@@ -478,7 +478,7 @@ label,.lead,.hint{color:#6B7280!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v85</b>｜ビルド 2026-10-22 14:05（博士の実験）</p>
+      <p class="verline">バージョン <b id="ver">v86</b>｜ビルド 2026-10-22 19:20（つながり修正）</p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -517,6 +517,7 @@ label,.lead,.hint{color:#6B7280!important}
             <textarea id="in-invite" rows="2" placeholder="https://…/shiritori-futari.html#s=…" autocomplete="off" spellcheck="false"></textarea>
           </label>
         </details>
+        <button id="btn-rejoin" class="ghost wide" type="button" hidden style="margin-bottom:8px">つなぎなおす（入室を もう一度 もとめる）</button>
         <button id="btn-force" class="ghost wide" type="button" hidden>時計が ずれている かも？ それでも つなぐ</button>
         <button id="btn-wipe" class="ghost wide" type="button" style="margin-top:14px">この端末の きろくを 消す</button>
       </div>
@@ -550,7 +551,7 @@ label,.lead,.hint{color:#6B7280!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v85</b>／ビルド 2026-10-22 14:05（博士の実験）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v86</b>／ビルド 2026-10-22 19:20（つながり修正）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -1338,7 +1339,11 @@ var Net={
       /* トーク・既読・受領証は中継サーバーに保存させない（接続中の相手へ直接届くのみ） */
       var noCache='?cache=no';   /* 中継サーバーに 一切 保存させない(記録を のこさない) */  /* メッセージ・写真・ライブは中継に保存させない */
       var r=await fetch('https://ntfy.sh/'+this.topic+noCache,{method:'POST',headers:{'Content-Type':'text/plain'},body:body});
-      return r.ok;
+      if(!r.ok){
+        if(r.status===429||r.status===413){ try{ note('つなぎ サーバーの 回数制限に かかりました。1〜2分 まってから もう一度 おしてください。','#note2'); }catch(e){} }
+        return false;
+      }
+      return true;
     }catch(e){ return false; }
   },
   /* 未達のメッセージを同じ番号のまま再送（相手は重複を自動で捨てる） */
@@ -1498,6 +1503,7 @@ $('#btn-create').addEventListener('click',async function(){
       if(S.paired||S.phase==='play') return;
       if(S.isHost===true) return;
       note('つながりませんでした。①部屋の ぬしが アプリを ひらいて いるか ②部屋のなまえと あいことばが 合って いるか ③もう 2人で あそんで いないか を たしかめてください。','#note2');
+      if($('#btn-rejoin')) $('#btn-rejoin').hidden=false;
     },10000);
   }catch(e){ busy(false); note('鍵をつくれませんでした: '+(e&&e.message?e.message:e)); }
 });
@@ -1529,6 +1535,18 @@ $('#btn-join').addEventListener('click',async function(){
     busy(false);
     enterWait(); probeStart();
   }catch(e){ busy(false); note('鍵をつくれませんでした: '+(e&&e.message?e.message:e)); }
+});
+$('#btn-rejoin').addEventListener('click',async function(){
+  if(!S.room||!S.secret) return;
+  this.hidden=true;
+  note('つなぎなおして います…','#note2');
+  try{
+    var d=await deriveKeys(S.room+'/'+S.secret);
+    S.key=d.key; S.code=d.code; S.topic=d.topic;
+    Net.reset(); Net.connect(S.topic,S.key); Net.lobby=S.topic;
+    S.paired=false; S.isHost=false;
+    startAnnounce();
+  }catch(e){ note('つなぎなおせませんでした。','#note2'); }
 });
 $('#btn-force').addEventListener('click',function(){
   S.forceJoin=true;
@@ -1817,7 +1835,12 @@ async function approveJoin(){
     var sk=await sessionKeyFromSid(sid);
     S.guest={did:req.did,name:req.name};
     S.opp={id:req.did,name:req.name};
-    Net.sendLegacy({t:'welcome',host:S.me.name||'あなた',hostPub:hpub,box:box,to:req.did,pr:S.price||'',ds:S.desc||''});
+    var wel={t:'welcome',host:S.me.name||'あなた',hostPub:hpub,box:box,to:req.did,pr:S.price||'',ds:S.desc||''};
+    /* とおりみちを かえる 前に、3回 おくる（1回 落ちても とどく ように） */
+    Net.sendLegacy(wel);
+    setTimeout(function(){ try{ Net.sendLegacy(wel); }catch(e){} },500);
+    setTimeout(function(){ try{ Net.sendLegacy(wel); }catch(e){} },1250);
+    setTimeout(function(){ try{ Net.sendLegacy(wel); }catch(e){} },2100);
     Net.setSession(sk);          /* ここから先は 2台だけの鍵 */
     S.pairBox=box; S.pairHostPub=hpub; S.pairDid=req.did;
     S.paired=true; S.sealed=true;          /* ここから 満席(2人で 固定) */
@@ -1847,7 +1870,7 @@ async function migrateToSession(sid,isHost){
     try{ Net.retopic(tp); }catch(e){}
     startSessionHandshake(isHost);
   };
-  if(isHost) setTimeout(go,1400); else go();     /* ホストは welcome が とどく のを まつ */
+  if(isHost) setTimeout(go,3000); else go();     /* ホストは welcome が とどく のを まつ */
 }
 function startSessionHandshake(isHost){
   stopMigrate();
