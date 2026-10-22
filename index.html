@@ -672,7 +672,7 @@ label,.lead,.hint{color:#6B7280!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v102</b>｜ビルド 2026-10-23 03:20（2人だけの あんごう）</p>
+      <p class="verline">バージョン <b id="ver">v103</b>｜ビルド 2026-10-23 07:10（回数制限で 止まらない ように）</p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -745,7 +745,7 @@ label,.lead,.hint{color:#6B7280!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v102</b>｜ビルド 2026-10-23 03:20（2人だけの あんごう）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v103</b>｜ビルド 2026-10-23 07:10（回数制限で 止まらない ように）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -1502,23 +1502,44 @@ var Net={
   startPoll:function(){
     var self=this;
     if(this.pollTimer||!this.topic) return;
-    this.poll();
-    this.pollTimer=setInterval(function(){ self.poll(); },2600);
+    if(!this.pollEvery) this.pollEvery=15000;
+    this.lastPollAt=0;
+    this.pollTimer=setInterval(function(){
+      var now=Date.now();
+      if(self.coolUntil&&now<self.coolUntil) return;      /* 制限中は 一切 ふれない */
+      if(now-(self.lastPollAt||0)<(self.pollEvery||15000)) return;
+      self.lastPollAt=now;
+      self.poll();
+    },2000);
   },
   stopPoll:function(){ if(this.pollTimer){ clearInterval(this.pollTimer); this.pollTimer=null; } },
+  hit429:function(waitMs){
+    var wait=waitMs||30000;
+    this.coolUntil=Date.now()+wait;
+    this.pollEvery=Math.min(60000,Math.max(15000,(this.pollEvery||15000)*2));
+    try{ if(this.onCool) this.onCool(wait); }catch(e){}
+  },
   poll:function(){
-    if(!this.topic) return;
-    var self=this;
+    if(!this.topic||this.polling) return;
+    if(this.coolUntil&&Date.now()<this.coolUntil) return;
+    var self=this; this.polling=true;
     fetch('https://ntfy.sh/'+this.topic+'/json?poll=1&since='+this.lastTs)
-      .then(function(r){ return r.text(); })
+      .then(function(r){
+        if(r.status===429){ self.hit429(); return null; }
+        if(!r.ok) return null;
+        return r.text();
+      })
       .then(function(txt){
+        self.polling=false;
+        if(!txt) return;
+        self.pollEvery=15000;                     /* うまく いったら 間隔を もどす */
         txt.split('\n').forEach(function(line){
           if(!line.trim()) return;
           var d; try{ d=JSON.parse(line); }catch(e){ return; }
           self.handleEvent(d);
         });
       })
-      .catch(function(){});
+      .catch(function(){ self.polling=false; });
   },
   handleEvent:function(ev){
     if(!ev||ev.event!=='message'||!this.topic) return;
@@ -1581,8 +1602,13 @@ var Net={
       /* トーク・既読・受領証は中継サーバーに保存させない（接続中の相手へ直接届くのみ） */
       var noCache='?cache=no';   /* 中継サーバーに 一切 保存させない(記録を のこさない) */  /* メッセージ・写真・ライブは中継に保存させない */
       var r=await fetch('https://ntfy.sh/'+this.topic+noCache,{method:'POST',headers:{'Content-Type':'text/plain'},body:body});
+      this.lastPostStatus=r.status;
+      if(r.status===429){
+        this.hit429();
+        return false;
+      }
       if(!r.ok){
-        if(r.status===429||r.status===413){ try{ note('つなぎ サーバーの 回数制限に かかりました。1〜2分 まってから もう一度 おしてください。','#note2'); }catch(e){} }
+        if(r.status===413){ try{ note('メッセージが 大きすぎます。みじかくして ください。','#note2'); }catch(e){} }
         return false;
       }
       return true;
@@ -4554,7 +4580,7 @@ function startPing(){
     try{ Net.send({t:'ping'}); }catch(e){}
   };
   fire();
-  S.pingTimer=setInterval(fire,15000);
+  S.pingTimer=setInterval(fire,25000);
 }
 function stopPing(){ if(S.pingTimer){ clearInterval(S.pingTimer); S.pingTimer=null; } }
 /* こまごま(端末のおぼえている あいだだけ) */
@@ -5467,16 +5493,16 @@ function submitChat(){
   msg.tries=1;
   renderChat(true);
   setTimeout(function(){ if(!msg.acked) sendAgain(msg); },5000);
-  setTimeout(function(){ if(!msg.acked) sendAgain(msg); },11000);
   setTimeout(function(){
     if(msg.acked) return;
-    if(msg.tries>=6) toast('メッセージが とどきません。下の「通信テスト」を おして ください。');
-  },16000);
+    if(Net.coolUntil&&Date.now()<Net.coolUntil){ return; }   /* 制限中は 再送しない */
+    toast('メッセージが とどきません。少し まってから もう一度 おしてください。');
+  },14000);
 }
 function sendAgain(msg){
   try{
     if(!msg||msg.acked||!msg.env) return;
-    if(msg.tries>=8) return;
+    if(msg.tries>=3) return;
     msg.tries++;
     Net.resendEnv(msg.env);
     if(S.tab==='chat') renderChat(true);
@@ -5486,7 +5512,7 @@ function resendUnacked(all){
   for(var i=0;i<S.chat.length;i++){
     var m=S.chat[i];
     if(!m||m.sys||m.from!==S.me.id||m.acked||!m.env) continue;
-    if((m.tries||0)<8){ if(all||Date.now()-(m.at||0)>4000){ m.tries=(m.tries||0)+1; Net.resendEnv(m.env); } }
+    if((m.tries||0)<3){ if(all||Date.now()-(m.at||0)>4000){ m.tries=(m.tries||0)+1; Net.resendEnv(m.env); } }
   }
   if(S.tab==='chat') renderChat(true);
 }
@@ -5619,6 +5645,13 @@ async function fullWatchTick(){
   }catch(e){}
 }
 Net.onState=setNet;
+Net.onCool=function(ms){
+  try{
+    toast('中継所が 混んでいます（回数制限）。'+Math.ceil(ms/1000)+'秒 まつと 自動で さいかいします。');
+    var e=$('#link-tag');
+    if(e){ e.textContent='中継所の 回数制限中 ／ あと '+Math.ceil(ms/1000)+'秒で さいかい'; e.className='link-tag ng'; }
+  }catch(e){}
+};
 (function(){ var o=Net.handleEvent; Net.handleEvent=function(ev){ var r=o.apply(this,arguments); try{ if(ev&&ev.event==='message'){ Net.lastRecv=Date.now(); paintTopicTag(); } }catch(e){} return r; }; })();
 setInterval(function(){ try{ paintTopicTag(); }catch(e){} },3000);
 var LEGACY_OK={join:1,in2:1,in3:1,keyed:1,deny:1,full:1,expired:1,ping:1,ob:1,nettest:1,'nettest-ok':1,ready:1,ready2:1,bye:1};
@@ -6087,8 +6120,11 @@ function netTest(){
     var sec=Math.round((Date.now()-(r.at||Date.now()))/1000);
     var sendTxt=r.sent?'おくれました':'おくれませんでした';
     var recvTxt=r.got?'とどきました':'とどきませんでした';
+    var limited=(Net.lastPostStatus===429||(Net.coolUntil&&Date.now()<Net.coolUntil));
     var verdict,advice,cls;
-    if(r.sent&&r.got){ verdict='つながっています（問題なし）'; advice='このまま メッセージを おくってみてください。'; cls='ok'; }
+    if(limited){ verdict='中継所の 回数制限に かかっています（回線は 生きています）'; advice='1〜2分 まつと 自動で もどります。この あいだは 送信も 受信も 止まります。'; cls='ng'; }
+    if(limited){ /* 上で 判定ずみ */ }
+    else if(r.sent&&r.got){ verdict='つながっています（問題なし）'; advice='このまま メッセージを おくってみてください。'; cls='ok'; }
     else if(r.sent&&!r.got){ verdict='かたむきが あります（おくるのは できるが、うけとれない）'; advice='アプリを いちど とじて ひらきなおしてください。それでも だめなら Wi-Fi と モバイルを きりかえてください。'; cls='ng'; }
     else if(!r.sent&&r.got){ verdict='かたむきが あります（うけとれるが、おくれない）'; advice='回線が とぎれています。Wi-Fi か モバイルの どちらか つながるほうに きりかえてください。'; cls='ng'; }
     else { verdict='つながっていません'; advice='2台の「つうしん あいず」が 同じか かくにんしてください。ちがう 場合は 部屋が わかれています。同じなら 回線を きりかえてください。'; cls='ng'; }
@@ -6255,5 +6291,6 @@ window.addEventListener('pagehide',function(){ Net.close(); });
 show('lobby'); setTab('chat'); setNet('off'); setLock(false,'未接続');
 })();
 </script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"08b344934bdd416db94053d34eb889d8","spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
