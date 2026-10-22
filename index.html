@@ -307,9 +307,14 @@ option{background:#12312A;color:#1F2430}
 .msg .meta{flex:none;font-size:.72rem;color:#22303A;font-weight:500;white-space:nowrap;background:rgba(255,255,255,.62);border-radius:9px;padding:2px 6px;margin-bottom:1px}
 .msg.out .meta{text-align:right}
 .line-read{align-self:flex-end;flex:none;font-size:.72rem;color:#22303A;font-weight:500;background:rgba(255,255,255,.62);border-radius:9px;padding:2px 7px;margin:3px 2px 0 0}
-.line-composer{flex:none;display:flex;gap:8px;padding:8px;background:#F2F4F6;border-top:1px solid #D9DFE5}
+.line-composer{flex:none;display:flex;gap:8px;padding:8px 8px calc(8px + env(safe-area-inset-bottom));
+  background:#F2F4F6;border-top:1px solid #D9DFE5;position:sticky;bottom:0;z-index:9}
 .line-composer input{flex:1;background:#fff;border:1px solid #DCE2E8;color:#1B1B1B;border-radius:20px;
-  padding:11px 15px;font-size:.94rem}
+  padding:11px 15px;font-size:16px;line-height:1.45;-webkit-text-size-adjust:100%}
+.line-composer input:disabled{opacity:.6}
+.line-chat{-webkit-overflow-scrolling:touch;overscroll-behavior:contain;scroll-behavior:auto}
+.chatpane{padding-bottom:0;transition:none}
+.kb-open .line-chat{padding-bottom:4px}
 .line-composer input::placeholder{color:#9AA6B2}
 .line-composer input:focus{outline:2px solid #06C755;outline-offset:1px;border-color:transparent}
 .line-send{flex:none;background:#06C755;color:#fff;border:0;border-radius:20px;padding:0 18px;
@@ -487,7 +492,7 @@ label,.lead,.hint{color:#6B7280!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v87</b>｜ビルド 2026-10-22 19:35（退出ボタン・起動）</p>
+      <p class="verline">バージョン <b id="ver">v88</b>｜ビルド 2026-10-22 20:15（入力改善）</p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -560,7 +565,7 @@ label,.lead,.hint{color:#6B7280!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v87</b>｜ビルド 2026-10-22 19:35（退出ボタン・起動）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v88</b>｜ビルド 2026-10-22 20:15（入力改善）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -1422,7 +1427,7 @@ function setTab(which){
   if($('#tab-chat')){ $('#tab-chat').classList.toggle('on',which==='chat'); $('#tab-chat').setAttribute('aria-selected',which==='chat'); }
   if($('#pane-game')) $('#pane-game').classList.toggle('on',which==='game');
   if($('#pane-chat')) $('#pane-chat').classList.toggle('on',which==='chat');
-  if(which==='chat'){ S.unread=0; updateBadge(); renderChat(true); maybeSendRead(); setTimeout(function(){ $('#in-chat').focus(); },60); }
+  if(which==='chat'){ S.unread=0; updateBadge(); renderChat(true); maybeSendRead(); }
   else { renderQuiz(); }
 }
 function updateBadge(){
@@ -4484,7 +4489,13 @@ function renderPlay(){
   }
 }
 var LINE_GROUP_MS=5*60000;
+var chatComposing=false, chatDeferred=false;
 function renderChat(forceBottom){
+  try{
+    var ai=document.activeElement;
+    if(!forceBottom && (chatComposing || (ai&&ai.id==='in-chat' && (ai.value||'').length>0))){ chatDeferred=true; return; }
+  }catch(e){}
+  chatDeferred=false;
   persistChat();
   var box=$('#chat-log');
   if(!box) return;
@@ -5056,6 +5067,39 @@ function flashHint(msg){
 }
 $('#form-chat').addEventListener('submit',function(e){ e.preventDefault(); submitChat(); });
 $('#in-chat').addEventListener('keydown',function(e){ if(e.key==='Enter'&&e.isComposing) e.preventDefault(); });
+/* ===== 入力まわり(Line風) ===== */
+(function(){
+  var inp=$('#in-chat'); if(!inp) return;
+  function flush(){
+    if(chatDeferred && !chatComposing){ chatDeferred=false; renderChat(true); }
+  }
+  inp.addEventListener('compositionstart',function(){ chatComposing=true; });
+  inp.addEventListener('compositionend',function(){ chatComposing=false; setTimeout(flush,30); });
+  inp.addEventListener('blur',function(){ setTimeout(flush,120); });
+  inp.addEventListener('focus',function(){
+    document.body.classList.add('kb-open');
+    setTimeout(function(){ try{ inp.scrollIntoView({block:'nearest'}); }catch(e){} },320);
+  });
+  /* キーボードの 高さぶん 画面を おしあげる（composerが 隠れない ように） */
+  function vv(){
+    var v=window.visualViewport; if(!v) return;
+    var kb=Math.max(0, Math.round(window.innerHeight - v.height - v.offsetTop));
+    var open=kb>80;
+    document.documentElement.style.setProperty('--kb', kb+'px');
+    document.body.classList.toggle('kb-open', open);
+    var main=document.querySelector('main');
+    if(main){ main.style.paddingBottom = open ? Math.min(kb,260)+'px' : ''; }
+    if(open && document.activeElement===inp){
+      clearTimeout(window.__kbT);
+      window.__kbT=setTimeout(function(){ try{ inp.scrollIntoView({block:'nearest'}); }catch(e){} },60);
+    }
+  }
+  if(window.visualViewport){
+    window.visualViewport.addEventListener('resize',vv);
+    window.visualViewport.addEventListener('scroll',vv);
+    setTimeout(vv,300);
+  }
+})();
 var lastChatAt=0;
 function submitChat(){
   if(!(S.phase==='play'&&S.paired)&&!(S.linked&&S.key&&S.topic)) return;
