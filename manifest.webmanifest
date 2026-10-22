@@ -1,0 +1,33 @@
+{
+ "name": "雑学王",
+ "short_name": "雑学王",
+ "description": "4択の雑学クイズ。今日のひらめきを、1問から。",
+ "lang": "ja",
+ "dir": "ltr",
+ "start_url": "./",
+ "scope": "./",
+ "display": "standalone",
+ "orientation": "portrait",
+ "theme_color": "#4B2ED6",
+ "background_color": "#FFFCF4",
+ "icons": [
+  {
+   "src": "./icon-192.png",
+   "sizes": "192x192",
+   "type": "image/png",
+   "purpose": "any"
+  },
+  {
+   "src": "./icon-512.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "any"
+  },
+  {
+   "src": "./icon-512.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "maskable"
+  }
+ ]
+}
