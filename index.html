@@ -672,7 +672,7 @@ label,.lead,.hint{color:#6B7280!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v103</b>｜ビルド 2026-10-23 07:10（回数制限で 止まらない ように）</p>
+      <p class="verline">バージョン <b id="ver">v105</b>｜ビルド 2026-10-23 09:05（取りもどせる 通信に 修正）</p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -745,7 +745,7 @@ label,.lead,.hint{color:#6B7280!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v103</b>｜ビルド 2026-10-23 07:10（回数制限で 止まらない ように）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v105</b>｜ビルド 2026-10-23 09:05（取りもどせる 通信に 修正）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -1459,26 +1459,65 @@ var Net={
     this.seen=new Set();
     this.lastTs=Math.floor(Date.now()/1000)-90;
     this.retry=0;
-    this.openWs();
+    this.openStream();
     this.startPoll();
   },
   close:function(){
     if(this.retryTimer){clearTimeout(this.retryTimer);this.retryTimer=null;}
     this.stopPoll();
+    this.closeStream();
     if(this.ws){ try{this.ws.onclose=null;this.ws.close();}catch(e){} this.ws=null; }
     this.open=false; this.topic=null; this.key=null;
+  },
+  /* ① SSE（httpの ながれ）→ ② WebSocket → ③ ポーリング の 順で つかう。
+     SSE は 多くの 回線で 通るうえ、つなぎっぱなしなので 回数制限に かかりにくい */
+  openStream:function(){
+    var self=this;
+    if(!this.topic) return;
+    this.closeStream();
+    if(typeof EventSource==='undefined'){ this.openWs(); return; }
+    this.transport='sse';
+    try{
+      var es=new EventSource('https://ntfy.sh/'+this.topic+'/sse');
+      this.es=es;
+      es.onopen=function(){
+        self.open=true; self.retry=0; self.transport='sse';
+        self.stopPoll();
+        if(!self.lastRecv||Date.now()-self.lastRecv>60000){ self.poll(); }
+        if(self.onState) self.onState('open');
+        try{ paintTopicTag(); }catch(e){}
+      };
+      es.onmessage=function(ev){
+        var d; try{ d=JSON.parse(ev.data); }catch(e){ return; }
+        self.handleEvent(d);
+      };
+      es.onerror=function(){
+        try{ es.close(); }catch(e){}
+        self.es=null; self.open=false;
+        if(self.onState) self.onState('lost');
+        self.startPoll();                 /* つなぎ直す あいだは ポーリングで つなぐ */
+        self.scheduleReconnect();
+        try{ paintTopicTag(); }catch(e){}
+      };
+    }catch(e){ this.openWs(); }
+  },
+  closeStream:function(){
+    if(this.es){ try{ this.es.close(); }catch(e){} this.es=null; }
+    if(this.ws){ try{ this.ws.onclose=null; this.ws.close(); }catch(e){} this.ws=null; }
   },
   openWs:function(){
     var self=this;
     if(!this.topic) return;
     var w;
+    this.transport='ws';
     try{ w=new WebSocket('wss://ntfy.sh/'+this.topic+'/ws'); }catch(e){ this.scheduleReconnect(); return; }
     this.ws=w;
     var guard=setTimeout(function(){ if(!self.open){ try{w.close();}catch(e){} } },8000);
     w.onopen=function(){
       clearTimeout(guard);
-      self.open=true; self.retry=0; /* ポーリングは 止めない（見かけだけの 接続で 落ちるのを 防ぐ） */
+      self.open=true; self.retry=0;
       if(self.onState) self.onState('open');
+      try{ paintTopicTag(); }catch(e){}
     };
     w.onmessage=function(ev){
       var d; try{ d=JSON.parse(ev.data); }catch(e){ return; }
@@ -1488,26 +1527,32 @@ var Net={
       clearTimeout(guard);
       if(self.open){ self.open=false; if(self.onState) self.onState('lost'); }
       self.scheduleReconnect();
+      try{ paintTopicTag(); }catch(e){}
     };
     w.onerror=function(){};
   },
   scheduleReconnect:function(){
     var self=this;
     if(this.retryTimer||!this.topic) return;
-    var d=Math.min(8000,700*Math.pow(2,this.retry));
+    var d=Math.min(15000,900*Math.pow(2,this.retry));
     this.retry++;
-    this.retryTimer=setTimeout(function(){ self.retryTimer=null; self.openWs(); },d);
-    this.startPoll();
+    this.retryTimer=setTimeout(function(){
+      self.retryTimer=null;
+      if(!self.topic) return;
+      /* 3回に 1回は WebSocket も ためす（SSEが とおらない 回線むけ） */
+      if(self.retry%3===0) self.openWs(); else self.openStream();
+    },d);
   },
   startPoll:function(){
     var self=this;
     if(this.pollTimer||!this.topic) return;
-    if(!this.pollEvery) this.pollEvery=15000;
+    if(!this.pollEvery) this.pollEvery=20000;
     this.lastPollAt=0;
     this.pollTimer=setInterval(function(){
       var now=Date.now();
       if(self.coolUntil&&now<self.coolUntil) return;      /* 制限中は 一切 ふれない */
-      if(now-(self.lastPollAt||0)<(self.pollEvery||15000)) return;
+      if(self.open) return;                               /* つながって いる あいだは ポーリングしない */
+      if(now-(self.lastPollAt||0)<(self.pollEvery||20000)) return;
       self.lastPollAt=now;
       self.poll();
     },2000);
@@ -1516,7 +1561,7 @@ var Net={
   hit429:function(waitMs){
     var wait=waitMs||30000;
     this.coolUntil=Date.now()+wait;
-    this.pollEvery=Math.min(60000,Math.max(15000,(this.pollEvery||15000)*2));
+    this.pollEvery=Math.min(60000,Math.max(20000,(this.pollEvery||20000)*2));
     try{ if(this.onCool) this.onCool(wait); }catch(e){}
   },
   poll:function(){
@@ -1532,7 +1577,7 @@ var Net={
       .then(function(txt){
         self.polling=false;
         if(!txt) return;
-        self.pollEvery=15000;                     /* うまく いったら 間隔を もどす */
+        self.pollEvery=20000;                     /* うまく いったら 間隔を もどす */
         txt.split('\n').forEach(function(line){
           if(!line.trim()) return;
           var d; try{ d=JSON.parse(line); }catch(e){ return; }
@@ -1570,7 +1615,8 @@ var Net={
       if(env.n<=last) return;
       this.lastSeq[env.from]=env.n;
     }
-    if(env.from===S.me.id) return;      /* 自分の送信は無視 */
+    try{ this.lastRecv=Date.now(); }catch(e){}
+    if(env.from===S.me.id && env.t!=='nettest' && env.t!=='nettest-ok') return;   /* 自分の送信は無視（通信テストだけ 例外） */
     if(this.onMsg) this.onMsg(env);
   },
   send:function(obj,onDone){
@@ -1600,7 +1646,7 @@ var Net={
     try{
       var body=await seal(env,key);
       /* トーク・既読・受領証は中継サーバーに保存させない（接続中の相手へ直接届くのみ） */
-      var noCache='?cache=no';   /* 中継サーバーに 一切 保存させない(記録を のこさない) */  /* メッセージ・写真・ライブは中継に保存させない */
+      var noCache='';   /* v105: 中継所に のこす（暗号文のみ・最長12時間）。ポーリングで 取りもどせる ようにする */   /* 中継サーバーに 一切 保存させない(記録を のこさない) */  /* メッセージ・写真・ライブは中継に保存させない */
       var r=await fetch('https://ntfy.sh/'+this.topic+noCache,{method:'POST',headers:{'Content-Type':'text/plain'},body:body});
       this.lastPostStatus=r.status;
       if(r.status===429){
@@ -4580,7 +4626,7 @@ function startPing(){
     try{ Net.send({t:'ping'}); }catch(e){}
   };
   fire();
-  S.pingTimer=setInterval(fire,25000);
+  S.pingTimer=setInterval(fire,40000);
 }
 function stopPing(){ if(S.pingTimer){ clearInterval(S.pingTimer); S.pingTimer=null; } }
 /* こまごま(端末のおぼえている あいだだけ) */
@@ -5608,7 +5654,7 @@ function replyFull(to){
       var env={v:V,n:S.seq,from:S.me.id,t:'full'};
       if(to) env.to=to;
       var body=await seal(env,S.key);
-      fetch('https://ntfy.sh/'+S.topic+'?cache=no',{method:'POST',headers:{'Content-Type':'text/plain'},body:body});
+      fetch('https://ntfy.sh/'+S.topic+'?cache=yes',{method:'POST',headers:{'Content-Type':'text/plain'},body:body});
     }catch(e){}
   })();
 }
@@ -6069,7 +6115,7 @@ document.addEventListener('visibilitychange',function(){
 /* 画面に もどった／回線が もどった ときに すぐ 再接続（スマホの スリープ対策） */
 document.addEventListener('visibilitychange',function(){
   if(document.hidden) return;
-  try{ if(Net.topic){ Net.poll(); if(!Net.open) Net.openWs(); } }catch(e){}
+  try{ if(Net.topic){ if(!Net.open){ Net.openStream(); } Net.poll(); } }catch(e){}
   try{ resendUnacked(true); }catch(e){}
 });
 window.addEventListener('online',function(){
@@ -6152,7 +6198,8 @@ function topicTag(){
 }
 function paintTopicTag(){
   var e=$('#link-tag'); if(!e) return;
-  var st=(Net.open?'接続中':'再接続中');
+  var tr=(Net.transport==='sse')?'SSE':(Net.transport==='ws')?'WebSocket':'ポーリング';
+  var st=(Net.open?('接続中('+tr+')'):('再接続中('+tr+')'));
   var sec=Net.secure?('／2人だけの あんごう あいず '+(S.sas||'----')):'／あんごう かため中';
   e.textContent='つうしん あいず '+topicTag()+' ／ '+st+sec+(Net.lastRecv?(' ／ 最終受信 '+fmtTime(Net.lastRecv)):'');
   e.className='link-tag'+(Net.open?' ok':' ng');
