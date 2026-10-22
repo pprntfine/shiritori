@@ -448,6 +448,15 @@ label,.lead,.hint{color:#6B7280!important}
 .qz-filter button.on{background:#4B2ED6;border-color:#4B2ED6;color:#fff}
 .flt-risk{color:#b3243b;border-color:#e0a4ae}
 .flt-risk.on{background:#b3243b;border-color:#b3243b;color:#fff}
+
+/* iPhone: ノッチ・ホームバーを よける */
+.bar{padding-top:calc(12px + env(safe-area-inset-top))!important}
+.leave-row{position:fixed;left:0;right:0;bottom:0;z-index:60;display:none;
+  padding:10px 14px calc(12px + env(safe-area-inset-bottom));
+  background:linear-gradient(to top,#FFFFFF 58%,rgba(255,255,255,.92));border-top:1px solid #ECE7FB}
+.leave-row button{width:100%}
+#s-play.on .leave-row{display:block}
+#s-play{padding-bottom:92px}
 </style>
 </head>
 <body>
@@ -478,7 +487,7 @@ label,.lead,.hint{color:#6B7280!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v86</b>｜ビルド 2026-10-22 19:20（つながり修正）</p>
+      <p class="verline">バージョン <b id="ver">v87</b>｜ビルド 2026-10-22 19:35（退出ボタン・起動）</p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -551,7 +560,7 @@ label,.lead,.hint{color:#6B7280!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v86</b>／ビルド 2026-10-22 19:20（つながり修正）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v87</b>｜ビルド 2026-10-22 19:35（退出ボタン・起動）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -4181,6 +4190,17 @@ function tapSecret(){
     else show('secret');
   }
 }
+
+/* トーク画面の 下に 「部屋を でる」を おく（上に ありすぎて とどかない ため） */
+(function(){
+  var play=document.getElementById('s-play'); if(!play) return;
+  var row=document.createElement('div'); row.className='leave-row';
+  var b=document.createElement('button');
+  b.type='button'; b.className='ghost wide'; b.textContent='部屋を でる';
+  b.addEventListener('click',function(){ pairClear(); leaveRoom(); });
+  row.appendChild(b); play.appendChild(row);
+})();
+
 document.querySelectorAll('.hero h1,.hero .mascots,.verline,.brand').forEach(function(el){
   el.addEventListener('click',tapSecret);
 });
@@ -4256,7 +4276,8 @@ if($('#btn-wipe')) $('#btn-wipe').addEventListener('click',function(){
   note('この端末の きろくを 消しました。','#note2');
 });
 /* 起動時: ペアの つづきが あれば そのまま トークへ */
-setTimeout(function(){ if(pairLoad()) resumePair(); },400);
+/* 起動時は 自動で トークに 入らない（まちがって 開かない ように）。5回タップで 入る */
+(function(){ try{ if(pairLoad()) window.__hasPair=true; }catch(e){} })();
 function startPlay(){
   stopAnnounce();
   S.words=[]; usedMap(); S.req=null; S.rendered=0; S.over=null; S.pending=null;
