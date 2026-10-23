@@ -720,7 +720,7 @@ body.in-play .leave-row{margin:6px 0 calc(6px + env(safe-area-inset-bottom))!imp
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v115</b>｜ビルド 2026-10-24（メッセージ・既読・写真・ライブの とどけかたを 修正）</p>
+      <p class="verline">バージョン <b id="ver">v116</b>｜ビルド 2026-10-24（なまえを ぶー／にゃん に とういつ・ルーム画面の きのこカードを 除去）</p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -793,7 +793,7 @@ body.in-play .leave-row{margin:6px 0 calc(6px + env(safe-area-inset-bottom))!imp
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v114</b>｜ビルド 2026-10-24（メッセージ・既読・写真・ライブの とどけかたを 修正）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v114</b>｜ビルド 2026-10-24（なまえを ぶー／にゃん に とういつ・ルーム画面の きのこカードを 除去）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -834,8 +834,8 @@ body.in-play .leave-row{margin:6px 0 calc(6px + env(safe-area-inset-bottom))!imp
     <!-- 商品ページ（トーク含む） -->
 <section id="s-play" class="screen">
   <div class="players">
-    <div class="pl me" id="pl-me"><span class="tag">あなた</span><b id="p-me">あなた</b></div>
-    <div class="pl opp" id="pl-opp"><span class="tag">あいて</span><b id="p-opp">あいて</b></div>
+    <div class="pl me" id="pl-me"><span class="tag">ぶー</span><b id="p-me">ぶー</b></div>
+    <div class="pl opp" id="pl-opp"><span class="tag">にゃん</span><b id="p-opp">にゃん</b></div>
   </div>
 
   <p id="link-tag" class="link-tag">つうしん あいず ----</p>
@@ -1843,7 +1843,7 @@ var S={
 
 function usedMap(){ S.used=Object.create(null); }
 function other(id){ return id===S.me.id ? S.opp.id : S.me.id; }
-function nameOf(id){ return id===S.me.id ? (S.me.name||'あなた') : (S.opp.name||'あいて'); }
+function nameOf(id){ return id===S.me.id ? 'ぶー' : 'にゃん'; }
 
 /* =================================================================
    5. 画面まわり
@@ -1916,10 +1916,7 @@ $('#peek').addEventListener('keydown',function(e){ if(e.key==='Enter'||e.key==='
 /* =================================================================
    6. ロビー
    ================================================================= */
-function myName(){
-  var v=($('#in-name').value||'').trim();
-  return v.slice(0,8)||'あなた';
-}
+function myName(){ return 'ぶー'; }
 function busy(on,msg,el){
   S.busy=!!on;
   $('#btn-create').disabled=!!on;
@@ -2310,7 +2307,7 @@ function approveJoin(){
       var hpub=await exportPub(hk);
       var ps=await pairSecret(hk,req.pub);
       S.sessKey=ps.key; S.sas=ps.tag;
-      var wel={t:'in2',host:S.me.name||'あなた',to:req.did,hostPub:hpub,pr:S.price||'',ds:S.desc||''};
+      var wel={t:'in2',host:'ぶー',to:req.did,hostPub:hpub,pr:S.price||'',ds:S.desc||''};
       Net.sendLegacy(wel);
       setTimeout(function(){ try{ Net.sendLegacy(wel); }catch(e){} },600);
       setTimeout(function(){ try{ Net.sendLegacy(wel); }catch(e){} },1400);
@@ -2331,7 +2328,7 @@ function approveJoin(){
 /* おなじ かぎを おくりなおす(とどかなかった ときの ため) */
 function resendWelcome(){
   if(!S.pairBox||!S.pairHostPub||!S.pairDid) return false;
-  Net.sendLegacy({t:'welcome',host:S.me.name||'あなた',hostPub:S.pairHostPub,box:S.pairBox,to:S.pairDid,pr:S.price||'',ds:S.desc||''});
+  Net.sendLegacy({t:'welcome',host:'ぶー',hostPub:S.pairHostPub,box:S.pairBox,to:S.pairDid,pr:S.price||'',ds:S.desc||''});
   return true;
 }
 /* ロビーから 専用の とおりみちへ 引っこす */
@@ -2412,7 +2409,7 @@ function priceText(v){
 function renderProduct(){
   var nm=S.prodName||S.room||'商品';
   var pr=priceText(S.price);
-  var seller=(S.isHost ? (S.me.name||'あなた') : (S.opp&&S.opp.name ? S.opp.name : '出品者'));
+  var seller=(S.isHost ? ('ぶー') : (S.opp&&S.opp.name ? S.opp.name : '出品者'));
   if($('#prod-name')) $('#prod-name').textContent=nm;
   if($('#prod-price')) $('#prod-price').textContent=pr;
   if($('#prod-seller')) $('#prod-seller').textContent='出品者: '+seller;
@@ -4661,10 +4658,10 @@ function renderMush(){
   var has=pairHasKeys();
   box.hidden=!has;
   var p=has?pairLoad():null;
-  var nm=$('#mush-name'); if(nm&&p) nm.textContent=(p.peerName||'あいて');
+  var nm=$('#mush-name'); if(nm&&p) nm.textContent='にゃん';
 }
 (function(){
-  var sec=$('#s-secret'); if(!sec||$('#mush-box')) return;
+  return;   /* v116: ルーム画面の きのこカードは 表示しない(再ログインは ロビーの 🍄‍🟫 から) */
   var box=document.createElement('div');
   box.id='mush-box'; box.hidden=true; box.className='mush-box';
   box.innerHTML='<button id="mush-btn" type="button" aria-label="きのこ">🍄‍🟫</button>'
@@ -4761,8 +4758,8 @@ async function resumeConnect(silent){
     Net.switchTo(sk);
     S.phase='play';
     S.chatRendered=-1;
-    if($('#p-me')) $('#p-me').textContent=S.me.name||'あなた';
-    if($('#p-opp')) $('#p-opp').textContent=S.opp.name||'あいて';
+    if($('#p-me')) $('#p-me').textContent='ぶー';
+    if($('#p-opp')) $('#p-opp').textContent='にゃん';
     startPing(); startWatch(); if(S.isHost) startFullWatch();
     /* v111: hi2 は 送らない */
     try{ renderChat(true); }catch(e){}
@@ -4793,8 +4790,8 @@ function openChatUI(){
   S.linked=true;
   stopAnnounce();
   renderProduct();
-  $('#p-me').textContent=S.me.name||'あなた';
-  $('#p-opp').textContent=S.opp.name||'あいて';
+  $('#p-me').textContent='ぶー';
+  $('#p-opp').textContent='にゃん';
   show('play');
   document.querySelector('.bar').classList.add('compact');
   $('#btn-eject').hidden = !(S.isHost && S.guest);
@@ -4822,8 +4819,8 @@ function startPlay(){
   $('#hint').classList.remove('bad');
   $('#hint').textContent='さいしょは なんでも OK';
   renderProduct();
-  $('#p-me').textContent=S.me.name||'あなた';
-  $('#p-opp').textContent=S.opp.name||'あいて';
+  $('#p-me').textContent='ぶー';
+  $('#p-opp').textContent='にゃん';
   sysChat('この部屋のトークは、あなたと あいて だけが よめます。');
   S.peerRead=0; S.lastPeerN=0; S.readSent=0; S.peerAck=0;
   S.linked=true;   /* v115: 部屋を でても つながりを たもつ（🍄‍🟫 で もどれる・相手を 追い出さない） */
@@ -6194,13 +6191,13 @@ Net.onMsg=function(m){
       (function(){
         try{
           var p=pairLoad();
-          if(p&&p.peer&&p.peer===m.from&&S.guest&&S.guest.did===m.from){ S.joinReq={did:m.from,name:(m.name||'あいて'),pub:m.pub}; approveJoin(); }
+          if(p&&p.peer&&p.peer===m.from&&S.guest&&S.guest.did===m.from){ S.joinReq={did:m.from,name:'にゃん',pub:m.pub}; approveJoin(); }
         }catch(e){}
       })();
       if(S.joinReq&&S.joinReq.did!==m.from){ notifyHostAccess('ほかの 人が 入室を もとめています'); break; }
       S.joinReq={did:m.from,name:(m.name||'なまえ なし'),pub:m.pub};
       showJoinReq();
-      notifyHostAccess((S.joinReq.name||'なまえ なし')+' さんが 入室を もとめています');   /* 人が かくにんしてから いれる */
+      notifyHostAccess('にゃん'+' さんが 入室を もとめています');   /* 人が かくにんしてから いれる */
       break;
 
     /* 承認された：端末固有の鍵でセッション鍵を受け取る */
@@ -6215,7 +6212,7 @@ Net.onMsg=function(m){
           var ps=await pairSecret(S.myECDH,m.hostPub);
           S.sessKey=ps.key; S.sas=ps.tag;
           stopAnnounce();
-          S.opp={id:m.from,name:(m.host||'あいて')};
+          S.opp={id:m.from,name:'にゃん'};
           if(m.pr) S.price=String(m.pr);
           if(m.ds) S.desc=String(m.ds);
           if(S.room) S.prodName=S.room;
@@ -6273,7 +6270,7 @@ Net.onMsg=function(m){
           var sk=await sessionKeyFromSid(got.sid);
           stopAnnounce();
           S.paired=true; S.sealed=true;
-          S.opp={id:m.from,name:(m.host||'あいて')};
+          S.opp={id:m.from,name:'にゃん'};
           Net.setSession(sk);
           note('入室を ゆるされました。','#note2');
           startPlay();
@@ -6697,7 +6694,7 @@ function paintTopicTag(){
 
 /* ===== インスタ風ライブの 操作 ===== */
 function igName(){
-  var n=(S.opp&&S.opp.name)?S.opp.name:'あいて';
+  var n='にゃん';
   var e=$('#ig-name'); if(e) e.textContent=n;
   var av=$('#ig-av'); if(av) av.textContent=(n||'あ').slice(0,1);
   var nm=$('#my-tag');
@@ -6747,7 +6744,7 @@ function igHeartFly(x){
     oc();
     igName();
     var vw=$('#ig-view'); if(vw) vw.textContent='1';
-    try{ if(S.opp&&S.opp.name){ $('#ig-name').textContent=S.opp.name; } }catch(e){}
+    try{ $('#ig-name').textContent='にゃん'; }catch(e){}
   };
 })();
 /* 送信待ちが のこって いれば 復元して 送る */
