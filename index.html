@@ -642,6 +642,43 @@ label,.lead,.hint{color:#6B7280!important}
   font-size:.7rem;font-weight:800;font-variant-numeric:tabular-nums;opacity:.9}
 .ig-state{position:absolute;top:calc(60px + env(safe-area-inset-top));right:14px;z-index:5;
   color:rgba(255,255,255,.9);font-size:.68rem;font-weight:700}
+
+/* ===== v107: 送信ボタンを 右端に 固定・上部の帯を 目立たなく ===== */
+.line-composer{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) auto!important;
+  grid-template-areas:"tools tools" "input send"!important;
+  gap:8px!important;align-items:center!important;
+  flex:none!important;position:sticky!important;bottom:0!important;z-index:70!important;
+  padding:8px 10px calc(8px + env(safe-area-inset-bottom))!important;
+  background:#F3F6F8!important;border-top:1px solid #DDE5EB!important
+}
+.line-composer .tools{grid-area:tools!important;display:flex;gap:6px;overflow-x:auto;padding:2px 0 2px;order:0!important}
+.line-composer .tools::-webkit-scrollbar{display:none}
+.line-composer #in-chat{grid-area:input!important;width:100%!important;min-width:0!important;order:0!important;
+  font-size:16px!important;padding:11px 16px!important;border-radius:999px!important;background:#fff!important;
+  border:1px solid #D9E2E9!important}
+.line-composer .line-send{grid-area:send!important;order:0!important;justify-self:end!important;
+  width:44px!important;height:44px!important;padding:0!important;border-radius:50%!important;
+  background:#06C755!important;color:#fff!important;font-size:0!important;
+  display:grid!important;place-items:center!important;box-shadow:0 2px 6px rgba(6,199,85,.35)!important}
+.line-composer .line-send:after{content:'➤';font-size:1rem;line-height:1;transform:rotate(-8deg)}
+/* 上部の つうしん帯：ふだんは 小さく 1行。タップで くわしく */
+.link-tag{
+  margin:4px 0 4px!important;font-size:.6rem!important;font-weight:700!important;
+  color:#8A93A0!important;background:transparent!important;border:0!important;
+  padding:2px 6px!important;text-align:center!important;opacity:.85
+}
+.link-tag.ok{color:#8A93A0!important;background:transparent!important;border:0!important}
+.link-tag.ng{color:#B4731E!important;background:#FFF7EC!important;border:1px solid #F0DDBf!important}
+.link-tag i{font-style:normal;opacity:.7}
+
+.mush-box{margin:10px 0 14px;text-align:center;background:#FFF9F0;border:2px dashed #E8C48B;border-radius:16px;padding:12px}
+.mush-box[hidden]{display:none}
+#mush-btn{background:none;border:0;font-size:40px;line-height:1;padding:4px 8px;transition:transform .12s}
+#mush-btn.mush-on{transform:scale(1.2)}
+.mush-l{margin:4px 0 0;font-size:.86rem;font-weight:800;color:#6B4A12}
+.mush-s{margin:2px 0 0;font-size:.7rem;font-weight:700;color:#A9865A}
 </style>
 </head>
 <body>
@@ -672,7 +709,7 @@ label,.lead,.hint{color:#6B7280!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v105</b>｜ビルド 2026-10-23 09:05（取りもどせる 通信に 修正）</p>
+      <p class="verline">バージョン <b id="ver">v110</b>｜ビルド 2026-10-23 15:35（満席おしらせ＋再接続の 保存を 修正）</p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -745,7 +782,7 @@ label,.lead,.hint{color:#6B7280!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v105</b>｜ビルド 2026-10-23 09:05（取りもどせる 通信に 修正）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v110</b>｜ビルド 2026-10-23 15:35（満席おしらせ＋再接続の 保存を 修正）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -1053,7 +1090,7 @@ async function pairSecret(myKey,peerPubB64){
   var hk=await crypto.subtle.importKey('raw',bits,'HKDF',false,['deriveKey','deriveBits']);
   var key=await crypto.subtle.deriveKey(
     {name:'HKDF',hash:'SHA-256',salt:new TextEncoder().encode(PAIR_SALT),info:new TextEncoder().encode('pair-v2')},
-    hk,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);
+    hk,{name:'AES-GCM',length:256},true,['encrypt','decrypt']);
   var h=await crypto.subtle.digest('SHA-256',bits);
   var bb=new Uint8Array(h), A='23456789ABCDEFGHJKLMNPQRSTUVWXYZ', tag='';
   for(var i=0;i<4;i++) tag+=A.charAt(bb[i]%32);
@@ -1065,7 +1102,7 @@ async function sessionKeyFromSid(sid){
   var hk=await crypto.subtle.importKey('raw',unb64(sid),'HKDF',false,['deriveKey']);
   return crypto.subtle.deriveKey(
     {name:'HKDF',hash:'SHA-256',salt:new TextEncoder().encode(SESS_SALT),info:new TextEncoder().encode('aes')},
-    hk,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);
+    hk,{name:'AES-GCM',length:256},true,['encrypt','decrypt']);
 }
 function newSid(){ return b64(randFrom(32)); }
 /* セッション鍵から 専用の とおりみち(topic)を つくる。合言葉からは たどれない */
@@ -1446,7 +1483,8 @@ var Net={
   /* 2人だけの鍵に きりかえる。旧鍵(合言葉)は 合図の 種類だけ うけつける */
   switchTo:function(key){
     if(!key) return false;
-    this.legacy=this.key;
+    if(!this.roomKey) this.roomKey=this.key;   /* 部屋の鍵は かならず 1回だけ 記録 */
+    this.legacy=this.roomKey;
     this.key=key;
     this.secure=true;
     try{ paintTopicTag(); }catch(e){}
@@ -1455,7 +1493,7 @@ var Net={
   clearSession:function(){ if(this.legacy){ this.key=this.legacy; this.legacy=null; } },
   connect:function(topic,key){
     this.close();
-    this.topic=topic; this.key=key; this.legacy=null;
+    this.topic=topic; this.key=key; this.legacy=null; this.roomKey=key;
     this.seen=new Set();
     this.lastTs=Math.floor(Date.now()/1000)-90;
     this.retry=0;
@@ -1559,7 +1597,7 @@ var Net={
   },
   stopPoll:function(){ if(this.pollTimer){ clearInterval(this.pollTimer); this.pollTimer=null; } },
   hit429:function(waitMs){
-    var wait=waitMs||30000;
+    var wait=waitMs||45000;
     this.coolUntil=Date.now()+wait;
     this.pollEvery=Math.min(60000,Math.max(20000,(this.pollEvery||20000)*2));
     try{ if(this.onCool) this.onCool(wait); }catch(e){}
@@ -1625,7 +1663,7 @@ var Net={
     S.seq++;
     var env={v:V,n:S.seq,from:S.me.id,t:obj.t};
     for(var k in obj){ if(k!=='v'&&k!=='n'&&k!=='from') env[k]=obj[k]; }
-    this.sendQueue=this.sendQueue.then(function(){ return self.post(env,false); })
+    this.sendQueue=this.sendQueue.then(function(){ return self.post(env,false,(obj&&obj.t==='chat')?0:(({ack:1,read:1,ping:1,ready:1,ready2:1}[obj&&obj.t])?2:0)); })
       .then(function(ok){ if(onDone){ try{ onDone(ok); }catch(e){} } return ok; })
       .catch(function(){ if(onDone){ try{ onDone(false); }catch(e){} } return false; });
     return env;
@@ -1640,9 +1678,23 @@ var Net={
     this.sendQueue=this.sendQueue.then(function(){ return self.post(env,!!self.legacy); }).catch(function(){});
     return env.n;
   },
-  post:async function(env,useLegacy){
+  /* 1分あたりの 送信数を 自分で かぎる（中継所の 回数制限に さきに 当たらない ため） */
+  budget:{t:0,n:0},
+  allow:function(prio){
+    var now=Date.now();
+    if(!this.budget||now-this.budget.t>60000){ this.budget={t:now,n:0}; }
+    var n=this.budget.n;
+    /* 背景の 電文（既読・あいず・生存確認）だけ しぼる。
+       トーク・入室・クイズの 合図は 落とさない */
+    if(prio>=2){ if(n>=4) return false; }
+    else if(n>=22) return false;
+    this.budget.n=n+1;
+    return true;
+  },
+  post:async function(env,useLegacy,prio){
     var key=useLegacy?(this.legacy||this.key):this.key;
     if(!key||!this.topic) return false;
+    if(!this.allow(typeof prio==='number'?prio:1)) return false;
     try{
       var body=await seal(env,key);
       /* トーク・既読・受領証は中継サーバーに保存させない（接続中の相手へ直接届くのみ） */
@@ -1664,7 +1716,7 @@ var Net={
   resendEnv:function(env){
     var self=this;
     if(!env||!this.topic||!this.key) return false;
-    this.sendQueue=this.sendQueue.then(function(){ return self.post(env,false); }).catch(function(){ return false; });
+    this.sendQueue=this.sendQueue.then(function(){ return self.post(env,false,0); }).catch(function(){ return false; });
     return env.n;
   }
 };
@@ -1732,8 +1784,16 @@ function setTab(which){
 }
 function updateBadge(){
   var b=$('#chat-badge');
-  if(S.unread>0){ b.hidden=false; b.textContent=String(S.unread); }
-  else b.hidden=true;
+  if(b){ if(S.unread>0){ b.hidden=false; b.textContent=String(S.unread); } else b.hidden=true; }
+  setAppBadgeCount(S.unread);
+  updateTitleBadge();
+}
+/* ホーム画面の アイコンに 数値バッジ（対応端末のみ） */
+function setAppBadgeCount(n){
+  try{
+    if(n>0){ if(navigator.setAppBadge) navigator.setAppBadge(n); }
+    else { if(navigator.clearAppBadge) navigator.clearAppBadge(); else if(navigator.setAppBadge) navigator.setAppBadge(0); }
+  }catch(e){}
 }
 function note(msg,el){ var t=$(el||'#note'); if(t) t.textContent=msg||''; }
 function setNet(state){
@@ -4492,13 +4552,32 @@ function tapSecret(){
   var t=Date.now();
   if(t-tapAt>1500) tapN=0;
   tapAt=t; tapN++;
-  if(tapN>=5){
-    tapN=0;
-    var p=pairLoad();
-    if(p&&p.sid){ resumePair().then(function(ok){ if(!ok) show('secret'); }); }
-    else show('secret');
-  }
+  if(tapN>=5){ tapN=0; show('secret'); renderMush(); }
 }
+/* 裏メニュー：ペアの きおくが あれば 🍄‍🟫 を 出す（5回で 再ログイン） */
+function renderMush(){
+  var box=$('#mush-box'); if(!box) return;
+  var has=pairHasKeys();
+  box.hidden=!has;
+  var p=has?pairLoad():null;
+  var nm=$('#mush-name'); if(nm&&p) nm.textContent=(p.peerName||'あいて');
+}
+(function(){
+  var sec=$('#s-secret'); if(!sec||$('#mush-box')) return;
+  var box=document.createElement('div');
+  box.id='mush-box'; box.hidden=true; box.className='mush-box';
+  box.innerHTML='<button id="mush-btn" type="button" aria-label="きのこ">🍄‍🟫</button>'
+    +'<p class="mush-l"><b id="mush-name">あいて</b> と また つながる</p>'
+    +'<p class="mush-s">🍄‍🟫 を 5回 タップ</p>';
+  sec.insertBefore(box,sec.firstChild);
+  var n=0,last=0;
+  box.querySelector('#mush-btn').addEventListener('click',function(){
+    var t=Date.now(); if(t-last>1500) n=0; last=t; n++;
+    if(n<5){ this.classList.add('mush-on'); var b=this; setTimeout(function(){ b.classList.remove('mush-on'); },400); return; }
+    n=0;
+    resumeConnect(false).then(function(ok){ if(!ok) toast('つなぎなおせませんでした。もう一度 おためしください。'); });
+  });
+})();
 
 /* トーク画面の 下に 「部屋を でる」を おく（上に ありすぎて とどかない ため） */
 (function(){
@@ -4506,7 +4585,7 @@ function tapSecret(){
   var row=document.createElement('div'); row.className='leave-row';
   var b=document.createElement('button');
   b.type='button'; b.className='ghost wide'; b.textContent='部屋を でる';
-  b.addEventListener('click',function(){ pairClear(); leaveRoom(); });
+  b.addEventListener('click',function(){ leaveRoom(); });
   row.appendChild(b); play.appendChild(row);
 })();
 
@@ -4520,11 +4599,30 @@ document.querySelectorAll('.hero h1,.hero .mascots,.verline,.brand').forEach(fun
 var PAIR_KEY='mtp_pair_v1';
 function pairSave(o){
   try{
-    var keep={sid:String(o.sid||''),h:o.isHost?1:0,peer:(o.peerId||''),at:Date.now(),exp:Date.now()+90*24*3600*1000};
-    if(!keep.sid) return;
+    var keep={sid:String(o.sid||'p'),h:o.isHost?1:0,peer:(o.peerId||''),peerName:o.peerName||'',
+      topic:o.topic||'',rk:o.rk||'',sk:o.sk||'',at:Date.now(),exp:Date.now()+90*24*3600*1000};
+    if(!keep.peer&&!keep.topic) return;
     localStorage.setItem(PAIR_KEY,JSON.stringify(keep));
   }catch(e){}
 }
+/* いまの ペア（鍵・とおりみち・あいて）を 端末に のこす */
+async function savePairState(){
+  try{
+    if(!S.sessKey||!Net.topic) return false;
+    var cands=[Net.roomKey,Net.legacy,Net.key].filter(Boolean);
+    var rkb=null,rk=null;
+    for(var i=0;i<cands.length;i++){
+      try{ rkb=b64(await crypto.subtle.exportKey('raw',cands[i])); rk=cands[i]; break; }catch(e){}
+    }
+    if(!rkb) return false;
+    var skb=null;
+    try{ skb=b64(await crypto.subtle.exportKey('raw',S.sessKey)); }catch(e){ return false; }
+    pairSave({peerId:(S.opp&&S.opp.id)||'',peerName:(S.opp&&S.opp.name)||'あいて',
+      isHost:S.isHost,topic:Net.topic,rk:rkb,sk:skb});
+    return true;
+  }catch(e){ return false; }
+}
+function pairHasKeys(){ var p=pairLoad(); return !!(p&&p.rk&&p.sk&&p.topic); }
 function pairLoad(){
   try{
     var v=localStorage.getItem(PAIR_KEY); if(!v) return null;
@@ -4545,6 +4643,33 @@ function persistChat(){
       try{ delete p.chat; localStorage.setItem(PAIR_KEY,JSON.stringify(p)); }catch(e){}
     }catch(e){}
   },400);
+}
+/* 保存した 鍵で そのまま つなぎなおす（ホストの 許可は そのまま 継続） */
+async function resumeConnect(silent){
+  var p=pairLoad();
+  if(!p||!p.rk||!p.sk||!p.topic) return false;
+  try{
+    var rk=await crypto.subtle.importKey('raw',unb64(p.rk),{name:'AES-GCM'},true,['encrypt','decrypt']);
+    var sk=await crypto.subtle.importKey('raw',unb64(p.sk),{name:'AES-GCM'},true,['encrypt','decrypt']);
+    S.isHost=!!p.h;
+    S.opp={id:p.peer||null,name:p.peerName||'あいて'};
+    S.paired=true; S.sealed=true; S.linked=true; S.sessKey=sk;
+    if(p.h) S.guest={did:p.peer,name:p.peerName||'あいて'};
+    Net.reset();
+    Net.connect(p.topic,rk);
+    Net.lobby=p.topic;
+    Net.switchTo(sk);
+    S.phase='play';
+    S.chatRendered=-1;
+    if($('#p-me')) $('#p-me').textContent=S.me.name||'あなた';
+    if($('#p-opp')) $('#p-opp').textContent=S.opp.name||'あいて';
+    startPing(); startWatch(); if(S.isHost) startFullWatch();
+    try{ Net.send({t:'hi2'}); }catch(e){}
+    try{ renderChat(true); }catch(e){}
+    if(!silent){ show('play'); document.querySelector('.bar').classList.add('compact'); setTab('chat'); }
+    try{ paintTopicTag(); }catch(e){}
+    return true;
+  }catch(e){ try{ window.__resumeErr=String(e&&e.message||e); }catch(_){} return false; }
 }
 /* ペアの つづきから トーク画面を ひらく */
 async function resumePair(){
@@ -4626,7 +4751,7 @@ function startPing(){
     try{ Net.send({t:'ping'}); }catch(e){}
   };
   fire();
-  S.pingTimer=setInterval(fire,40000);
+  S.pingTimer=setInterval(fire,90000);
 }
 function stopPing(){ if(S.pingTimer){ clearInterval(S.pingTimer); S.pingTimer=null; } }
 /* こまごま(端末のおぼえている あいだだけ) */
@@ -4887,6 +5012,7 @@ function maybeSendRead(){
     var mm=S.chat[i];
     if(!mm.sys&&mm.from!==S.me.id&&mm.n&&mm.n<=S.lastPeerN&&!mm.exp) mm.exp=exp;
   }
+  if(!Net.allow(2)) return;
   Net.send({t:'read',upTo:S.lastPeerN,exp:exp});
 }
 /* 消去：期限の来たメッセージを端末内から完全に取り除く(復元不可) */
@@ -4942,11 +5068,16 @@ function notifyHostAccess(txt){
   beepHost();
   try{ if('Notification' in window&&Notification.permission==='granted') new Notification('雑学王',{body:txt}); }catch(e){}
 }
+/* メッセージ着信：中身は 出さない。数値バッジと 短い通知だけ */
 function notifyIncoming(){
+  setAppBadgeCount(S.unread||1);
   if(!notifyOn) return;
-  if(S.tab==='chat'&&document.visibilityState==='visible') return;
+  if(S.tab==='chat'&&document.visibilityState==='visible'&&S.phase==='play') return;
   beepHost();
-  try{ new Notification('雑学王',{body:'あいてから おしらせが あります'}); }catch(e){}
+  try{
+    var n=new Notification('雑学王',{body:'あいてから メッセージが とどきました',tag:'mtp-chat',renotify:true});
+    n.onclick=function(){ try{ window.focus(); show('play'); setTab('chat'); }catch(e){} try{ n.close(); }catch(e){} };
+  }catch(e){}
 }
 /* しゃしん：カメラでとって あんごうチャンクで そうしんする(きろくには のこらない) */
 var PHOTO_PIECE=1300, PHOTO_MAXSIDE=512, photoBuf={};
@@ -5565,8 +5696,10 @@ function resendUnacked(all){
 /* 未達トークの再送：あいての端末に届く(受領証が返る)まで、送り側の端末だけが保持する */
 function resendUndelivered(){
   if((S.phase!=='play'||!S.paired)&&!S.linked) return;
+  if(Net.open) return;                 /* つながって いる あいだは 再送しない */
+  if(Net.coolUntil&&Date.now()<Net.coolUntil) return;
   var sent=0;
-  for(var i=0;i<S.chat.length&&sent<20;i++){
+  for(var i=0;i<S.chat.length&&sent<2;i++){
     var mm=S.chat[i];
     if(!mm.sys&&mm.from===S.me.id&&mm.n&&!mm.acked&&mm.env){ Net.resendEnv(mm.env); sent++; }
   }
@@ -5614,6 +5747,12 @@ $('#btn-leave').addEventListener('click',function(){ pairClear(); leaveRoom(); }
 function leaveRoom(){
   try{ if(typeof liveOn!=='undefined'&&liveOn) closeLive(); }catch(e){}
 
+  if(S.linked&&S.sealed){   /* ペアの あいてとは つながった まま（とじない） */
+    S.words=[]; usedMap(); S.req=null; S.turn=null; S.rendered=0; S.over=null; S.pending=null;
+    show('lobby');
+    try{ note('つながりは そのまま たもっています。メッセージは とどきます。'); }catch(e){}
+    return;
+  }
   if(S.linked){   /* ぺあ いこう:トークは つづく(きおく・あんごうかぎ も ほご) */
     Net.send({t:'bye'});
     S.opp={id:null,name:''};
@@ -5653,7 +5792,7 @@ function replyFull(to){
       S.seq++;
       var env={v:V,n:S.seq,from:S.me.id,t:'full'};
       if(to) env.to=to;
-      var body=await seal(env,S.key);
+      var body=await seal(env,(typeof Net!=='undefined'&&(Net.roomKey||Net.legacy))||S.key);
       fetch('https://ntfy.sh/'+S.topic+'?cache=yes',{method:'POST',headers:{'Content-Type':'text/plain'},body:body});
     }catch(e){}
   })();
@@ -5665,12 +5804,13 @@ function startFullWatch(){
   stopFullWatch();
   if(!S.isHost||!S.topic||!S.key) return;
   fwLast=Math.floor(Date.now()/1000)-6;
-  S.fwTimer=setInterval(fullWatchTick,5000);
+  S.fwTimer=setInterval(fullWatchTick,60000);
   fullWatchTick();
 }
 async function fullWatchTick(){
   try{
     if(!S.isHost||(!S.sealed&&!S.paired)) { stopFullWatch(); return; }
+    if(Net.open) return;                       /* つながって いる あいだは 何もしない */
     if(!S.topic||!S.key) return;
     var r=await fetch('https://ntfy.sh/'+S.topic+'/json?poll=1&since='+fwLast);
     var txt=await r.text();
@@ -5691,9 +5831,27 @@ async function fullWatchTick(){
   }catch(e){}
 }
 Net.onState=setNet;
+/* 制限で 送れなかった トークを、復帰したら 順に 送りなおす */
+setInterval(function(){
+  try{
+    if(!Net.open) return;
+    if(!S.paired&&!S.linked) return;
+    for(var i=0;i<S.chat.length;i++){
+      var m=S.chat[i];
+      if(m&&!m.sys&&m.from===S.me.id&&!m.acked&&m.env&&(m.tries||0)<4){
+        m.tries=(m.tries||0)+1;
+        Net.resendEnv(m.env);
+        break;                        /* 1通ずつ（まとめて 送らない） */
+      }
+    }
+  }catch(e){}
+},9000);
+$('#link-tag')&&$('#link-tag').addEventListener('click',function(){
+  var t=this.title||''; if(t) toast(t);
+});
 Net.onCool=function(ms){
   try{
-    toast('中継所が 混んでいます（回数制限）。'+Math.ceil(ms/1000)+'秒 まつと 自動で さいかいします。');
+    toast('いま 少し こんでいます。'+Math.ceil(ms/1000)+'秒後に 自動で つながります。');
     var e=$('#link-tag');
     if(e){ e.textContent='中継所の 回数制限中 ／ あと '+Math.ceil(ms/1000)+'秒で さいかい'; e.className='link-tag ng'; }
   }catch(e){}
@@ -5749,6 +5907,13 @@ Net.onMsg=function(m){
         break;
       }
       if(!m.pub) break;
+      /* いちど ペアに なった 相手（保存ずみ）は ホストの 許可を 継続する */
+      (function(){
+        try{
+          var p=pairLoad();
+          if(p&&p.peer&&p.peer===m.from&&S.guest&&S.guest.did===m.from){ S.joinReq={did:m.from,name:(m.name||'あいて'),pub:m.pub}; approveJoin(); }
+        }catch(e){}
+      })();
       if(S.joinReq&&S.joinReq.did!==m.from){ notifyHostAccess('ほかの 人が 入室を もとめています'); break; }
       S.joinReq={did:m.from,name:(m.name||'なまえ なし'),pub:m.pub};
       showJoinReq();
@@ -5776,6 +5941,8 @@ Net.onMsg=function(m){
           setTimeout(function(){ try{ Net.sendLegacy({t:'in3',to:m.from,pub:S.myPub}); }catch(e){} },500);
           /* ここで 2人だけの 鍵に きりかえる（以後 本番の 内容は 新鍵のみ） */
           Net.switchTo(S.sessKey);
+          S.sas=ps.tag;
+          await savePairState();
           note('2人だけの あんごうを あわせました。','#note2');
         }catch(e){ note('あんごうの あわせかたに 失敗しました。','#note2'); }
       })();
@@ -5794,6 +5961,7 @@ Net.onMsg=function(m){
           }
           S.sessKey=ps.key; S.sas=ps.tag;
           Net.switchTo(S.sessKey);
+          await savePairState();
           note('2人だけの あんごうに きりかえました。','#note2');
           if(S.phase!=='play'){
             startPlay();
@@ -5939,7 +6107,14 @@ Net.onMsg=function(m){
       break;
 
     /* 受領証：相手の端末に届いた */
-        case 'nettest':
+        case 'hi2':
+      if(!S.paired) break;
+      if(m.from!==(S.opp&&S.opp.id)) break;
+      S.lastPeer=Date.now();
+      if(!m.r) try{ Net.send({t:'hi2',r:1}); }catch(e){}
+      break;
+
+    case 'nettest':
       if(pingWait[m.id]) pingWait[m.id].got=true;
       try{ Net.send({t:'nettest-ok',id:m.id,to:m.from}); }catch(e){}
       break;
@@ -6198,11 +6373,20 @@ function topicTag(){
 }
 function paintTopicTag(){
   var e=$('#link-tag'); if(!e) return;
-  var tr=(Net.transport==='sse')?'SSE':(Net.transport==='ws')?'WebSocket':'ポーリング';
-  var st=(Net.open?('接続中('+tr+')'):('再接続中('+tr+')'));
-  var sec=Net.secure?('／2人だけの あんごう あいず '+(S.sas||'----')):'／あんごう かため中';
-  e.textContent='つうしん あいず '+topicTag()+' ／ '+st+sec+(Net.lastRecv?(' ／ 最終受信 '+fmtTime(Net.lastRecv)):'');
-  e.className='link-tag'+(Net.open?' ok':' ng');
+  var bad=(!Net.open)||!Net.secure||(Net.coolUntil&&Date.now()<Net.coolUntil);
+  if(bad){
+    var msg = (Net.coolUntil&&Date.now()<Net.coolUntil)
+      ? ('つうしん まち（あと'+Math.max(0,Math.ceil((Net.coolUntil-Date.now())/1000))+'秒）')
+      : (Net.open ? 'あんごう かため中…' : 'つなぎ中…');
+    e.textContent=msg+'　あいず '+(S.sas||'----');
+    e.className='link-tag ng';
+  }else{
+    e.textContent='あいず '+(S.sas||'----')+' ・ 接続中';
+    e.className='link-tag ok';
+  }
+  e.title='つうしん あいず '+((function(){try{return topicTag()}catch(x){return '----'}})())
+    +' ／ '+((Net.transport==='sse')?'SSE':(Net.transport==='ws')?'WebSocket':'ポーリング')
+    +' ／ '+(Net.lastRecv?('最終受信 '+fmtTime(Net.lastRecv)):'まだ 受信なし');
 }
 
 /* 待機画面に 通信テストの ボタンを 足す */
@@ -6275,6 +6459,9 @@ function igHeartFly(x){
     try{ if(S.opp&&S.opp.name){ $('#ig-name').textContent=S.opp.name; } }catch(e){}
   };
 })();
+/* 起動：ペアの きおくが あれば しずかに つなぐ（メッセージ・通知は とどく） */
+setTimeout(function(){ try{ if(pairHasKeys()) resumeConnect(true); }catch(e){} },1200);
+
 /* 起動 */
 if(isLocalFile()){
   var lh=$('#local-hint');
