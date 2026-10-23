@@ -709,7 +709,7 @@ label,.lead,.hint{color:#6B7280!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v111</b>｜ビルド 2026-10-23 17:00（通信を 最小に しぼる）</p>
+      <p class="verline">バージョン <b id="ver">v114</b>｜ビルド 2026-10-23 22:45（テレビ電話が とまる 場所を 見えるように・やりなおし 3回）</p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -782,7 +782,7 @@ label,.lead,.hint{color:#6B7280!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v111</b>｜ビルド 2026-10-23 17:00（通信を 最小に しぼる）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v114</b>｜ビルド 2026-10-23 22:45（テレビ電話が とまる 場所を 見えるように・やりなおし 3回）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -1701,8 +1701,10 @@ var Net={
       var noCache='';   /* v105: 中継所に のこす（暗号文のみ・最長12時間）。ポーリングで 取りもどせる ようにする */   /* 中継サーバーに 一切 保存させない(記録を のこさない) */  /* メッセージ・写真・ライブは中継に保存させない */
       var r=await fetch('https://ntfy.sh/'+this.topic+noCache,{method:'POST',headers:{'Content-Type':'text/plain'},body:body});
       this.lastPostStatus=r.status;
-      if(r.status===429){
-        this.hit429();
+      if(r.status===429||r.status===503){
+        var ra=0;
+        try{ ra=parseInt(r.headers&&r.headers.get&&r.headers.get('retry-after')||'0',10); }catch(e){}
+        this.hit429(ra>0?ra*1000:45000);
         return false;
       }
       if(!r.ok){
@@ -5182,6 +5184,27 @@ function toast(msg){
   clearTimeout(toast._t); toast._t=setTimeout(function(){ t.className=''; },4600);
 }
 
+/* ===== v114: 失敗した 場所を のこす（実機の しんだん用） ===== */
+function callDiagLog(step,err){
+  var nm=(err&&(err.name||''))||'', ms=(err&&(err.message||''))||'';
+  var line=step+(nm?('['+nm+(ms?(': '+String(ms).slice(0,90)):'')+']'):'');
+  window.__callDiag=window.__callDiag||[];
+  window.__callDiag.push(line);
+  if(window.__callDiag.length>20) window.__callDiag=window.__callDiag.slice(-20);
+  try{ console.log('[call]',line); }catch(e){}
+  return line;
+}
+function callDiagText(){
+  var a=window.__callDiag||[];
+  return a.slice(-3).join(' → ');
+}
+function callFail(where,err){
+  var nm=(err&&(err.name||''))||'';
+  var line=callDiagLog(where,err);
+  try{ note('テレビ電話が とまりました（しんだん: '+line+'）','#note2'); }catch(e){}
+  toast('テレビ電話を はじめられませんでした（'+where+(nm?': '+nm:'')+'）。「＋」から しゃしんを おくれます。');
+  try{ stopCall(false); }catch(e){}
+}
 /* ===== v92: テレビ電話(WebRTC) ===== */
 var callOn=false, callVideo=false, callStream=null, curFacing='user', callT0=0, callTimer=null, callHide=false;
 function tuneSenders(){
@@ -5269,27 +5292,53 @@ async function flipCam(){
     curFacing=next; tuneSenders();
   }catch(e){ toast('カメラを きりかえられません。'); }
 }
+var callBusy=false;
 $('#btn-live').addEventListener('click',async function(){
   if(callOn&&callVideo){ stopCall(); return; }
-  if(S.phase!=='play'){ toast('まだ 部屋に 入っていません。'); return; }
+  if(S.phase!=='play'&&!S.linked){ toast('まだ 部屋に 入っていません。'); return; }
   if(!(window.RTCPeerConnection&&navigator.mediaDevices&&navigator.mediaDevices.getUserMedia)){
     toast('この ブラウザでは テレビ電話を つかえません。Safari か Chrome で ひらいてください。'); return;
   }
-  if(rtcOn) stopCall(false);          /* でんわ中なら かけなおし */
-  toast('カメラと マイクの きょかを もとめています…');
-  var gm=await getCallMedia(true);
-  if(gm!==true){
-    var nm=(gm&&gm.name)||'';
-    if(nm==='NotAllowedError'||nm==='SecurityError') toast('カメラ／マイクが きょか されていません。アドレスバーの 左の「aA」→ サイトの設定 → カメラと マイクを きょか して、もういちど 押してください。');
-    else if(nm==='NotFoundError'||nm==='DevicesNotFoundError') toast('カメラが 見つかりません。');
-    else if(nm==='NotReadableError') toast('カメラを ひらけません。ほかの アプリが つかっていないか かくにんしてください。');
-    else toast('カメラ／マイクを ひらけませんでした（'+nm+'）。');
-    return;
+  if(callBusy) return;
+  callBusy=true;
+  try{
+    if(rtcOn) stopCall(false);
+    toast('カメラと マイクの きょかを もとめています…');
+    var gm=await getCallMedia(true);
+    if(gm!==true){
+      var nm=(gm&&gm.name)||'';
+      callDiagLog('getUserMedia',gm);
+      if(nm==='NotAllowedError'||nm==='SecurityError') toast('カメラ／マイクが きょか されていません。アドレスバーの 左の「aA」→ サイトの設定 → カメラと マイクを きょか して、もういちど 押してください。');
+      else if(nm==='NotFoundError'||nm==='DevicesNotFoundError') toast('カメラが 見つかりません。');
+      else if(nm==='NotReadableError') toast('カメラを ひらけません。ほかの アプリが つかっていないか かくにんしてください。');
+      else toast('カメラ／マイクを ひらけませんでした（'+nm+'）。');
+      return;
+    }
+    callDiagLog('media-ok',null);
+    openCallUI();
+    /* iOS は カメラが ひらいた 直後の createOffer が こけやすい → 少し まって やりなおす */
+    var last=null;
+    for(var t=0;t<3;t++){
+      if(t>0) await new Promise(function(r){ setTimeout(r,700); });
+      try{ await rtcStart(true); last=null; break; }
+      catch(e){
+        last=e||new Error('unknown');
+        callDiagLog('rtcStart#'+(t+1),last);
+        try{ if(pc) pc.close(); }catch(e2){}
+        pc=null; rtcOn=false; callOn=false;
+        var src2=callStream;
+        if(src2&&src2.getTracks) src2.getTracks().forEach(function(tr){ if(tr.readyState==='ended'){ try{ callStream=null; }catch(e3){} } });
+      }
+    }
+    if(last){ callFail('createOffer',last); return; }
+    toast('テレビ電話を はじめました。');
+  }catch(e){
+    callFail('live-button',e);
+  }finally{
+    callBusy=false;
   }
-  openCallUI();
-  try{ rtcStart(true); }catch(e){ toast('テレビ電話を はじめられませんでした。'); stopCall(); return; }
-  toast('テレビ電話を はじめました。');
 });
+
 function snapLive(){
   if(!liveOn||!liveStream||liveDark) return;
   var v=$('#live-vid');
@@ -5410,7 +5459,9 @@ $('#btn-call').addEventListener('click',async function(){
   var gm=await getCallMedia(false);
   if(gm!==true){ this.textContent='電話:不可'; toast('マイクを つかえません（'+((gm&&gm.name)||'')+'）。'); return; }
   voiceChunkOn=false;
-  try{ rtcStart(true); this.textContent='電話:つなぐ中…'; }catch(e){ stopMic(); this.textContent='電話:不可'; }
+  var self2=this;
+  rtcStart(true).then(function(){ self2.textContent='電話:つなぐ中…'; })
+    .catch(function(e){ callDiagLog('rtcStart-voice',e); stopMic(); self2.textContent='電話:不可'; toast('電話を はじめられませんでした（'+(e&&e.name||'')+'）。'); });
 });
 /* 通話は いつでも 『どこでも つながる』ように STUN を つかう。
    STUN は『相手の ばしょ』を さがす ためだけ。音声は DTLS-SRTP で 端末どうしが 暗号化する
@@ -5435,6 +5486,8 @@ function rtcStart(isCaller){
     }
   };
   pc.onicecandidate=function(e){ if(e.candidate) Net.send({t:'rtc-ice',c:JSON.stringify(e.candidate)}); };
+  pc.onicecandidateerror=function(e){ try{ callDiagLog('ice',{name:'ice'+(e&&e.errorCode||''),message:(e&&e.errorText)||''}); }catch(x){} };
+  pc.onicegatheringstatechange=function(){ try{ if(pc) callDiagLog('gather:'+pc.iceGatheringState,null); }catch(x){} };
   pc.onconnectionstatechange=function(){
     var cb=$('#btn-call');
     var stt=$('#call-state');
@@ -5462,11 +5515,20 @@ function rtcStart(isCaller){
     }
   };
   if(isCaller){
-    pc.createOffer().then(function(o){ return pc.setLocalDescription(o); }).then(function(){
-      rtcSendSdp('offer',JSON.stringify(pc.localDescription));
-      setTimeout(tuneSenders,800);
-    }).catch(function(){ toast('テレビ電話を はじめられませんでした。'); stopCall(); });
+    return new Promise(function(res,rej){
+      if(!pc){ rej(new Error('no-pc')); return; }
+      var settled=false;
+      var to=setTimeout(function(){ if(!settled){ settled=true; rej(new Error('createOffer-timeout')); } },9000);
+      pc.createOffer().then(function(o){ return pc.setLocalDescription(o); }).then(function(){
+        rtcSendSdp('offer',JSON.stringify(pc.localDescription));
+        setTimeout(tuneSenders,800);
+        if(!settled){ settled=true; clearTimeout(to); res(true); }
+      }).catch(function(e){
+        if(!settled){ settled=true; clearTimeout(to); rej(e||new Error('createOffer-failed')); }
+      });
+    });
   }
+  return Promise.resolve(true);
 }
 function rtcSendSdp(kind,sdpStr){
   var id='S'+Date.now().toString(36)+((Math.random()*1e6)|0).toString(36);
@@ -5636,6 +5698,50 @@ $('#in-chat').addEventListener('keydown',function(e){ if(e.key==='Enter'&&e.isCo
   }
 })();
 var lastChatAt=0;
+/* 送信待ちの まとめ送り（1回の POST で 最大8通） */
+var OUT_KEY='mtp_out_v1';
+function outLoad(){ try{ return JSON.parse(localStorage.getItem(OUT_KEY)||'[]')||[]; }catch(e){ return []; } }
+function outSave(){
+  try{
+    var a=(S.outbox||[]).map(function(x){ return {text:x.text,at:x.at}; });
+    if(!a.length){ localStorage.removeItem(OUT_KEY); return; }
+    localStorage.setItem(OUT_KEY,JSON.stringify(a));
+  }catch(e){}
+}
+function queueChat(txt,at){
+  S.outbox=S.outbox||outLoad();
+  var item={text:txt,at:at||Date.now()};
+  S.outbox.push(item);
+  outSave();
+  var msg={from:S.me.id,text:txt,at:item.at,sent:false,acked:false,delivered:false,tries:0,n:0,uid:String(++UID)};
+  S.chat.push(msg);
+  item.msg=msg;
+  renderChat(true);
+  if(!S.flushT) S.flushT=setTimeout(function(){ S.flushT=null; flushOutbox(); },400);
+  return msg;
+}
+function flushOutbox(){
+  S.outbox=S.outbox||outLoad();
+  if(!S.outbox.length) return;
+  if(!Net.topic||!Net.key) return;
+  if(Net.coolUntil&&Date.now()<Net.coolUntil){ setTimeout(flushOutbox,3000); return; }
+  var items=S.outbox.slice(0,8);
+  var payload=items.map(function(x){ return {text:x.text,at:x.at}; });
+  var msgs=items.map(function(x){ return x.msg; }).filter(Boolean);
+  var envSent=Net.send({t:'chats',items:payload},function(ok){
+    if(ok){
+      S.outbox=S.outbox.filter(function(x){ return items.indexOf(x)<0; });
+      outSave();
+      msgs.forEach(function(m){ if(m){ m.sent=true; m.delivered=true; } });
+    }else{
+      msgs.forEach(function(m){ if(m){ m.tries=(m.tries||0)+1; } });
+      setTimeout(flushOutbox,2500);
+    }
+    if(S.tab==='chat') renderChat(true);
+  });
+  if(envSent&&envSent.n) msgs.forEach(function(m){ m.n=envSent.n; });
+  if(S.outbox.length>8) setTimeout(flushOutbox,1200);
+}
 function submitChat(){
   if(!(S.phase==='play'&&S.paired)&&!(S.linked&&S.key&&S.topic)){
     toast('まだ つながっていません。少し まって もう一度 おしてください。'); return;
@@ -5643,27 +5749,8 @@ function submitChat(){
   var inp=$('#in-chat');
   var txt=(inp.value||'').replace(/\s+$/,'').slice(0,MAX_CHAT);
   if(!txt.trim()) return;
-  var now=Date.now();
-  if(now-lastChatAt<250) return;
-  lastChatAt=now;
   inp.value='';
-  var msg={from:S.me.id,text:txt,at:now,sent:false,n:0,acked:false,tries:0,env:null,uid:String(++UID)};
-  S.chat.push(msg);
-  var envSent=Net.send({t:'chat',text:txt,at:now},function(ok){
-    msg.sent=!!ok;
-    if(!ok&&msg.tries<6){ setTimeout(function(){ sendAgain(msg); },1200); }
-    if(S.tab==='chat') renderChat(true);
-  });
-  msg.n=envSent?envSent.n:0;
-  msg.env=envSent||null;
-  msg.tries=1;
-  renderChat(true);
-  setTimeout(function(){ if(!msg.acked) sendAgain(msg); },5000);
-  setTimeout(function(){
-    if(msg.acked) return;
-    if(Net.coolUntil&&Date.now()<Net.coolUntil){ return; }   /* 制限中は 再送しない */
-    toast('メッセージが とどきません。少し まってから もう一度 おしてください。');
-  },14000);
+  queueChat(txt,Date.now());
 }
 function sendAgain(msg){
   try{
@@ -5798,14 +5885,7 @@ setInterval(function(){
     if(!Net.open) return;
     if(Net.coolUntil&&Date.now()<Net.coolUntil) return;
     if(!S.paired&&!S.linked) return;
-    for(var i=0;i<S.chat.length;i++){
-      var m=S.chat[i];
-      if(m&&!m.sys&&m.from===S.me.id&&!m.acked&&m.env&&(m.tries||0)<12){
-        m.tries=(m.tries||0)+1;
-        Net.resendEnv(m.env);
-        break;                     /* 1通ずつ */
-      }
-    }
+    if(S.outbox&&S.outbox.length){ flushOutbox(); }
     if(S.tab==='chat') renderChat(true);
   }catch(e){}
 },4000);
@@ -6088,11 +6168,10 @@ Net.onMsg=function(m){
 
 case 'ack':
       if(m.from===S.me.id) break;
-      /* あいてが うけとった しるし → ここまでの 自分の メッセージを 届いた ことにする */
       (function(up){
         for(var ai=0;ai<S.chat.length;ai++){
           var am=S.chat[ai];
-          if(am&&!am.sys&&am.from===S.me.id&&am.n&&am.n<=up) am.acked=true;
+          if(am&&!am.sys&&am.from===S.me.id&&am.n&&am.n<=up){ am.acked=true; am.delivered=true; }
         }
         if(S.tab==='chat') renderChat(true);
       })(m.upTo||0);
@@ -6161,6 +6240,26 @@ case 'ack':
       if(typeof m.rn!=='number') break;
       if(S.qz&&m.rn<=S.qz.n) break;
       qzStart(m.rn);
+      break;
+
+    case 'chats':
+      (function(list){
+        if(!Array.isArray(list)) return;
+        var viewing=(S.phase==='play'&&S.tab==='chat'&&document.visibilityState==='visible');
+        var added=0;
+        for(var i=0;i<list.length&&i<16;i++){
+          var it=list[i]||{};
+          var tx=String(it.text||'').slice(0,MAX_CHAT);
+          if(!tx) continue;
+          S.chat.push({from:m.from,text:tx,at:(typeof it.at==='number'?it.at:Date.now()),sent:true,n:m.n||0});
+          added++;
+        }
+        if(!added) return;
+        if(!viewing){ S.unread=(S.unread||0)+added; updateBadge(); }
+        notifyIncoming();
+        if(m.n) try{ Net.send({t:'ack',upTo:m.n}); }catch(e){}
+        if(S.tab==='chat') renderChat(true);
+      })(m.items);
       break;
 
     case 'chat':
@@ -6286,9 +6385,10 @@ window.addEventListener('offline',function(){ try{ toast('回線が きれまし
         var mm=byUid[uid]; if(!mm) continue;
         var mk=el.querySelector('.snd');
         if(!mk){ mk=document.createElement('span'); mk.className='snd'; el.appendChild(mk); }
-        if(mm.acked){ mk.textContent='✓✓'; mk.className='snd done'; mk.title='とどきました'; }
-        else if((mm.tries||0)>3){ mk.textContent='未達'; mk.className='snd retry'; mk.title='おくりなおしています（電波を まっています）'; }
-        else { mk.textContent='✓'; mk.className='snd sending'; mk.title='おくっています'; }
+        if(mm.acked){ mk.textContent='既読'; mk.className='snd done'; mk.title='あいてが よみました'; }
+        else if(mm.delivered||mm.sent){ mk.textContent='✓'; mk.className='snd done'; mk.title='とどきました'; }
+        else if((mm.tries||0)>=6){ mk.textContent='未達'; mk.className='snd retry'; mk.title='おくりなおしています（電波を まっています）'; }
+        else { mk.textContent='…'; mk.className='snd sending'; mk.title='おくっています'; }
       }
     }catch(e){}
   };
@@ -6421,6 +6521,8 @@ function igHeartFly(x){
     try{ if(S.opp&&S.opp.name){ $('#ig-name').textContent=S.opp.name; } }catch(e){}
   };
 })();
+/* 送信待ちが のこって いれば 復元して 送る */
+setTimeout(function(){ try{ S.outbox=outLoad(); if(S.outbox.length){ flushOutbox(); } }catch(e){} },3000);
 /* 起動：ペアの きおくが あれば しずかに つなぐ（メッセージ・通知は とどく） */
 setTimeout(function(){ try{ if(pairHasKeys()) resumeConnect(true); }catch(e){} },1200);
 
