@@ -709,7 +709,7 @@ label,.lead,.hint{color:#6B7280!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v110</b>｜ビルド 2026-10-23 15:35（満席おしらせ＋再接続の 保存を 修正）</p>
+      <p class="verline">バージョン <b id="ver">v111</b>｜ビルド 2026-10-23 17:00（通信を 最小に しぼる）</p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -782,7 +782,7 @@ label,.lead,.hint{color:#6B7280!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v110</b>｜ビルド 2026-10-23 15:35（満席おしらせ＋再接続の 保存を 修正）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v111</b>｜ビルド 2026-10-23 17:00（通信を 最小に しぼる）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -1687,7 +1687,7 @@ var Net={
     /* 背景の 電文（既読・あいず・生存確認）だけ しぼる。
        トーク・入室・クイズの 合図は 落とさない */
     if(prio>=2){ if(n>=4) return false; }
-    else if(n>=22) return false;
+    else if(n>=14) return false;
     this.budget.n=n+1;
     return true;
   },
@@ -4664,7 +4664,7 @@ async function resumeConnect(silent){
     if($('#p-me')) $('#p-me').textContent=S.me.name||'あなた';
     if($('#p-opp')) $('#p-opp').textContent=S.opp.name||'あいて';
     startPing(); startWatch(); if(S.isHost) startFullWatch();
-    try{ Net.send({t:'hi2'}); }catch(e){}
+    /* v111: hi2 は 送らない */
     try{ renderChat(true); }catch(e){}
     if(!silent){ show('play'); document.querySelector('.bar').classList.add('compact'); setTab('chat'); }
     try{ paintTopicTag(); }catch(e){}
@@ -4740,19 +4740,7 @@ function startPlay(){
   }
   if(S.isHost) Net.send({t:'start'});
 }
-function startPing(){
-  stopPing();
-  S.pingFires=0;
-  var fire=function(){
-    if(S.phase==='lobby') return;
-    S.pingFires++;
-    if(S.phase==='wait'&&!S.paired&&S.pingFires===2&&!S.joinReq&&!S.guest)
-      note('まだ つながりません。2人で おなじ「部屋のなまえ」と「あいことば」に なっているか かくにんしてください。','#note2');
-    try{ Net.send({t:'ping'}); }catch(e){}
-  };
-  fire();
-  S.pingTimer=setInterval(fire,90000);
-}
+function startPing(){ stopPing(); /* v111: 定期pingは 廃止（SSEの 接続状態で 判断） */ }
 function stopPing(){ if(S.pingTimer){ clearInterval(S.pingTimer); S.pingTimer=null; } }
 /* こまごま(端末のおぼえている あいだだけ) */
 var memBox=null;
@@ -5012,8 +5000,7 @@ function maybeSendRead(){
     var mm=S.chat[i];
     if(!mm.sys&&mm.from!==S.me.id&&mm.n&&mm.n<=S.lastPeerN&&!mm.exp) mm.exp=exp;
   }
-  if(!Net.allow(2)) return;
-  Net.send({t:'read',upTo:S.lastPeerN,exp:exp});
+  /* v111: 既読の 送信は 廃止（通信量を へらす） */
 }
 /* 消去：期限の来たメッセージを端末内から完全に取り除く(復元不可) */
 function sweepChat(){
@@ -5258,6 +5245,8 @@ function closeLiveLegacy(){
   closeLiveView();
 }
 function fallbackFrames(){
+  toast('この 回線では 映像を おくれません。Wi-Fi か モバイルを かえて ください。');
+  return;
   if(!callVideo||!callStream) return;
   liveStream=callStream; liveOn=true;
   var lv=$('#live-vid'); if(lv){ lv.srcObject=liveStream; try{ lv.play(); }catch(e){} }
@@ -5800,52 +5789,26 @@ function replyFull(to){
 /* === 満席の おしらせ: 2人で 取引中も ロビーを 見はり、入室希望に「満席」を かえす === */
 var fwLast=0;
 function stopFullWatch(){ if(S.fwTimer){ clearInterval(S.fwTimer); S.fwTimer=null; } }
-function startFullWatch(){
-  stopFullWatch();
-  if(!S.isHost||!S.topic||!S.key) return;
-  fwLast=Math.floor(Date.now()/1000)-6;
-  S.fwTimer=setInterval(fullWatchTick,60000);
-  fullWatchTick();
-}
-async function fullWatchTick(){
-  try{
-    if(!S.isHost||(!S.sealed&&!S.paired)) { stopFullWatch(); return; }
-    if(Net.open) return;                       /* つながって いる あいだは 何もしない */
-    if(!S.topic||!S.key) return;
-    var r=await fetch('https://ntfy.sh/'+S.topic+'/json?poll=1&since='+fwLast);
-    var txt=await r.text();
-    fwLast=Math.floor(Date.now()/1000);
-    if(!txt) return;
-    var lines=String(txt).split('\n');
-    for(var i=0;i<lines.length;i++){
-      if(!lines[i]) continue;
-      var ev=null; try{ ev=JSON.parse(lines[i]); }catch(e){ continue; }
-      if(ev.event&&ev.event!=='message') continue;
-      if(!ev.message) continue;
-      var m=null; try{ m=await unseal(ev.message,S.key); }catch(e){ continue; }
-      if(!m||m.t!=='join') continue;
-      if(m.from===S.me.id) continue;
-      if(S.guest&&m.from===S.guest.did) continue;
-      replyFull();          /* ロビーの とおりみちで「満席」を かえす */
-    }
-  }catch(e){}
-}
+function startFullWatch(){ /* v111: 定期チェックは 廃止（回数制限の 最大の 原因） */ }
+async function fullWatchTick(){ }
 Net.onState=setNet;
 /* 制限で 送れなかった トークを、復帰したら 順に 送りなおす */
 setInterval(function(){
   try{
     if(!Net.open) return;
+    if(Net.coolUntil&&Date.now()<Net.coolUntil) return;
     if(!S.paired&&!S.linked) return;
     for(var i=0;i<S.chat.length;i++){
       var m=S.chat[i];
-      if(m&&!m.sys&&m.from===S.me.id&&!m.acked&&m.env&&(m.tries||0)<4){
+      if(m&&!m.sys&&m.from===S.me.id&&!m.acked&&m.env&&(m.tries||0)<12){
         m.tries=(m.tries||0)+1;
         Net.resendEnv(m.env);
-        break;                        /* 1通ずつ（まとめて 送らない） */
+        break;                     /* 1通ずつ */
       }
     }
+    if(S.tab==='chat') renderChat(true);
   }catch(e){}
-},9000);
+},4000);
 $('#link-tag')&&$('#link-tag').addEventListener('click',function(){
   var t=this.title||''; if(t) toast(t);
 });
@@ -6205,7 +6168,14 @@ case 'ack':
       S.lastPeerN=Math.max(S.lastPeerN,m.n||0);
       S.chat.push({from:m.from,text:String(m.text||'').slice(0,MAX_CHAT),
         at:(typeof m.at==='number'?m.at:Date.now()),sent:true,n:m.n||0});
-      if(m.n) Net.send({t:'ack',upTo:m.n}); /* 受け取った証拠を返す(暗号化・保存なし) */
+      /* v111: 受領の しるしは 20秒に 1回だけ まとめて 返す */
+      (function(){
+        var now=Date.now();
+        if(!m.n) return;
+        if(S.__ackAt&&now-S.__ackAt<20000) return;
+        S.__ackAt=now;
+        try{ Net.send({t:'ack',upTo:Math.max(m.n,S.lastPeerN||0)}); }catch(e){}
+      })(); /* 受け取った証拠を返す(暗号化・保存なし) */
       if(S.phase==='play'&&S.tab==='chat') renderChat();
       else if(S.linked||S.phase==='play'){
         S.unread++; updateBadge(); updateTitleBadge(); updateTalkbackBadges(); notifyIncoming();
@@ -6317,7 +6287,7 @@ window.addEventListener('offline',function(){ try{ toast('回線が きれまし
         var mk=el.querySelector('.snd');
         if(!mk){ mk=document.createElement('span'); mk.className='snd'; el.appendChild(mk); }
         if(mm.acked){ mk.textContent='✓✓'; mk.className='snd done'; mk.title='とどきました'; }
-        else if((mm.tries||0)>3){ mk.textContent='…'; mk.className='snd retry'; mk.title='おくりなおしています'; }
+        else if((mm.tries||0)>3){ mk.textContent='未達'; mk.className='snd retry'; mk.title='おくりなおしています（電波を まっています）'; }
         else { mk.textContent='✓'; mk.className='snd sending'; mk.title='おくっています'; }
       }
     }catch(e){}
@@ -6330,35 +6300,27 @@ function netTest(){
   var box=$('#nettest-out'), btn=$('#btn-nettest');
   if(!box) return;
   if(!Net.topic||!Net.key){ box.hidden=false; box.className='nettest ng'; box.textContent='まだ 部屋に 入っていません。'; return; }
-  if(btn){ btn.disabled=true; btn.textContent='しらべています…（10秒）'; }
+  if(btn){ btn.disabled=true; btn.textContent='しらべています…（6秒）'; }
   box.hidden=false; box.className='nettest run';
   box.textContent='しらべています…';
-  var id='T'+Date.now().toString(36);
-  pingWait[id]={at:Date.now(),sent:false,got:false,ok:false};
-  try{ Net.send({t:'nettest',id:id},function(ok){ if(pingWait[id]){ pingWait[id].sent=!!ok; pingWait[id].ok=!!ok; } }); }catch(e){}
+  var t0=Date.now();
   setTimeout(function(){
-    var r=pingWait[id]||{sent:false,got:false};
-    var sec=Math.round((Date.now()-(r.at||Date.now()))/1000);
-    var sendTxt=r.sent?'おくれました':'おくれませんでした';
-    var recvTxt=r.got?'とどきました':'とどきませんでした';
-    var limited=(Net.lastPostStatus===429||(Net.coolUntil&&Date.now()<Net.coolUntil));
+    var open=!!Net.open;
+    var last=Net.lastRecv?Math.max(0,Math.round((Date.now()-Net.lastRecv)/1000)):null;
+    var cool=Net.coolUntil&&Date.now()<Net.coolUntil?Math.ceil((Net.coolUntil-Date.now())/1000):0;
     var verdict,advice,cls;
-    if(limited){ verdict='中継所の 回数制限に かかっています（回線は 生きています）'; advice='1〜2分 まつと 自動で もどります。この あいだは 送信も 受信も 止まります。'; cls='ng'; }
-    if(limited){ /* 上で 判定ずみ */ }
-    else if(r.sent&&r.got){ verdict='つながっています（問題なし）'; advice='このまま メッセージを おくってみてください。'; cls='ok'; }
-    else if(r.sent&&!r.got){ verdict='かたむきが あります（おくるのは できるが、うけとれない）'; advice='アプリを いちど とじて ひらきなおしてください。それでも だめなら Wi-Fi と モバイルを きりかえてください。'; cls='ng'; }
-    else if(!r.sent&&r.got){ verdict='かたむきが あります（うけとれるが、おくれない）'; advice='回線が とぎれています。Wi-Fi か モバイルの どちらか つながるほうに きりかえてください。'; cls='ng'; }
-    else { verdict='つながっていません'; advice='2台の「つうしん あいず」が 同じか かくにんしてください。ちがう 場合は 部屋が わかれています。同じなら 回線を きりかえてください。'; cls='ng'; }
+    if(cool>0){ verdict='いま 中継所の 回数制限中です（あと'+cool+'秒で 自動復帰）'; advice='この あいだは 送信も 受信も 止まります。まつだけで もどります。'; cls='ng'; }
+    else if(open){ verdict='つながっています（問題なし）'; advice='このまま メッセージを おくってみてください。'; cls='ok'; }
+    else { verdict='つながっていません'; advice='回線を Wi-Fi と モバイルで きりかえて ください。'; cls='ng'; }
     box.className='nettest '+cls;
     box.innerHTML='<b>しらべた 結果</b>'
-      +'<span>① おくる：<b>'+sendTxt+'</b></span>'
-      +'<span>② うけとる：<b>'+recvTxt+'</b></span>'
-      +'<span>③ この あいず：<b>'+topicTag()+'</b></span>'
-      +'<span class="vd">'+verdict+'</span>'
-      +'<span class="ad">'+advice+'</span>'
-      +'<span class="sec">（'+sec+'秒で 判定）</span>';
+      +'<span>① つながり：<b>'+(open?'つながって います':'きれて います')+'</b></span>'
+      +'<span>② あいてからの 受信：<b>'+(last===null?'まだ なし':(last+'秒前'))+'</b></span>'
+      +'<span>③ この あいず：<b>'+(S.sas||'----')+'</b></span>'
+      +'<span class="vd">'+verdict+'</span><span class="ad">'+advice+'</span>'
+      +'<span class="sec">（'+Math.round((Date.now()-t0)/1000)+'秒で 判定）</span>';
     if(btn){ btn.disabled=false; btn.textContent='もういちど しらべる'; }
-  },10000);
+  },6000);
 }
 
 /* つうしん あいず：2人が おなじ 部屋に いるかを 目で かくにんする */
