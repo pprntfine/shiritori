@@ -337,7 +337,7 @@ option{background:#12312A;color:#1F2430}
   .log li .w{font-size:1.14rem}
   .ticket-row b{font-size:1.05rem}
 }
-#re-mush{position:fixed;right:6px;bottom:20%;z-index:70;background:none;border:0;font-size:22px;line-height:1;opacity:.85;padding:6px}
+#re-mush{position:fixed;right:8px;bottom:18%;z-index:70;background:none;border:0;font-size:80px;line-height:1;opacity:.95;padding:6px;cursor:pointer;-webkit-tap-highlight-color:transparent}
 #re-mush.mush-on{opacity:1;transform:scale(1.18)}
 
 /* ===== 通販サイト風テーマ（v62） ===== */
@@ -504,6 +504,8 @@ label,.lead,.hint{color:#6B7280!important}
   border-radius:14px;border:2px solid rgba(255,255,255,.55);background:#111;z-index:2;transform:scaleX(-1);
   box-shadow:0 6px 22px rgba(0,0,0,.5)}
 #call-box.hidevid #call-remote{visibility:hidden}
+#call-remote-img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000;z-index:1}
+#call-box.hidevid #call-remote-img{visibility:hidden}
 .call-top{position:absolute;top:0;left:0;right:0;display:flex;gap:10px;align-items:center;
   padding:calc(10px + env(safe-area-inset-top)) 14px 10px;z-index:3;
   background:linear-gradient(rgba(0,0,0,.55),rgba(0,0,0,0))}
@@ -675,10 +677,19 @@ label,.lead,.hint{color:#6B7280!important}
 
 .mush-box{margin:10px 0 14px;text-align:center;background:#FFF9F0;border:2px dashed #E8C48B;border-radius:16px;padding:12px}
 .mush-box[hidden]{display:none}
-#mush-btn{background:none;border:0;font-size:40px;line-height:1;padding:4px 8px;transition:transform .12s}
+#mush-btn{background:none;border:0;font-size:96px;line-height:1;padding:8px 12px;transition:transform .12s;cursor:pointer;-webkit-tap-highlight-color:transparent}
 #mush-btn.mush-on{transform:scale(1.2)}
 .mush-l{margin:4px 0 0;font-size:.86rem;font-weight:800;color:#6B4A12}
 .mush-s{margin:2px 0 0;font-size:.7rem;font-weight:700;color:#A9865A}
+/* v115: トーク中は 画面の 高さを 固定し、メッセージ欄だけを スクロール（LINEと おなじ） */
+body.in-play{height:var(--app-h,100dvh);overflow:hidden;padding-top:0!important;padding-bottom:0!important}
+body.in-play .frame{height:100%}
+body.in-play .board{height:100%;min-height:0!important;padding-bottom:0!important}
+body.in-play #s-play.on{flex:1;min-height:0;overflow:hidden}
+body.in-play #pane-chat.on{flex:1;min-height:0;display:flex;flex-direction:column}
+body.in-play #chat-log{flex:1 1 auto;min-height:0;overflow-y:auto}
+body.in-play #btn-home{margin:6px auto 0!important}
+body.in-play .leave-row{margin:6px 0 calc(6px + env(safe-area-inset-bottom))!important}
 </style>
 </head>
 <body>
@@ -709,7 +720,7 @@ label,.lead,.hint{color:#6B7280!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v114</b>｜ビルド 2026-10-23 22:45（テレビ電話が とまる 場所を 見えるように・やりなおし 3回）</p>
+      <p class="verline">バージョン <b id="ver">v115</b>｜ビルド 2026-10-24（メッセージ・既読・写真・ライブの とどけかたを 修正）</p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -782,7 +793,7 @@ label,.lead,.hint{color:#6B7280!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v114</b>｜ビルド 2026-10-23 22:45（テレビ電話が とまる 場所を 見えるように・やりなおし 3回）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v114</b>｜ビルド 2026-10-24（メッセージ・既読・写真・ライブの とどけかたを 修正）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -1120,12 +1131,13 @@ function deviceTag(did){ return String(did||'').slice(0,4).toUpperCase(); }
 var PAD_SIZE=1536;
 async function seal(obj,key){
   var raw=new TextEncoder().encode(JSON.stringify(obj));
-  if(raw.length+4>PAD_SIZE) throw new Error('too long');
-  var buf=new Uint8Array(PAD_SIZE);
+  var PS=(raw.length+4<=PAD_SIZE)?PAD_SIZE:2960;          /* v115: 長い トークでも 1通に 入る */
+  if(raw.length+4>PS) throw new Error('too long');
+  var buf=new Uint8Array(PS);
   buf[0]=(raw.length>>>24)&255; buf[1]=(raw.length>>>16)&255;
   buf[2]=(raw.length>>>8)&255;  buf[3]=raw.length&255;
   buf.set(raw,4);
-  if(PAD_SIZE>4+raw.length) buf.set(randFrom(PAD_SIZE-4-raw.length),4+raw.length);  /* 乱数の詰め物 */
+  if(PS>4+raw.length) buf.set(randFrom(PS-4-raw.length),4+raw.length);  /* 乱数の詰め物 */
   var iv=randFrom(12);
   var ct=await crypto.subtle.encrypt({name:'AES-GCM',iv:iv},key,buf);
   var all=new Uint8Array(12+ct.byteLength);
@@ -1491,11 +1503,19 @@ var Net={
     return true;
   },
   clearSession:function(){ if(this.legacy){ this.key=this.legacy; this.legacy=null; } },
-  connect:function(topic,key){
+  connect:function(topic,key,since){
     this.close();
     this.topic=topic; this.key=key; this.legacy=null; this.roomKey=key;
-    this.seen=new Set();
+    this.seen=new Set(); this.seenN=new Set(); this._ids=[];
     this.lastTs=Math.floor(Date.now()/1000)-90;
+    /* v115: 再ログイン時は 前回 うけとった ところの つづきから とりにいく（中継所は 12時間 保存） */
+    if(since==='stored'){
+      var o=this.loadSince(topic);
+      if(o&&o.ts>0){
+        this.lastTs=Math.max(o.ts,Math.floor(Date.now()/1000)-11*3600);
+        var ids=o.ids||[]; for(var q=0;q<ids.length;q++){ this.seen.add(ids[q]); this._ids.push(ids[q]); }
+      }
+    }
     this.retry=0;
     this.openStream();
     this.startPoll();
@@ -1516,7 +1536,10 @@ var Net={
     if(typeof EventSource==='undefined'){ this.openWs(); return; }
     this.transport='sse';
     try{
-      var es=new EventSource('https://ntfy.sh/'+this.topic+'/sse');
+      var es=new EventSource('https://ntfy.sh/'+this.topic+'/sse?since='+Math.max(0,this.lastTs||0));
+      this.lastAlive=Date.now();
+      try{ es.addEventListener('keepalive',function(){ self.lastAlive=Date.now(); }); }catch(e){}
+      try{ es.addEventListener('open',function(){ self.lastAlive=Date.now(); }); }catch(e){}
       this.es=es;
       es.onopen=function(){
         self.open=true; self.retry=0; self.transport='sse';
@@ -1526,6 +1549,7 @@ var Net={
         try{ paintTopicTag(); }catch(e){}
       };
       es.onmessage=function(ev){
+        self.lastAlive=Date.now();
         var d; try{ d=JSON.parse(ev.data); }catch(e){ return; }
         self.handleEvent(d);
       };
@@ -1548,7 +1572,7 @@ var Net={
     if(!this.topic) return;
     var w;
     this.transport='ws';
-    try{ w=new WebSocket('wss://ntfy.sh/'+this.topic+'/ws'); }catch(e){ this.scheduleReconnect(); return; }
+    try{ w=new WebSocket('wss://ntfy.sh/'+this.topic+'/ws?since='+Math.max(0,this.lastTs||0)); }catch(e){ this.scheduleReconnect(); return; }
     this.ws=w;
     var guard=setTimeout(function(){ if(!self.open){ try{w.close();}catch(e){} } },8000);
     w.onopen=function(){
@@ -1625,6 +1649,7 @@ var Net={
       .catch(function(){ self.polling=false; });
   },
   handleEvent:function(ev){
+    if(ev) this.lastAlive=Date.now();
     if(!ev||ev.event!=='message'||!this.topic) return;
     if(this.seen.has(ev.id)) return;
     this.seen.add(ev.id);
@@ -1633,11 +1658,24 @@ var Net={
       for(var i=0;i<250;i++) this.seen.delete(it.next().value);
     }
     if(typeof ev.time==='number') this.lastTs=Math.max(this.lastTs,ev.time-1);
+    this.saveSince(ev.id);
     var self=this;
     /* 復号は順番どおりに処理する（トークの並びが崩れないように） */
-    this.recvQueue=this.recvQueue.then(function(){ return self.process(ev.message); }).catch(function(){});
+    this.recvQueue=this.recvQueue.then(function(){ return self.process(ev.message,ev.attachment); }).catch(function(){});
   },
-  process:async function(body){
+  saveSince:function(id){
+    try{
+      if(!this.topic) return;
+      this._ids=this._ids||[]; if(id) this._ids.push(id);
+      if(this._ids.length>60) this._ids=this._ids.slice(-60);
+      localStorage.setItem('mtp_since_v1',JSON.stringify({topic:this.topic,ts:this.lastTs,ids:this._ids}));
+    }catch(e){}
+  },
+  loadSince:function(topic){
+    try{ var o=JSON.parse(localStorage.getItem('mtp_since_v1')||'null'); if(o&&o.topic===topic) return o; }catch(e){}
+    return null;
+  },
+  process:async function(body,att){
     if(!this.key) return;
     var env=null, legacy=false;
     try{ env=await unseal(body,this.key); }
@@ -1648,10 +1686,15 @@ var Net={
     }
     if(!env||env.v!==V||typeof env.t!=='string') return;
     env.__legacy=legacy;
-    if(typeof env.n==='number'){        /* なりすまし・再送の防止 */
-      var last=this.lastSeq[env.from]||0;
-      if(env.n<=last) return;
-      this.lastSeq[env.from]=env.n;
+    env.__att=(att&&att.url)?String(att.url):'';
+    /* v115: 番号は「同じものを 2回 うけとらない」ためだけに つかう。
+       (以前は「前より 小さい 番号は すてる」だったため、相手が 入りなおすと 番号が 0 に もどり、全部 すてられていた) */
+    if(typeof env.n==='number'){
+      var nk=String(env.from)+':'+env.n;
+      if(!this.seenN) this.seenN=new Set();
+      if(this.seenN.has(nk)) return;
+      this.seenN.add(nk);
+      if(this.seenN.size>3000){ var it2=this.seenN.values(); for(var z=0;z<1500;z++) this.seenN.delete(it2.next().value); }
     }
     try{ this.lastRecv=Date.now(); }catch(e){}
     if(env.from===S.me.id && env.t!=='nettest' && env.t!=='nettest-ok') return;   /* 自分の送信は無視（通信テストだけ 例外） */
@@ -1660,10 +1703,10 @@ var Net={
   send:function(obj,onDone){
     var self=this;
     if(!this.topic||!this.key) return 0;
-    S.seq++;
+    nextSeq();
     var env={v:V,n:S.seq,from:S.me.id,t:obj.t};
     for(var k in obj){ if(k!=='v'&&k!=='n'&&k!=='from') env[k]=obj[k]; }
-    this.sendQueue=this.sendQueue.then(function(){ return self.post(env,false,(obj&&obj.t==='chat')?0:(({ack:1,read:1,ping:1,ready:1,ready2:1}[obj&&obj.t])?2:0)); })
+    this.sendQueue=this.sendQueue.then(function(){ return self.post(env,false,(({ack:1,ping:1,hi2:1}[obj&&obj.t])?2:0)); })
       .then(function(ok){ if(onDone){ try{ onDone(ok); }catch(e){} } return ok; })
       .catch(function(){ if(onDone){ try{ onDone(false); }catch(e){} } return false; });
     return env;
@@ -1672,23 +1715,22 @@ var Net={
   sendLegacy:function(obj){
     var self=this;
     if(!this.topic||!this.key) return 0;
-    S.seq++;
+    nextSeq();
     var env={v:V,n:S.seq,from:S.me.id,t:obj.t};
     for(var k in obj){ if(k!=='v'&&k!=='n'&&k!=='from') env[k]=obj[k]; }
     this.sendQueue=this.sendQueue.then(function(){ return self.post(env,!!self.legacy); }).catch(function(){});
     return env.n;
   },
   /* 1分あたりの 送信数を 自分で かぎる（中継所の 回数制限に さきに 当たらない ため） */
-  budget:{t:0,n:0},
+  /* v115: 中継所の きまり(最初 60回・その後 5秒に 1回 回復)に あわせた 水がめ方式。
+     以前は 1分 14回で 打ち切っていたため、写真や 連投で トークが おくれなく なっていた */
+  budget:null,
   allow:function(prio){
-    var now=Date.now();
-    if(!this.budget||now-this.budget.t>60000){ this.budget={t:now,n:0}; }
-    var n=this.budget.n;
-    /* 背景の 電文（既読・あいず・生存確認）だけ しぼる。
-       トーク・入室・クイズの 合図は 落とさない */
-    if(prio>=2){ if(n>=4) return false; }
-    else if(n>=14) return false;
-    this.budget.n=n+1;
+    var now=Date.now(), b=this.budget;
+    if(!b) b=this.budget={tok:50,t:now};
+    b.tok=Math.min(50,b.tok+(now-b.t)/5000); b.t=now;
+    if(b.tok<((prio>=2)?20:1)) return false;
+    b.tok-=1;
     return true;
   },
   post:async function(env,useLegacy,prio){
@@ -1720,8 +1762,64 @@ var Net={
     if(!env||!this.topic||!this.key) return false;
     this.sendQueue=this.sendQueue.then(function(){ return self.post(env,false,0); }).catch(function(){ return false; });
     return env.n;
+  },
+  /* v115: 写真・ライブの 合図など 大きい ものは 「あんごうした ファイル」として 1回で おくる */
+  sendFile:function(obj,bytes,onDone){
+    var self=this;
+    if(!this.topic||!this.key){ if(onDone) try{ onDone(false); }catch(e){} return 0; }
+    nextSeq();
+    var env={v:V,n:S.seq,from:S.me.id,t:obj.t};
+    for(var k in obj){ if(k!=='v'&&k!=='n'&&k!=='from') env[k]=obj[k]; }
+    this.sendQueue=this.sendQueue.then(function(){ return self.putFile(env,bytes); })
+      .then(function(ok){ if(onDone){ try{ onDone(ok); }catch(e){} } return ok; })
+      .catch(function(){ if(onDone){ try{ onDone(false); }catch(e){} } return false; });
+    return env;
+  },
+  putFile:async function(env,bytes){
+    var key=this.key;
+    if(!key||!this.topic) return false;
+    if(this.coolUntil&&Date.now()<this.coolUntil) return false;
+    if(!this.allow(0)) return false;
+    try{
+      var body=await seal(env,key);
+      var iv=randFrom(12);
+      var ct=await crypto.subtle.encrypt({name:'AES-GCM',iv:iv},key,bytes);
+      var all=new Uint8Array(12+ct.byteLength); all.set(iv,0); all.set(new Uint8Array(ct),12);
+      var r=await fetch('https://ntfy.sh/'+this.topic+'?filename=d.bin&message='+encodeURIComponent(body),
+        {method:'PUT',headers:{'Content-Type':'application/octet-stream'},body:all});
+      this.lastPostStatus=r.status;
+      if(r.status===429||r.status===503){ this.hit429(45000); return false; }
+      return !!r.ok;
+    }catch(e){ return false; }
+  },
+  /* うけとった ファイルを とってきて ひらく */
+  fetchFile:async function(url){
+    for(var t=0;t<4;t++){
+      try{
+        var r=await fetch(url,{cache:'no-store'});
+        if(r.ok){
+          var buf=new Uint8Array(await r.arrayBuffer());
+          var keys=[this.key,this.legacy,this.roomKey].filter(Boolean);
+          for(var i=0;i<keys.length;i++){
+            try{ return new Uint8Array(await crypto.subtle.decrypt({name:'AES-GCM',iv:buf.slice(0,12)},keys[i],buf.slice(12))); }catch(e){}
+          }
+          return null;
+        }
+      }catch(e){}
+      await new Promise(function(res){ setTimeout(res,1200*(t+1)); });
+    }
+    return null;
   }
 };
+/* 番号は 時刻ベース：入りなおしても 前より 小さく ならない */
+function nextSeq(){ S.seq=Math.max((S.seq||0)+1,Date.now()); return S.seq; }
+/* つながって いるのに 受信が とまった(スマホで よく おきる)ら、とりなおす */
+setInterval(function(){
+  try{
+    if(!Net.topic) return;
+    if(Net.open&&Net.lastAlive&&Date.now()-Net.lastAlive>100000){ Net.open=false; Net.openStream(); }
+  }catch(e){}
+},15000);
 
 /* =================================================================
    4. 状態
@@ -1752,6 +1850,7 @@ function nameOf(id){ return id===S.me.id ? (S.me.name||'あなた') : (S.opp.nam
    ================================================================= */
 function show(which){
   S.phase=which;
+  try{ document.body.classList.toggle('in-play',which==='play'); }catch(e){}
   Object.keys(screens).forEach(function(k){ screens[k].classList.toggle('on',k===which); });
   $('#btn-quit').hidden = (which!=='play');
   updateTalkbackBadges();
@@ -1781,7 +1880,7 @@ function setTab(which){
   if($('#tab-chat')){ $('#tab-chat').classList.toggle('on',which==='chat'); $('#tab-chat').setAttribute('aria-selected',which==='chat'); }
   if($('#pane-game')) $('#pane-game').classList.toggle('on',which==='game');
   if($('#pane-chat')) $('#pane-chat').classList.toggle('on',which==='chat');
-  if(which==='chat'){ S.unread=0; updateBadge(); renderChat(true); maybeSendRead(); }
+  if(which==='chat'){ S.unread=0; updateBadge(); S._jump=true; renderChat(true); maybeSendRead(); setTimeout(scrollChatBottom,200); }
   else { renderQuiz(); }
 }
 function updateBadge(){
@@ -4569,8 +4668,7 @@ function renderMush(){
   var box=document.createElement('div');
   box.id='mush-box'; box.hidden=true; box.className='mush-box';
   box.innerHTML='<button id="mush-btn" type="button" aria-label="きのこ">🍄‍🟫</button>'
-    +'<p class="mush-l"><b id="mush-name">あいて</b> と また つながる</p>'
-    +'<p class="mush-s">🍄‍🟫 を 5回 タップ</p>';
+    +'<p class="mush-l"><b id="mush-name">あいて</b></p>';
   sec.insertBefore(box,sec.firstChild);
   var n=0,last=0;
   box.querySelector('#mush-btn').addEventListener('click',function(){
@@ -4658,7 +4756,7 @@ async function resumeConnect(silent){
     S.paired=true; S.sealed=true; S.linked=true; S.sessKey=sk;
     if(p.h) S.guest={did:p.peer,name:p.peerName||'あいて'};
     Net.reset();
-    Net.connect(p.topic,rk);
+    Net.connect(p.topic,rk,'stored');
     Net.lobby=p.topic;
     Net.switchTo(sk);
     S.phase='play';
@@ -4728,6 +4826,7 @@ function startPlay(){
   $('#p-opp').textContent=S.opp.name||'あいて';
   sysChat('この部屋のトークは、あなたと あいて だけが よめます。');
   S.peerRead=0; S.lastPeerN=0; S.readSent=0; S.peerAck=0;
+  S.linked=true;   /* v115: 部屋を でても つながりを たもつ（🍄‍🟫 で もどれる・相手を 追い出さない） */
   show('play');
   document.querySelector('.bar').classList.add('compact');
   $('#btn-eject').hidden = !(S.isHost && S.guest);
@@ -4919,7 +5018,9 @@ function renderChat(forceBottom){
   persistChat();
   var box=$('#chat-log');
   if(!box) return;
-  var stick = !!forceBottom || (box.scrollHeight-box.scrollTop-box.clientHeight<70);
+  /* v115: LINEと おなじ。あたらしい メッセージ・トークを ひらいた とき・下の ほうを 見ている ときは 最新(いちばん 下)へ */
+  var stick = S._jump || (S.chat.length!==S._rcLen) || (box.scrollHeight-box.scrollTop-box.clientHeight<160);
+  S._jump=false; S._rcLen=S.chat.length;
   box.innerHTML='';
   var lastOwnN=0,i;
   for(i=0;i<S.chat.length;i++){
@@ -4948,9 +5049,10 @@ function renderChat(forceBottom){
       prow.className='msg '+(mine?'out':'in')+(cont?' cont':'');
       var pbub=document.createElement('div'); pbub.className='bubble photo-b';
       var pim=document.createElement('img'); pim.className='photo-msg'; pim.src=m.data; pim.alt='しゃしん';
+      pim.addEventListener('load',function(){ scrollChatBottom(); });
       pbub.appendChild(pim);
       var pmeta=document.createElement('div'); pmeta.className='meta';
-      pmeta.textContent=groupEnd?fmtTime(at):'';
+      pmeta.textContent=metaText(m,mine,at,groupEnd);
       if(mine){ pbub.title='タップで とりけし'; prow.dataset.uid=m.uid||''; prow.appendChild(pmeta); prow.appendChild(pbub); }
       else{
         var pav=document.createElement('div'); pav.className='av'+(cont?' blank':'');
@@ -4967,12 +5069,7 @@ function renderChat(forceBottom){
     bub.className='bubble'; bub.textContent=m.text;
     var meta=document.createElement('div');
     meta.className='meta';
-    var mtxt='';
-    if(m.sent===false) mtxt='送信中';
-    else if(mine&&m.n&&m.n>S.peerAck) mtxt=((Date.now()-at)>12000)?'未達':'送信中';
-    else if(mine&&m.n&&m.n>S.peerRead&&((Date.now()-at)>15000)) mtxt='未読';
-    else mtxt=groupEnd?fmtTime(at):'';
-    meta.textContent=mtxt;
+    meta.textContent=metaText(m,mine,at,groupEnd);
     if(mine) bub.title='タップで とりけし';
     if(mine){ row.dataset.uid=m.uid||''; row.appendChild(meta); row.appendChild(bub); }
     else{
@@ -4982,19 +5079,31 @@ function renderChat(forceBottom){
       row.appendChild(av); row.appendChild(bub); row.appendChild(meta);
     }
     box.appendChild(row);
-    if(mine&&groupEnd&&m.n===lastOwnN&&m.n>0&&S.peerRead>=m.n){
-      var rd=document.createElement('div'); rd.className='line-read'; rd.textContent='既読';
-      box.appendChild(rd);
-    }
     prevFrom=m.from; prevAt=at;
   }
-  if(stick) box.scrollTop=box.scrollHeight;
+  if(stick) scrollChatBottom();
+}
+/* v115: 1つの ふきだしに 表示は 1つだけ（送信中 → 未読 → 既読） */
+function metaText(m,mine,at,groupEnd){
+  var tm=fmtTime(at);
+  if(!mine) return groupEnd?tm:'';
+  if(m.sent===false||!m.n) return '送信中…';
+  if(m.read||(S.peerRead&&m.n<=S.peerRead)) return '既読 '+tm;
+  return '未読 '+tm;
+}
+function scrollChatBottom(){
+  var box=$('#chat-log'); if(!box) return;
+  var go=function(){ try{ box.scrollTop=box.scrollHeight; }catch(e){} };
+  go();
+  try{ (window.requestAnimationFrame||setTimeout)(go,16); }catch(e){}
+  setTimeout(go,120);
 }
 function sysChat(text){ S.chat.push({sys:true,text:text,at:Date.now()}); if(S.tab==='chat') renderChat(true); }
 /* 既読：トークを開いていて画面が見えている時だけ「読んだ」と伝える */
 function maybeSendRead(){
   if(S.tab!=='chat'||(S.phase!=='play'&&!S.linked)) return;
   if(typeof document.visibilityState==='string'&&document.visibilityState!=='visible') return;
+  if(S.phase!=='play') return;
   if(!S.lastPeerN||S.lastPeerN<=S.readSent) return;
   S.readSent=S.lastPeerN;
   var exp=Date.now()+CHAT_EXP_MS, i;
@@ -5002,7 +5111,13 @@ function maybeSendRead(){
     var mm=S.chat[i];
     if(!mm.sys&&mm.from!==S.me.id&&mm.n&&mm.n<=S.lastPeerN&&!mm.exp) mm.exp=exp;
   }
-  /* v111: 既読の 送信は 廃止（通信量を へらす） */
+  /* v115: 既読を あいてに つたえる（すこし まとめてから 1通） */
+  if(S.readT) return;
+  S.readT=setTimeout(function(){
+    S.readT=null;
+    var up=S.lastPeerN||0; if(!up) return;
+    Net.send({t:'read',upTo:up,exp:exp},function(ok){ if(!ok){ S.readSent=0; setTimeout(maybeSendRead,4000); } });
+  },700);
 }
 /* 消去：期限の来たメッセージを端末内から完全に取り除く(復元不可) */
 function sweepChat(){
@@ -5069,7 +5184,7 @@ function notifyIncoming(){
   }catch(e){}
 }
 /* しゃしん：カメラでとって あんごうチャンクで そうしんする(きろくには のこらない) */
-var PHOTO_PIECE=1300, PHOTO_MAXSIDE=512, photoBuf={};
+var PHOTO_PIECE=1300, PHOTO_MAXSIDE=1024, photoBuf={};
 var camStream=null;
 function closeCam(){
   if(camStream){ try{ camStream.getTracks().forEach(function(t){ t.stop(); }); }catch(e){} camStream=null; }
@@ -5094,12 +5209,14 @@ $('#cam-shoot').addEventListener('click',function(){
     var c=document.createElement('canvas');
     c.width=Math.max(1,Math.round(w*sc)); c.height=Math.max(1,Math.round(h*sc));
     c.getContext('2d').drawImage(v,0,0,c.width,c.height);
-    var url=c.toDataURL('image/jpeg',0.62);
+    var url=c.toDataURL('image/jpeg',0.72);
     closeCam();
-    if(url.length>160000){ note('しゃしんが おおきすぎます。もういちど おねがいします。','#note2'); return; }
-    S.chat.push({photo:true,from:S.me.id,at:Date.now(),data:url,pid:pid,uid:String(++UID),exp:Date.now()+CHAT_EXP_MS});
+    /* v115: 以前は「pid」が 未定義で ここで 止まり、写真が つかなかった */
+    var pid='P'+Date.now().toString(36)+((Math.random()*1e6)|0).toString(36);
+    var msg={photo:true,from:S.me.id,at:Date.now(),data:url,pid:pid,uid:String(++UID),sent:false,n:0};
+    S.chat.push(msg);
     renderChat(true);
-    sendPhotoChunks(url,pid);
+    sendPhoto(msg);
   }catch(e){ closeCam(); note('さつえいに しっぱいしました。','#note2'); }
 });
 var UID=0;
@@ -5123,6 +5240,34 @@ $('#chat-log').addEventListener('click',function(e){
   var uid=row.getAttribute('data-uid'); if(!uid) return;
   recallMsg(uid);
 });
+/* v115: 写真は あんごうした 1つの ファイルとして おくる（かけらに わけない ので とちゅうで 欠けない） */
+function dataURLBytes(u){ var b=atob(String(u).split(',')[1]||''), a=new Uint8Array(b.length); for(var i=0;i<b.length;i++) a[i]=b.charCodeAt(i); return a; }
+function bytesDataURL(a,mime){ var s='',CH=0x8000; for(var i=0;i<a.length;i+=CH) s+=String.fromCharCode.apply(null,a.subarray(i,i+CH)); return 'data:'+(mime||'image/jpeg')+';base64,'+btoa(s); }
+function sendPhoto(msg,tries){
+  tries=tries||0;
+  if(!Net.topic||!Net.key){ setTimeout(function(){ sendPhoto(msg,tries); },3000); return; }
+  var env=Net.sendFile({t:'photo',id:msg.pid,at:msg.at},dataURLBytes(msg.data),function(ok){
+    if(ok){ msg.sent=true; msg.sentAt=Date.now(); }
+    else if(tries<6){ setTimeout(function(){ sendPhoto(msg,tries+1); },2500*(tries+1)); }
+    else { note('しゃしんを そうしん できませんでした。でんぱの よい ところで もういちど おねがいします。','#note2'); }
+    if(S.tab==='chat') renderChat(true);
+  });
+  if(env&&env.n) msg.n=env.n;
+}
+async function recvPhoto(m){
+  if(!m.__att) return;
+  for(var i=0;i<S.chat.length;i++){ if(S.chat[i].pid&&S.chat[i].pid===m.id&&S.chat[i].from===m.from) return; }
+  var bytes=await Net.fetchFile(m.__att);
+  if(!bytes||bytes.length<4||bytes[0]!==0xFF||bytes[1]!==0xD8) return;
+  var url=bytesDataURL(bytes,'image/jpeg');
+  var viewing=(S.phase==='play'&&S.tab==='chat'&&document.visibilityState==='visible');
+  S.chat.push({photo:true,from:m.from,at:(typeof m.at==='number'?m.at:Date.now()),data:url,pid:m.id,uid:String(++UID),n:m.n||0,sent:true});
+  S.lastPeerN=Math.max(S.lastPeerN||0,m.n||0);
+  if(!viewing){ S.unread++; updateBadge(); updateTitleBadge(); updateTalkbackBadges(); }
+  notifyIncoming();
+  if(S.tab==='chat') renderChat(true);
+  maybeSendRead();
+}
 async function sendPhotoChunks(dataURL,pid){
   if(S.phase!=='play'||!S.paired) return;
   var id=pid;
@@ -5230,7 +5375,7 @@ async function getCallMedia(wantVideo){
   try{
     if(wantVideo){
       callStream=await navigator.mediaDevices.getUserMedia({
-        video:{facingMode:{ideal:curFacing},width:{ideal:1280},height:{ideal:720},frameRate:{ideal:30,min:15}},
+        video:{facingMode:{ideal:curFacing},width:{ideal:1280},height:{ideal:720},frameRate:{ideal:30}},
         audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}
       });
       callVideo=true; micStream=callStream; micOn=true;
@@ -5267,9 +5412,42 @@ function closeLiveLegacy(){
   var lv=$('#live-vid'); if(lv) lv.srcObject=null;
   closeLiveView();
 }
+var jpgTimer=null, jpgCount=0, JPG_MS=5000, JPG_MAX=36;
 function fallbackFrames(){
-  toast('この 回線では 映像を おくれません。Wi-Fi か モバイルを かえて ください。');
-  return;
+  if(!callVideo||!callStream) return;
+  if(jpgTimer) return;
+  var lv=$('#live-vid'); if(lv){ lv.srcObject=callStream; try{ lv.play(); }catch(e){} }
+  jpgCount=0;
+  var st=$('#call-state'); if(st) st.textContent='コマ送りで おくっています';
+  toast('この 回線では 動画で つながらないため、コマ送り（5秒ごと）の ライブに きりかえました。');
+  jpgTimer=setInterval(snapJpg,JPG_MS); setTimeout(snapJpg,600);
+}
+function stopJpg(){ if(jpgTimer){ clearInterval(jpgTimer); jpgTimer=null; } }
+function snapJpg(){
+  if(!callOn||!callStream){ stopJpg(); return; }
+  if(document.hidden||callHide) return;
+  if(++jpgCount>JPG_MAX){ stopJpg(); toast('コマ送りの ライブを 自動で とめました（中継所の 回数制限を まもるため）。'); return; }
+  var v=$('#live-vid'); if(!v||!v.videoWidth) v=$('#call-local');
+  if(!v||!v.videoWidth) return;
+  try{
+    var w=v.videoWidth,h=v.videoHeight,sc=480/Math.max(w,h);
+    var c=document.createElement('canvas'); c.width=Math.round(w*sc); c.height=Math.round(h*sc);
+    c.getContext('2d').drawImage(v,0,0,c.width,c.height);
+    Net.sendFile({t:'live-jpg'},dataURLBytes(c.toDataURL('image/jpeg',0.6)));
+  }catch(e){}
+}
+async function recvLiveJpg(m){
+  if(!m.__att) return;
+  var b=await Net.fetchFile(m.__att);
+  if(!b||b[0]!==0xFF||b[1]!==0xD8) return;
+  var box=$('#call-box'); if(!box) return;
+  if(box.hidden){ openCallUI(); var st=$('#call-state'); if(st) st.textContent='コマ送りで うけとっています'; }
+  var im=$('#call-remote-img');
+  if(!im){ im=document.createElement('img'); im.id='call-remote-img'; box.insertBefore(im,box.firstChild.nextSibling); }
+  im.src=bytesDataURL(b,'image/jpeg');
+  if(!callOn) callOn=true;
+}
+function fallbackFramesOld(){
   if(!callVideo||!callStream) return;
   liveStream=callStream; liveOn=true;
   var lv=$('#live-vid'); if(lv){ lv.srcObject=liveStream; try{ lv.play(); }catch(e){} }
@@ -5331,7 +5509,8 @@ $('#btn-live').addEventListener('click',async function(){
       }
     }
     if(last){ callFail('createOffer',last); return; }
-    toast('テレビ電話を はじめました。');
+    toast('ライブを はじめました。あいてに つないでいます…');
+    setTimeout(function(){ try{ if(callOn&&callVideo&&pc&&pc.connectionState!=='connected') fallbackFrames(); }catch(e){} },15000);
   }catch(e){
     callFail('live-button',e);
   }finally{
@@ -5436,6 +5615,7 @@ function ensureRtcAudio(){
 }
 function stopCall(notify){
   rtcOn=false; callOn=false;
+  try{ stopJpg(); var ri=$('#call-remote-img'); if(ri) ri.remove(); }catch(e){}
   if(fbT){ clearTimeout(fbT); fbT=0; }
   if(callTimer){ clearInterval(callTimer); callTimer=null; }
   if(pc){ try{ pc.close(); }catch(e){} pc=null; }
@@ -5467,7 +5647,17 @@ $('#btn-call').addEventListener('click',async function(){
    STUN は『相手の ばしょ』を さがす ためだけ。音声は DTLS-SRTP で 端末どうしが 暗号化する
    (中継所にも STUN にも 音声の 中身は とどかない)。 */
 var STUN_LIST=['stun:stun.cloudflare.com:3478','stun:stun.l.google.com:19302','stun:stun1.l.google.com:19302'];
-function buildIce(){ return STUN_LIST.slice(); }
+/* v115: RTCPeerConnection は {urls:…} の 形で わたす ひつようが ある（文字列のままだと 即エラー＝カメラが すぐ とじていた） */
+function buildIce(){ return [{urls:STUN_LIST.slice()}]; }
+/* ICE 候補が そろうまで まつ（候補を 1つずつ おくらない＝通信回数を へらす） */
+function waitIce(p,ms){
+  return new Promise(function(res){
+    if(!p||p.iceGatheringState==='complete'){ res(); return; }
+    var done=false, fin=function(){ if(done) return; done=true; res(); };
+    p.addEventListener('icegatheringstatechange',function(){ if(p.iceGatheringState==='complete') fin(); });
+    setTimeout(fin,ms||3500);
+  });
+}
 function rtcStart(isCaller){
   var cfg={iceServers:buildIce()};
   pc=new RTCPeerConnection(cfg);
@@ -5477,15 +5667,19 @@ function rtcStart(isCaller){
   pc.ontrack=function(e){
     var st=(e.streams&&e.streams[0])||new MediaStream([e.track]);
     var hasVid=(st.getVideoTracks&&st.getVideoTracks().length>0);
-    if(hasVid&&callVideo){
+    if(hasVid){
+      var cbx=$('#call-box'); if(cbx&&cbx.hidden) openCallUI();
       var rv=$('#call-remote');
-      if(rv){ rv.srcObject=st; try{ rv.play(); }catch(err){} }
+      if(rv){
+        rv.srcObject=st;
+        var pr=rv.play(); if(pr&&pr.catch) pr.catch(function(){ rv.muted=true; rv.play().catch(function(){}); toast('画面を タップすると 音が 出ます。'); });
+      }
     }else{
       var a=ensureRtcAudio();
       a.srcObject=st; try{ a.play(); }catch(err){}
     }
   };
-  pc.onicecandidate=function(e){ if(e.candidate) Net.send({t:'rtc-ice',c:JSON.stringify(e.candidate)}); };
+  pc.onicecandidate=function(){};   /* v115: 候補は SDP に まとめて 1回で おくる */
   pc.onicecandidateerror=function(e){ try{ callDiagLog('ice',{name:'ice'+(e&&e.errorCode||''),message:(e&&e.errorText)||''}); }catch(x){} };
   pc.onicegatheringstatechange=function(){ try{ if(pc) callDiagLog('gather:'+pc.iceGatheringState,null); }catch(x){} };
   pc.onconnectionstatechange=function(){
@@ -5519,7 +5713,8 @@ function rtcStart(isCaller){
       if(!pc){ rej(new Error('no-pc')); return; }
       var settled=false;
       var to=setTimeout(function(){ if(!settled){ settled=true; rej(new Error('createOffer-timeout')); } },9000);
-      pc.createOffer().then(function(o){ return pc.setLocalDescription(o); }).then(function(){
+      pc.createOffer().then(function(o){ return pc.setLocalDescription(o); }).then(function(){ return waitIce(pc,3500); }).then(function(){
+        if(!pc) throw new Error('closed');
         rtcSendSdp('offer',JSON.stringify(pc.localDescription));
         setTimeout(tuneSenders,800);
         if(!settled){ settled=true; clearTimeout(to); res(true); }
@@ -5531,6 +5726,14 @@ function rtcStart(isCaller){
   return Promise.resolve(true);
 }
 function rtcSendSdp(kind,sdpStr){
+  /* v115: SDP は あんごうファイル 1つで おくる（かけらが 欠けて つながらない のを なくす） */
+  var tries=0;
+  (function go(){
+    Net.sendFile({t:'rtc2',k:kind,v:callVideo?1:0},new TextEncoder().encode(sdpStr),function(ok){
+      if(!ok&&tries++<4&&rtcOn) setTimeout(go,1500*tries);
+    });
+  })();
+  return;
   var id='S'+Date.now().toString(36)+((Math.random()*1e6)|0).toString(36);
   var total=Math.ceil(sdpStr.length/PHOTO_PIECE);
   var i=0;
@@ -5541,6 +5744,36 @@ function rtcSendSdp(kind,sdpStr){
     i++;
     setTimeout(next,150);
   })();
+}
+async function rtcRecvFile(m){
+  if(!m.__att) return;
+  var b=await Net.fetchFile(m.__att); if(!b) return;
+  var sdp; try{ sdp=JSON.parse(new TextDecoder().decode(b)); }catch(e){ return; }
+  await rtcHandleSdp(m,sdp);
+}
+async function rtcHandleSdp(m,sdp){
+  try{
+    if(m.k==='offer'){
+      if(rtcOn) stopCall(false);
+      callVideo=!!m.v;
+      var gm=await getCallMedia(callVideo);
+      if(gm!==true){
+        if(callVideo){ callVideo=false; gm=await getCallMedia(false); }   /* カメラが だめでも 見るだけは できる ように */
+        if(gm!==true){ note('あいてから でんわですが カメラ／マイクを つかえません（'+((gm&&gm.name)||'')+'）。','#note2'); }
+      }
+      if(m.v){ openCallUI(); toast('あいてから ライブが とどきました。');
+        setTimeout(function(){ try{ if(callOn&&callVideo&&pc&&pc.connectionState!=='connected') fallbackFrames(); }catch(e){} },15000); }
+      rtcStart(false);
+      await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+      var ans=await pc.createAnswer();
+      await pc.setLocalDescription(ans);
+      await waitIce(pc,3500);
+      rtcSendSdp('answer',JSON.stringify(pc.localDescription));
+      $('#btn-call').textContent='電話:つなぐ中…';
+    }else if(m.k==='answer'&&pc&&!pc.remoteDescription){
+      await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+    }
+  }catch(e){ callDiagLog('sdp',e); }
 }
 async function rtcRecvSdp(m){
   var id=String(m.id||'').slice(0,24), total=m.total|0, i=m.i|0;
@@ -5684,8 +5917,10 @@ $('#in-chat').addEventListener('keydown',function(e){ if(e.key==='Enter'&&e.isCo
     var open=kb>80;
     document.documentElement.style.setProperty('--kb', kb+'px');
     document.body.classList.toggle('kb-open', open);
+    document.documentElement.style.setProperty('--app-h', Math.round(v.height)+'px');
     var main=document.querySelector('main');
-    if(main){ main.style.paddingBottom = open ? Math.min(kb,260)+'px' : ''; }
+    if(main){ main.style.paddingBottom = (open&&!document.body.classList.contains('in-play')) ? Math.min(kb,260)+'px' : ''; }
+    if(document.body.classList.contains('in-play')){ try{ window.scrollTo(0,0); }catch(e){} scrollChatBottom(); }
     if(open && document.activeElement===inp){
       clearTimeout(window.__kbT);
       window.__kbT=setTimeout(function(){ try{ inp.scrollIntoView({block:'nearest'}); }catch(e){} },60);
@@ -5725,22 +5960,32 @@ function flushOutbox(){
   if(!S.outbox.length) return;
   if(!Net.topic||!Net.key) return;
   if(Net.coolUntil&&Date.now()<Net.coolUntil){ setTimeout(flushOutbox,3000); return; }
-  var items=S.outbox.slice(0,8);
+  if(S.flushing) return;
+  /* 1通の 封筒に 入る ぶんだけ まとめる（入りきらないと 送れなかった） */
+  var items=[], bytes=0;
+  for(var q=0;q<S.outbox.length&&items.length<8;q++){
+    var sz=new TextEncoder().encode(S.outbox[q].text||'').length+40;
+    if(items.length&&bytes+sz>2600) break;
+    items.push(S.outbox[q]); bytes+=sz;
+  }
   var payload=items.map(function(x){ return {text:x.text,at:x.at}; });
   var msgs=items.map(function(x){ return x.msg; }).filter(Boolean);
+  S.flushing=true;
   var envSent=Net.send({t:'chats',items:payload},function(ok){
+    S.flushing=false;
     if(ok){
       S.outbox=S.outbox.filter(function(x){ return items.indexOf(x)<0; });
       outSave();
-      msgs.forEach(function(m){ if(m){ m.sent=true; m.delivered=true; } });
+      msgs.forEach(function(m){ if(m){ m.sent=true; m.delivered=true; m.sentAt=Date.now(); } });
+      if(S.outbox.length) setTimeout(flushOutbox,300);
     }else{
       msgs.forEach(function(m){ if(m){ m.tries=(m.tries||0)+1; } });
       setTimeout(flushOutbox,2500);
     }
     if(S.tab==='chat') renderChat(true);
   });
-  if(envSent&&envSent.n) msgs.forEach(function(m){ m.n=envSent.n; });
-  if(S.outbox.length>8) setTimeout(flushOutbox,1200);
+  if(envSent&&envSent.n) msgs.forEach(function(m){ m.n=envSent.n; m.env=envSent; });
+  if(!envSent) S.flushing=false;
 }
 function submitChat(){
   if(!(S.phase==='play'&&S.paired)&&!(S.linked&&S.key&&S.topic)){
@@ -5772,13 +6017,8 @@ function resendUnacked(all){
 /* 未達トークの再送：あいての端末に届く(受領証が返る)まで、送り側の端末だけが保持する */
 function resendUndelivered(){
   if((S.phase!=='play'||!S.paired)&&!S.linked) return;
-  if(Net.open) return;                 /* つながって いる あいだは 再送しない */
   if(Net.coolUntil&&Date.now()<Net.coolUntil) return;
-  var sent=0;
-  for(var i=0;i<S.chat.length&&sent<2;i++){
-    var mm=S.chat[i];
-    if(!mm.sys&&mm.from===S.me.id&&mm.n&&!mm.acked&&mm.env){ Net.resendEnv(mm.env); sent++; }
-  }
+  if(S.outbox&&S.outbox.length) flushOutbox();
 }
 setInterval(function(){
   if(document.visibilityState==='visible') resendUndelivered();
@@ -5865,7 +6105,7 @@ function leaveRoom(){
 function replyFull(to){
   (async function(){
     try{
-      S.seq++;
+      nextSeq();
       var env={v:V,n:S.seq,from:S.me.id,t:'full'};
       if(to) env.to=to;
       var body=await seal(env,(typeof Net!=='undefined'&&(Net.roomKey||Net.legacy))||S.key);
@@ -6075,6 +6315,7 @@ Net.onMsg=function(m){
       if(m.from===S.me.id) break;
       S.peerRead=Math.max(S.peerRead,m.upTo||0);
       S.peerAck=Math.max(S.peerAck,m.upTo||0);
+      (function(up){ for(var i=0;i<S.chat.length;i++){ var x=S.chat[i]; if(x&&!x.sys&&x.from===S.me.id&&x.n&&x.n<=up){ x.read=true; x.acked=true; } } })(m.upTo||0);
       (function(upTo,expAt){
         for(var i=0;i<S.chat.length;i++){
           var mm=S.chat[i];
@@ -6088,6 +6329,18 @@ Net.onMsg=function(m){
     case 'photo-chunk':
       if(m.from===S.me.id) break;
       recvPhotoChunk(m);
+      break;
+    case 'photo':
+      if(m.from===S.me.id) break;
+      recvPhoto(m);
+      break;
+    case 'rtc2':
+      if(m.from===S.me.id) break;
+      rtcRecvFile(m);
+      break;
+    case 'live-jpg':
+      if(m.from===S.me.id) break;
+      recvLiveJpg(m);
       break;
 
     /* ライブ：あいての えいぞうを うけとる */
@@ -6255,10 +6508,11 @@ case 'ack':
           added++;
         }
         if(!added) return;
-        if(!viewing){ S.unread=(S.unread||0)+added; updateBadge(); }
+        S.lastPeerN=Math.max(S.lastPeerN||0,m.n||0);
+        if(!viewing){ S.unread=(S.unread||0)+added; updateBadge(); updateTalkbackBadges(); }
         notifyIncoming();
-        if(m.n) try{ Net.send({t:'ack',upTo:m.n}); }catch(e){}
         if(S.tab==='chat') renderChat(true);
+        maybeSendRead();
       })(m.items);
       break;
 
@@ -6346,6 +6600,7 @@ $('#call-hide').addEventListener('click',function(){
   this.textContent=callHide?'映像を出す':'画面を隠す';
 });
 $('#call-end').addEventListener('click',function(){ stopCall(); });
+$('#call-box').addEventListener('click',function(){ var rv=$('#call-remote'); if(rv&&rv.muted&&rv.srcObject){ rv.muted=false; rv.play().catch(function(){}); } });
 document.addEventListener('visibilitychange',function(){
   /* 画面を はなれたら カメラを とめる(いきのこり配信を ふせぐ) */
   if(document.hidden&&rtcOn&&callVideo&&callStream){
@@ -6367,32 +6622,6 @@ window.addEventListener('online',function(){
   try{ resendUnacked(true); }catch(e){}
 });
 window.addEventListener('offline',function(){ try{ toast('回線が きれました。もどると 自動で つなぎ直します。'); }catch(e){} });
-
-/* 送信状態を 吹き出しに 表示する */
-(function(){
-  var orig=renderChat;
-  renderChat=function(fb){
-    orig(fb);
-    try{
-      var box=$('#chat-log'); if(!box) return;
-      var byUid={};
-      for(var i=0;i<S.chat.length;i++){ if(S.chat[i]&&S.chat[i].uid) byUid[S.chat[i].uid]=S.chat[i]; }
-      var outs=box.querySelectorAll('.msg.out');
-      for(var k=0;k<outs.length;k++){
-        var el=outs[k];
-        var uid=(el.dataset&&el.dataset.uid)||'';
-        if(!uid) continue;
-        var mm=byUid[uid]; if(!mm) continue;
-        var mk=el.querySelector('.snd');
-        if(!mk){ mk=document.createElement('span'); mk.className='snd'; el.appendChild(mk); }
-        if(mm.acked){ mk.textContent='既読'; mk.className='snd done'; mk.title='あいてが よみました'; }
-        else if(mm.delivered||mm.sent){ mk.textContent='✓'; mk.className='snd done'; mk.title='とどきました'; }
-        else if((mm.tries||0)>=6){ mk.textContent='未達'; mk.className='snd retry'; mk.title='おくりなおしています（電波を まっています）'; }
-        else { mk.textContent='…'; mk.className='snd sending'; mk.title='おくっています'; }
-      }
-    }catch(e){}
-  };
-})();
 
 /* 通信テスト：自分あてに 1通 おくって 帰ってくるかを 実測する */
 var pingWait={};
