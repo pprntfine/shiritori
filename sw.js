@@ -1,33 +1,67 @@
-/* 雑学王 サービスワーカー（v122）
-   - アプリを とじていても「メッセージが とどきました」の 通知を だす
-   - 通知が あると Android は アイコンに バッジ（点・数字）が つく
-   メッセージの 中身は ここには とどきません（合図だけ） */
+/* 雑学王 サービスワーカー（v124）
+   - アプリが 裏・画面オフ でも、とどいた メッセージ（あんごう文のまま）を スマホの 中に しまう
+     → アプリを ひらいた 瞬間に 表示される（2人の 鍵で しか 読めない）
+   - 通知は 音なし。Android は アイコンに バッジ（件数）
+   ここでは 中身を 読みません（鍵は ここに ありません） */
 self.addEventListener('install', function(e){ self.skipWaiting(); });
 self.addEventListener('activate', function(e){ e.waitUntil(self.clients.claim()); });
 
 var unread = 0;
 
+function idbOpen(){
+  return new Promise(function(res, rej){
+    var r = indexedDB.open('zg-inbox', 1);
+    r.onupgradeneeded = function(){ r.result.createObjectStore('m', {autoIncrement:true}); };
+    r.onsuccess = function(){ res(r.result); };
+    r.onerror = function(){ rej(r.error); };
+  });
+}
+async function stash(body){
+  try {
+    var db = await idbOpen();
+    await new Promise(function(res){
+      var tx = db.transaction('m', 'readwrite');
+      tx.objectStore('m').add(body);
+      tx.oncomplete = res; tx.onerror = res;
+    });
+    db.close();
+  } catch (err) {}
+}
+
+/* ntfy の Web Push は {event, message:{message:"本文"}} の 形で とどく */
+function pickText(raw){
+  try { var j = JSON.parse(raw); if (j && j.message && typeof j.message.message === 'string') return j.message.message; } catch (err) {}
+  return raw || '';
+}
+
 self.addEventListener('push', function(e){
   var raw = '';
   try { raw = e.data ? e.data.text() : ''; } catch (err) {}
-  var isTest = raw.indexOf('zg-test') >= 0;
+  var txt = pickText(raw);
+  var isTest = txt.indexOf('zg-test') >= 0;
   e.waitUntil((async function(){
+    /* 本文つき: 'zgm:件数:あんごう文' → スマホの 中に しまう */
+    var mm = /^zgm:(\d+):([\s\S]+)$/.exec(txt);
+    var cnt = 0;
+    if (mm) { cnt = parseInt(mm[1], 10) || 1; await stash(mm[2]); }
+    else { var nn = /zgn:(\d+)/.exec(txt); if (nn) cnt = parseInt(nn[1], 10) || 1; }
+
     var list = await self.clients.matchAll({type:'window', includeUncontrolled:true});
     var visible = false;
-    for (var i = 0; i < list.length; i++) { if (list[i].visibilityState === 'visible' && list[i].focused !== false) visible = true; }
-    /* アプリを 見ている ときは アプリ側で 知らせる（テストは つねに 出す） */
+    for (var i = 0; i < list.length; i++) {
+      try { list[i].postMessage('zg-new'); } catch (err) {}
+      if (list[i].visibilityState === 'visible' && list[i].focused !== false) visible = true;
+    }
     if (visible && !isTest) return;
-    /* 合図 'zgn:数' = 前回 読まれてから 送られた 通数（中身は ふくまない） */
-    var m = /zgn:(\d+)/.exec(raw);
-    if (m) unread = Math.max(unread, parseInt(m[1], 10) || 1); else unread++;
+    if (cnt) unread = Math.max(unread + (mm ? 1 : 0), cnt); else unread++;
     try { if (self.navigator && self.navigator.setAppBadge) await self.navigator.setAppBadge(unread); } catch (err) {}
     await self.registration.showNotification('雑学王', {
       body: isTest ? 'テスト通知です。とどいています！' : (unread > 1 ? ('メッセージが ' + unread + '件 とどいています') : 'メッセージが とどきました'),
       tag: isTest ? 'mtp-test' : 'mtp-chat',
       renotify: true,
+      silent: true,
       icon: './icon-192.png',
       badge: './icon-192.png',
-      silent: true,
       data: { n: unread }
     });
   })());
