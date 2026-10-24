@@ -787,7 +787,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v140</b>｜ビルド 2026-10-24（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v141</b>｜ビルド 2026-10-24（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -2369,6 +2369,7 @@ function updateBadge(){
   if(b){ if(S.unread>0){ b.hidden=false; b.textContent='🐾'; } else b.hidden=true; }
   setAppBadgeCount(S.unread);
   updateTitleBadge();
+  try{ if(navigator.serviceWorker&&navigator.serviceWorker.controller) navigator.serviceWorker.controller.postMessage({unread:S.unread||0}); }catch(e){}   /* v141: サービスワーカーの 件数も あわせる */
 }
 /* v125: ホーム画面の バッジに 数字を 出さない（iPhoneの 決まりで 画像は だせないため。●だけで 出る 端末も あり） */
 function setAppBadgeCount(n){
@@ -5699,7 +5700,8 @@ function notifyIncoming(){
   if(!('Notification' in window)||Notification.permission!=='granted') return;
   if(localStorage.getItem('mtp_notify_off')==='1') return;
   var cnt=S.unread||1;
-  var body=peerName()+' から メッセージが とどいたよ🐾';
+  var body='新しい問題が'+cnt+'件追加されたよ🐾';   /* v141: 相手の名前は 出さず 件数で しめす */
+
   var opt={body:body,tag:'mtp-chat',renotify:true,silent:true,badge:'./icon-192.png',icon:'./icon-192.png',data:{n:cnt}};
   /* スマホ(とくに Android)は サービスワーカー 経由で ないと 通知が でない */
   try{
