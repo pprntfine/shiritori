@@ -506,6 +506,9 @@ label,.lead,.hint{color:#6B7280!important}
   box-shadow:0 6px 22px rgba(0,0,0,.5)}
 #call-box.hidevid #call-remote{visibility:hidden}
 #call-remote-img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000;z-index:1}
+#call-remote-cv{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000;z-index:1}
+#call-box.hidevid #call-remote-cv{visibility:hidden}
+#call-box.rtc-ok #call-remote-cv{display:none}
 #call-box.hidevid #call-remote-img{visibility:hidden}
 .call-top{position:absolute;top:0;left:0;right:0;display:flex;gap:10px;align-items:center;
   padding:calc(10px + env(safe-area-inset-top)) 14px 10px;z-index:3;
@@ -707,6 +710,7 @@ body.in-play .leave-row{display:none!important}
 .lhead .lh-nm{flex:1;min-width:0;font-weight:800;font-size:1rem;color:#15181C;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lhead .lh-dot{width:9px;height:9px;border-radius:50%;background:#C3CAD2;flex:none}
 .lhead .lh-dot.on{background:#06C755}
+.lhead #btn-unpair{background:#FFECEC;color:#C62828}
 .lhead button{flex:none;border:0;background:#F1F3F6;color:#334;border-radius:999px;padding:7px 11px;font-size:.78rem;font-weight:800}
 .msg .av{display:grid!important;width:34px;height:34px;border-radius:50%;flex:none;place-items:center;background:#E8EEF4;font-size:20px;overflow:hidden;align-self:flex-start}
 .msg .av.blank{visibility:hidden}
@@ -732,6 +736,11 @@ body.in-play .leave-row{display:none!important}
 #prof-modal .ng{background:#EEF1F4;color:#334}
 #prof-modal .ph{background:#F4F6F9;color:#334;border:0;border-radius:10px;padding:8px 10px;font-weight:800;font-size:.82rem}
 #prof-modal .sec{font-size:.78rem;color:#667;font-weight:800;margin-top:12px}
+/* v118: タイトルを 長おし／連打しても 文字が 選ばれない・コピーされない */
+.hero,.hero *,.brand,.bar,.verline{-webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:none!important;-webkit-tap-highlight-color:transparent}
+.hero h1{cursor:pointer;touch-action:manipulation}
+#hero-badge{position:absolute;top:-6px;right:-22px;min-width:22px;height:22px;padding:0 6px;border-radius:11px;background:#FF3B30;color:#fff;font:800 13px/22px system-ui,sans-serif;text-align:center}
+#hero-badge[hidden]{display:none}
 </style>
 </head>
 <body>
@@ -754,7 +763,7 @@ body.in-play .leave-row{display:none!important}
     <section id="s-lobby" class="screen on">
       <div class="hero">
                 <div class="mascots lab" id="lab" aria-hidden="true"></div>
-        <h1 class="chalk">雑学王</h1>
+        <h1 class="chalk" style="position:relative">雑学王<span id="hero-badge" hidden></span></h1>
       </div>
       <button id="btn-solo" class="chalk-btn big" type="button" style="width:100%;margin-top:4px">クイズを はじめる</button>
       <p id="local-hint" class="note" hidden></p>
@@ -762,7 +771,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v117</b>｜ビルド 2026-10-24（つうしん 2本立て・名前とアイコン・通知・トップ画面に もどる）</p>
+      <p class="verline">バージョン <b id="ver">v119</b>｜ビルド 2026-10-24（ライブを なめらかに：あんごう中継 15コマ/秒）</p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -835,7 +844,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v114</b>｜ビルド 2026-10-24（つうしん 2本立て・名前とアイコン・通知・トップ画面に もどる）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v114</b>｜ビルド 2026-10-24（ライブを なめらかに：あんごう中継 15コマ/秒）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -916,7 +925,7 @@ body.in-play .leave-row{display:none!important}
   </div>
 
   <div id="pane-chat" class="pane chatpane on">
-    <div class="lhead"><span class="lh-av" id="lh-av">🐱</span><span class="lh-nm" id="lh-nm">にゃん</span><span class="lh-dot" id="lh-dot"></span><button type="button" id="btn-prof">名前・アイコン</button><button type="button" id="btn-top2">トップへ</button></div>
+    <div class="lhead"><span class="lh-av" id="lh-av">🐱</span><span class="lh-nm" id="lh-nm">にゃん</span><span class="lh-dot" id="lh-dot"></span><button type="button" id="btn-prof">名前・アイコン</button><button type="button" id="btn-top2">トップへ</button><button type="button" id="btn-unpair">部屋を でる</button></div>
     <div id="chat-log" class="line-chat" role="log" aria-live="polite"></div>
     <form id="form-chat" class="line-composer" autocomplete="off">
       <div class="tools">
@@ -1004,7 +1013,7 @@ body.in-play .leave-row{display:none!important}
 </div>
 </div>
 
-<button id="re-mush" type="button" aria-label="きのこ" hidden>🍄‍🟫</button>
+
 <div id="prof-modal"><div class="pm">
   <h3>名前と アイコン</h3>
   <div class="sec">じぶん（あいてにも この名前・アイコンで みえます）</div>
@@ -1885,7 +1894,7 @@ var Net={
    ntfy と 同じ あんごう文を 同時に ながす。どちらか 早い ほうが とどけば OK（重複は 番号で すてる）
    ================================================================ */
 var Fast={
-  urls:['wss://broker.emqx.io:8084/mqtt','wss://broker.hivemq.com:8884/mqtt'],
+  urls:['wss://broker.hivemq.com:8884/mqtt','wss://broker.emqx.io:8084/mqtt'],
   ws:null,open:false,topic:null,ui:0,pid:1,pingT:null,retryT:null,buf:[],
   enc:function(str){ var b=new TextEncoder().encode(str); var a=new Uint8Array(2+b.length); a[0]=b.length>>8; a[1]=b.length&255; a.set(b,2); return a; },
   len:function(n){ var o=[]; do{ var d=n%128; n=Math.floor(n/128); if(n>0) d|=128; o.push(d); }while(n>0); return o; },
@@ -1929,12 +1938,28 @@ var Fast={
       this.ws.send(this.pkt(0x82,this.cat([new Uint8Array([0,this.pid++&255||1]),tp,new Uint8Array([0])])));
       clearInterval(this.pingT); this.pingT=setInterval(function(){ try{ if(self.open) self.ws.send(new Uint8Array([0xC0,0])); }catch(e){} },25000);
       var q=this.buf; this.buf=[]; q.forEach(function(x){ self.pub(x); });
+      try{ if(Vid.rxTopic) this.sub(Vid.rxTopic); }catch(e){}
       try{ paintTopicTag(); }catch(e){}
     }else if(t===3){                             /* PUBLISH */
       var tl=(body[0]<<8)|body[1], q=(type>>1)&3, off=2+tl+(q?2:0);
+      var tname=new TextDecoder().decode(body.slice(2,2+tl));
+      if(tname.indexOf('zgv/')===0){ try{ Vid.onBin(body.slice(off)); }catch(e){} return; }
       var msg=new TextDecoder().decode(body.slice(off));
       try{ Net.lastAlive=Date.now(); Net.recvFast(msg); }catch(e){}
     }
+  },
+  sub:function(name){
+    if(!this.open||!this.ws) return false;
+    try{ this.ws.send(this.pkt(0x82,this.cat([new Uint8Array([0,(this.pid++&255)||1]),this.enc(name),new Uint8Array([0])]))); return true; }catch(e){ return false; }
+  },
+  unsub:function(name){
+    if(!this.open||!this.ws) return;
+    try{ this.ws.send(this.pkt(0xA2,this.cat([new Uint8Array([0,(this.pid++&255)||1]),this.enc(name)]))); }catch(e){}
+  },
+  pubBin:function(name,bytes){
+    if(!this.open||!this.ws) return false;
+    if(this.ws.bufferedAmount>600000) return false;   /* 回線が つまって いる ときは 古い コマを すてる(おくれ防止) */
+    try{ this.ws.send(this.pkt(0x30,this.cat([this.enc(name),bytes]))); return true; }catch(e){ return false; }
   },
   pub:function(str){
     if(!this.topic) return false;
@@ -1945,6 +1970,92 @@ var Fast={
   close:function(){ clearInterval(this.pingT); clearTimeout(this.retryT); this.retryT=null; this.open=false; this.topic=null;
     if(this.ws){ try{ this.ws.onclose=null; this.ws.close(); }catch(e){} this.ws=null; } this.buf=[]; },
   kick:function(){ if(this.topic&&!this.open&&!this.ws){ clearTimeout(this.retryT); this.retryT=null; this.go(); } }
+};
+
+/* ================================================================
+   v119: なめらか ライブ（直接つながらない 回線でも 15コマ/秒）
+   - 映像は 端末内で 1コマずつ AES-GCM（2人だけの 鍵）で あんごう化してから 中継へ
+   - 中継所・第三者には 読めない データしか ながれない
+   - 直接(WebRTC)で つながれば そちらを 優先（さらに なめらか・音つき）
+   ================================================================ */
+var Vid={
+  on:false, rxOn:false, timer:null, seq:0, rxTopic:null, txTopic:null, busy:false, lastRx:0, shown:0, rxSeq:-1,
+  FPS:15, W:480, Q:0.62,
+  topicFor:async function(dir){
+    var k=(Net.key&&S.sealed)?Net.key:null; if(!k) return null;
+    var raw; try{ raw=new Uint8Array(await crypto.subtle.exportKey('raw',k)); }catch(e){ return null; }
+    var h=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('vid|'+dir+'|'+b64(raw)));
+    return 'zgv/'+toHex(h).slice(0,32);
+  },
+  myDir:function(){ return S.isHost?'h':'g'; },
+  peerDir:function(){ return S.isHost?'g':'h'; },
+  listen:async function(){
+    var t=await this.topicFor(this.peerDir()); if(!t) return;
+    if(this.rxTopic&&this.rxTopic!==t) Fast.unsub(this.rxTopic);
+    this.rxTopic=t; this.rxOn=true; Fast.sub(t);
+  },
+  stopListen:function(){ if(this.rxTopic) Fast.unsub(this.rxTopic); this.rxTopic=null; this.rxOn=false; this.rxSeq=-1; },
+  start:async function(){
+    if(this.on) return;
+    if(!callStream){ return; }
+    this.txTopic=await this.topicFor(this.myDir()); if(!this.txTopic) return;
+    this.on=true; this.seq=0;
+    var v=$('#call-local'); if(v&&!v.srcObject){ v.srcObject=callStream; try{ v.play(); }catch(e){} }
+    this.cv=document.createElement('canvas'); this.cx=this.cv.getContext('2d');
+    var self=this, iv=Math.round(1000/this.FPS);
+    this.timer=setInterval(function(){ self.snap(); },iv);
+    var st=$('#call-state'); if(st) st.textContent='ライブ中（あんごう中継）';
+  },
+  stop:function(){ this.on=false; if(this.timer){ clearInterval(this.timer); this.timer=null; } },
+  snap:function(){
+    if(!this.on||this.busy||!callStream||!Fast.open) return;
+    if(document.hidden||callHide) return;
+    var v=$('#call-local'); if(!v||!v.videoWidth) return;
+    var self=this; this.busy=true;
+    try{
+      var w=v.videoWidth,h=v.videoHeight,sc=Math.min(1,this.W/Math.max(w,h));
+      var cw=Math.round(w*sc), ch=Math.round(h*sc);
+      if(this.cv.width!==cw){ this.cv.width=cw; this.cv.height=ch; }
+      this.cx.drawImage(v,0,0,cw,ch);
+      this.cv.toBlob(function(bl){
+        if(!bl){ self.busy=false; return; }
+        bl.arrayBuffer().then(async function(ab){
+          try{
+            var key=Net.key; if(!key||!S.sealed){ self.busy=false; return; }
+            var iv=randFrom(12);
+            var hdr=new Uint8Array(4); var n=(++self.seq)>>>0; hdr[0]=n>>>24; hdr[1]=(n>>>16)&255; hdr[2]=(n>>>8)&255; hdr[3]=n&255;
+            var pt=new Uint8Array(4+ab.byteLength); pt.set(hdr,0); pt.set(new Uint8Array(ab),4);
+            var ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv:iv},key,pt));
+            var out=new Uint8Array(12+ct.length); out.set(iv,0); out.set(ct,12);
+            Fast.pubBin(self.txTopic,out);
+          }catch(e){}
+          self.busy=false;
+        },function(){ self.busy=false; });
+      },'image/jpeg',self.Q);
+    }catch(e){ this.busy=false; }
+  },
+  onBin:async function(buf){
+    if(!this.rxOn||buf.length<30) return;
+    var key=Net.key; if(!key||!S.sealed) return;
+    var pt;
+    try{ pt=new Uint8Array(await crypto.subtle.decrypt({name:'AES-GCM',iv:buf.slice(0,12)},key,buf.slice(12))); }catch(e){ return; }   /* 2人の 鍵で ひらけない ものは すてる */
+    var n=((pt[0]<<24)|(pt[1]<<16)|(pt[2]<<8)|pt[3])>>>0;
+    if(n<=this.rxSeq&&n>5) return;    /* 古い コマは すてる */
+    this.rxSeq=n;
+    var jpg=pt.slice(4); if(jpg[0]!==0xFF||jpg[1]!==0xD8) return;
+    this.lastRx=Date.now();
+    var box=$('#call-box'); if(!box) return;
+    if(box.hidden){ openCallUI(); toast(peerName()+' の ライブが とどきました。'); }
+    var cvs=$('#call-remote-cv');
+    if(!cvs){ cvs=document.createElement('canvas'); cvs.id='call-remote-cv'; box.insertBefore(cvs,box.firstChild.nextSibling); }
+    try{
+      var bm=await createImageBitmap(new Blob([jpg],{type:'image/jpeg'}));
+      if(cvs.width!==bm.width){ cvs.width=bm.width; cvs.height=bm.height; }
+      cvs.getContext('2d').drawImage(bm,0,0); try{ bm.close(); }catch(e){}
+      this.shown++;
+      var st=$('#call-state'); if(st&&!(pc&&pc.connectionState==='connected')) st.textContent='ライブ中';
+    }catch(e){}
+  }
 };
 /* 番号は 時刻ベース：入りなおしても 前より 小さく ならない */
 function nextSeq(){ S.seq=Math.max((S.seq||0)+1,Date.now()); return S.seq; }
@@ -1999,8 +2110,8 @@ function updateTalkbackBadges(){
     var bg=b.querySelector('.badge');
     if(bg){ bg.hidden=!S.unread; bg.textContent=String(S.unread); }
   });
-  var mu=$('#re-mush');
-  if(mu){ mu.hidden=!(S.linked&&S.phase!=='play'); mu.setAttribute('data-n',S.unread>0?String(S.unread>99?'99+':S.unread):''); }
+  /* v118: 🍄‍🟫 は はいし。未読は タイトルの 右上に 小さく 出す */
+  var hb=$('#hero-badge'); if(hb){ hb.hidden=!(S.linked&&S.phase!=='play'&&S.unread>0); hb.textContent=S.unread>99?'99+':String(S.unread||''); }
 }
 document.querySelectorAll('.talk-back').forEach(function(b){
   b.addEventListener('click',function(){
@@ -4825,13 +4936,22 @@ function renderMush(){
   var play=document.getElementById('s-play'); if(!play) return;
   var row=document.createElement('div'); row.className='leave-row';
   var b=document.createElement('button');
-  b.type='button'; b.className='ghost wide'; b.textContent='部屋を でる';
-  b.addEventListener('click',function(){ leaveRoom(); });
+  b.type='button'; b.className='ghost wide'; b.textContent='部屋を でる（ペア解除）';
+  b.addEventListener('click',function(){ unpairBoth(b); });
   row.appendChild(b); play.appendChild(row);
 })();
 
 document.querySelectorAll('.hero h1,.hero .mascots,.verline,.brand').forEach(function(el){
   el.addEventListener('click',tapSecret);
+  /* 連打での 文字えらび・コピーメニューを ふせぐ */
+  el.addEventListener('selectstart',function(e){ e.preventDefault(); });
+  el.addEventListener('contextmenu',function(e){ e.preventDefault(); });
+  el.addEventListener('dblclick',function(e){ e.preventDefault(); try{ window.getSelection().removeAllRanges(); }catch(_){} });
+  el.addEventListener('mousedown',function(e){ if(e.detail>1) e.preventDefault(); });
+});
+document.addEventListener('selectionchange',function(){
+  try{ var sel=window.getSelection(); if(!sel||sel.isCollapsed) return; var n=sel.anchorNode; n=n&&(n.nodeType===1?n:n.parentElement);
+    if(n&&n.closest&&n.closest('.hero,.brand,.verline')) sel.removeAllRanges(); }catch(e){}
 });
 
 /* =================================================================
@@ -4908,6 +5028,7 @@ async function resumeConnect(silent){
     /* v111: hi2 は 送らない */
     try{ renderChat(true); }catch(e){}
     if(!silent){ show('play'); document.querySelector('.bar').classList.add('compact'); setTab('chat'); }
+    setTimeout(function(){ try{ bgPushSetup(); }catch(e){} },2000);
     try{ paintTopicTag(); }catch(e){}
     return true;
   }catch(e){ try{ window.__resumeErr=String(e&&e.message||e); }catch(_){} return false; }
@@ -4969,6 +5090,7 @@ function startPlay(){
   S.peerRead=0; S.lastPeerN=0; S.readSent=0; S.peerAck=0;
   S.linked=true;   /* v115: 部屋を でても つながりを たもつ（🍄‍🟫 で もどれる・相手を 追い出さない） */
   setTimeout(sendProf,2500); paintProf();
+  setTimeout(function(){ try{ bgPushSetup(); }catch(e){} },3000);
   show('play');
   document.querySelector('.bar').classList.add('compact');
   $('#btn-eject').hidden = !(S.isHost && S.guest);
@@ -5285,7 +5407,8 @@ function updateNotifyBtns(){
   var l=$('#btn-notify-lobby'); if(l) l.textContent=t;
 }
 function toggleNotify(){
-  if(notifyOn){ notifyOn=false; updateNotifyBtns(); return; }
+  if(notifyOn){ notifyOn=false; try{ localStorage.setItem('mtp_notify_off','1'); }catch(e){} updateNotifyBtns(); return; }
+  try{ localStorage.removeItem('mtp_notify_off'); }catch(e){}
   if(!('Notification' in window)){ $('#btn-notify').textContent='通知:不可'; var l=$('#btn-notify-lobby'); if(l) l.textContent='通知:不可'; return; }
   try{
     Notification.requestPermission().then(function(p){ notifyOn=(p==='granted'); updateNotifyBtns(); if(notifyOn) bgPushSetup(); }).catch(function(){});
@@ -5293,7 +5416,7 @@ function toggleNotify(){
 }
 $('#btn-notify').addEventListener('click',toggleNotify);
 /* v117: 通知は 一度 ゆるせば つねに オン */
-try{ if('Notification' in window&&Notification.permission==='granted'){ notifyOn=true; setTimeout(updateNotifyBtns,0); } }catch(e){}
+try{ if('Notification' in window&&Notification.permission==='granted'&&localStorage.getItem('mtp_notify_off')!=='1'){ notifyOn=true; setTimeout(updateNotifyBtns,0); } }catch(e){}
 document.addEventListener('click',function askOnce(){
   document.removeEventListener('click',askOnce,true);
   try{ if('Notification' in window&&Notification.permission==='default'&&(S.linked||pairHasKeys())) Notification.requestPermission().then(function(p){ notifyOn=(p==='granted'); updateNotifyBtns(); if(notifyOn) bgPushSetup(); }); }catch(e){}
@@ -5332,6 +5455,7 @@ function notifyIncoming(){
   try{ if(navigator.vibrate) navigator.vibrate([120,60,120]); }catch(e){}
   beepHost();
   if(!('Notification' in window)||Notification.permission!=='granted') return;
+  if(notifyOn===false&&localStorage.getItem('mtp_notify_off')==='1') return;
   var body=peerName()+' から メッセージが とどきました';
   var opt={body:body,tag:'mtp-chat',renotify:true,badge:'./icon-192.png',icon:'./icon-192.png',data:{n:S.unread||1}};
   /* スマホ(とくに Android)は サービスワーカー 経由で ないと 通知が でない */
@@ -5493,7 +5617,7 @@ function callDiagLog(step,err){
   window.__callDiag=window.__callDiag||[];
   window.__callDiag.push(line);
   if(window.__callDiag.length>20) window.__callDiag=window.__callDiag.slice(-20);
-  try{ console.log('[call]',line); }catch(e){}
+  /* v118: 診断は 端末内だけ（コンソールにも 出さない） */
   return line;
 }
 function callDiagText(){
@@ -5517,7 +5641,7 @@ function tuneSenders(){
       var p=sn.getParameters();
       if(!p.encodings||!p.encodings.length) p.encodings=[{}];
       if(sn.track.kind==='video'){
-        p.degradationPreference='maintain-resolution';
+        p.degradationPreference='maintain-framerate';
         p.encodings[0].maxBitrate=2500000;
         p.encodings[0].maxFramerate=30;
         try{ sn.track.contentHint='motion'; }catch(e){}
@@ -5532,7 +5656,7 @@ async function getCallMedia(wantVideo){
   try{
     if(wantVideo){
       callStream=await navigator.mediaDevices.getUserMedia({
-        video:{facingMode:{ideal:curFacing},width:{ideal:1280},height:{ideal:720},frameRate:{ideal:30}},
+        video:{facingMode:{ideal:curFacing},width:{ideal:960},height:{ideal:720},frameRate:{ideal:30,min:20}},
         audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}
       });
       callVideo=true; micStream=callStream; micOn=true;
@@ -5571,6 +5695,9 @@ function closeLiveLegacy(){
 }
 var jpgTimer=null, jpgCount=0, JPG_MS=5000, JPG_MAX=36;
 function fallbackFrames(){
+  /* v119: コマ送りは つかわない。なめらか 中継（最初から うごいている） */
+  try{ Vid.start(); Vid.listen(); }catch(e){}
+  return;
   if(!callVideo||!callStream) return;
   if(jpgTimer) return;
   var lv=$('#live-vid'); if(lv){ lv.srcObject=callStream; try{ lv.play(); }catch(e){} }
@@ -5666,8 +5793,8 @@ $('#btn-live').addEventListener('click',async function(){
       }
     }
     if(last){ callFail('createOffer',last); return; }
-    toast('ライブを はじめました。あいてに つないでいます…');
-    setTimeout(function(){ try{ if(callOn&&callVideo&&pc&&pc.connectionState!=='connected') fallbackFrames(); }catch(e){} },15000);
+    toast('ライブを はじめました。');
+    try{ Vid.listen(); Vid.start(); }catch(e){}
   }catch(e){
     callFail('live-button',e);
   }finally{
@@ -5772,6 +5899,7 @@ function ensureRtcAudio(){
 }
 function stopCall(notify){
   rtcOn=false; callOn=false;
+  try{ Vid.stop(); Vid.stopListen(); var rc=$('#call-remote-cv'); if(rc) rc.remove(); var cbx0=$('#call-box'); if(cbx0) cbx0.classList.remove('rtc-ok'); }catch(e){}
   try{ stopJpg(); var ri=$('#call-remote-img'); if(ri) ri.remove(); }catch(e){}
   if(fbT){ clearTimeout(fbT); fbT=0; }
   if(callTimer){ clearInterval(callTimer); callTimer=null; }
@@ -5803,7 +5931,7 @@ $('#btn-call').addEventListener('click',async function(){
 /* 通話は いつでも 『どこでも つながる』ように STUN を つかう。
    STUN は『相手の ばしょ』を さがす ためだけ。音声は DTLS-SRTP で 端末どうしが 暗号化する
    (中継所にも STUN にも 音声の 中身は とどかない)。 */
-var STUN_LIST=['stun:stun.cloudflare.com:3478','stun:stun.l.google.com:19302','stun:stun1.l.google.com:19302'];
+var STUN_LIST=['stun:stun.cloudflare.com:3478','stun:stun.l.google.com:19302','stun:stun1.l.google.com:19302','stun:stun2.l.google.com:19302','stun:stun.services.mozilla.com:3478'];
 /* v115: RTCPeerConnection は {urls:…} の 形で わたす ひつようが ある（文字列のままだと 即エラー＝カメラが すぐ とじていた） */
 function buildIce(){ return [{urls:STUN_LIST.slice()}]; }
 /* ICE 候補が そろうまで まつ（候補を 1つずつ おくらない＝通信回数を へらす） */
@@ -5848,13 +5976,25 @@ function rtcStart(isCaller){
       if(fbT){ clearTimeout(fbT); fbT=0; }
       tuneSenders();
       setTimeout(tuneSenders,2500);
+      /* 実際に 映像が うごいて いるのを たしかめてから 中継を とめる */
+      setTimeout(function(){
+        try{
+          var rv=$('#call-remote');
+          if(pc&&pc.connectionState==='connected'&&rv&&rv.videoWidth>0){
+            Vid.stop(); var cb2=$('#call-box'); if(cb2) cb2.classList.add('rtc-ok');
+            var st3=$('#call-state'); if(st3) st3.textContent='ライブ中（直接）';
+          }
+        }catch(e){}
+      },3000);
     }else if(pc&&rtcOn&&(pc.connectionState==='failed'||pc.connectionState==='disconnected'||pc.connectionState==='closed')){
+      /* 直接が きれたら すぐ 中継に もどす（映像が とまらない） */
+      try{ var cb3=$('#call-box'); if(cb3) cb3.classList.remove('rtc-ok'); if(callVideo){ Vid.listen(); Vid.start(); } }catch(e){}
       if(cb) cb.textContent='電話:つなぐ中…';
       if(stt) stt.textContent='つなぎなおしています…';
       if(!fbT) fbT=setTimeout(function(){
         fbT=0;
         if(!rtcOn) return;
-        if(callVideo){ fallbackFrames(); return; }
+        if(callVideo){ return; }   /* v119: 映像は 中継で つづける */
         stopCall(false);
         if(!voiceChunkOn){
           voiceChunkOn=true; micOn=true;
@@ -5918,8 +6058,8 @@ async function rtcHandleSdp(m,sdp){
         if(callVideo){ callVideo=false; gm=await getCallMedia(false); }   /* カメラが だめでも 見るだけは できる ように */
         if(gm!==true){ note('あいてから でんわですが カメラ／マイクを つかえません（'+((gm&&gm.name)||'')+'）。','#note2'); }
       }
-      if(m.v){ openCallUI(); toast('あいてから ライブが とどきました。');
-        setTimeout(function(){ try{ if(callOn&&callVideo&&pc&&pc.connectionState!=='connected') fallbackFrames(); }catch(e){} },15000); }
+      if(m.v){ openCallUI(); toast('あいてから ライブが とどきました。'); }
+      try{ Vid.listen(); if(callVideo) Vid.start(); }catch(e){}
       rtcStart(false);
       await pc.setRemoteDescription(new RTCSessionDescription(sdp));
       var ans=await pc.createAnswer();
@@ -6222,7 +6362,47 @@ function restartRound(){
 $('#btn-to-chat').addEventListener('click',function(){
   show('play'); setTab('chat');
 });
-$('#btn-leave').addEventListener('click',function(){ pairClear(); leaveRoom(); });
+$('#btn-leave').addEventListener('click',function(){ unpairBoth(this); });
+
+/* v118: ペアを 両方の 端末から 解除する（再度 入るには あたらしく ペアが ひつよう） */
+function wipePairLocal(){
+  try{ pairClear(); }catch(e){}
+  try{ localStorage.removeItem('mtp_since_v1'); }catch(e){}
+  try{ localStorage.removeItem(OUT_KEY); }catch(e){}
+  try{ localStorage.removeItem('mtp_prof_v1'); PROF=profLoad(); }catch(e){}
+  try{ closeLive(); }catch(e){}
+  try{ stopCall(false); }catch(e){}
+  try{ Net.close(); }catch(e){}
+  try{ stopAnnounce(); stopPing(); stopWatch(); stopExpiryTick(); }catch(e){}
+  S.linked=false; S.paired=false; S.sealed=false; S.guest=null; S.joinReq=null; S.sessKey=null; S.sas=null;
+  S.myECDH=null; S.pairBox=null; S.pairHostPub=null; S.pairDid=null;
+  S.opp={id:null,name:''}; S.isHost=null; S._profSent=false;
+  S.chat=[]; S.chatRendered=0; S.outbox=[]; S.unread=0; S.peerRead=0; S.lastPeerN=0; S.readSent=0; S.peerAck=0;
+  S.words=[]; S.req=null; S.turn=null; S.over=null; S.pending=null;
+  S.secret=''; S.room=''; S.code=''; S.key=null; S.topic=null; S.expiresAt=0;
+  try{ $('#chat-log').innerHTML=''; $('#log').innerHTML=''; }catch(e){}
+  try{ updateBadge(); updateTalkbackBadges(); setNet('off'); setLock(false,'未接続'); }catch(e){}
+  try{ if(swReg&&swReg.pushManager) swReg.pushManager.getSubscription().then(function(sb){ if(sb) sb.unsubscribe(); }); }catch(e){}
+  try{ setAppBadgeCount(0); }catch(e){}
+}
+var unpairArmed=false, unpairT=null;
+function unpairBoth(btn){
+  if(btn&&!unpairArmed){
+    unpairArmed=true; var old=btn.textContent; btn.textContent='もう一度 おすと ペア解除';
+    unpairT=setTimeout(function(){ unpairArmed=false; btn.textContent=old; },3000);
+    return;
+  }
+  clearTimeout(unpairT); unpairArmed=false;
+  var done=false;
+  var fin=function(){ if(done) return; done=true; wipePairLocal(); show('lobby'); note('ペアを 解除しました。また つかうときは あたらしく 部屋を つくって ペアに なってください。'); };
+  try{
+    if(Net.topic&&Net.key){
+      Net.send({t:'unpair'},function(){ setTimeout(fin,300); });
+      setTimeout(function(){ try{ Net.send({t:'unpair'}); }catch(e){} },500);
+      setTimeout(fin,2500);
+    } else fin();
+  }catch(e){ fin(); }
+}
 function leaveRoom(){
   try{ if(typeof liveOn!=='undefined'&&liveOn) closeLive(); }catch(e){}
 
@@ -6311,6 +6491,9 @@ Net.onMsg=function(m){
   if(!m||typeof m.t!=='string') return;
   /* 大きすぎる 電文は 捨てる(過負荷よけ) */
   try{ if(JSON.stringify(m).length>120000) return; }catch(e){ return; }
+  /* v118: 2人だけの 鍵に きりかえた あとは、あいことばの 鍵で 来た 中身は 一切 うけとらない */
+  if(m.__legacy&&(S.sealed||S.linked)&&!({join:1,full:1,in3:1}[m.t])) return;
+  if(m.__legacy&&!S.isHost&&!({welcome:1,in2:1,deny:1,full:1,expired:1,ping:1,bye:1}[m.t])&&!S.paired) return;
   /* ペア成立後は その相手 いがい いっさい通さない(3人目・なりすまし対策) */
   if(S.paired||S.sealed){
     var pid = S.isHost ? (S.guest&&S.guest.did) : (S.opp&&S.opp.id);
@@ -6322,6 +6505,8 @@ Net.onMsg=function(m){
     if(S.isHost && S.guest && m.from!==S.guest.did) return;
     if(!S.isHost && S.paired && S.opp.id && m.from!==S.opp.id) return;
   }
+  var PRIV={chats:1,chat:1,photo:1,'photo-chunk':1,read:1,ack:1,prof:1,unpair:1,rtc2:1,'rtc-sdp':1,'rtc-ice':1,'live-jpg':1,'live-ctl':1,'live-frame':1,'live-audio':1,call:1,'call-end':1};
+  if(PRIV[m.t]&&(m.__legacy||!S.sealed)) return;
   /* 連投よけ(1秒60通まで) */
   var nowMs=Date.now();
   if(!S.rl||nowMs-S.rl.t>1000) S.rl={t:nowMs,n:0};
@@ -6357,7 +6542,7 @@ Net.onMsg=function(m){
       (function(){
         try{
           var p=pairLoad();
-          if(p&&p.peer&&p.peer===m.from&&S.guest&&S.guest.did===m.from){ S.joinReq={did:m.from,name:'にゃん',pub:m.pub}; approveJoin(); }
+          /* v118: 自動承認は しない（かならず ホストが 承認する） */
         }catch(e){}
       })();
       if(S.joinReq&&S.joinReq.did!==m.from){ notifyHostAccess('ほかの 人が 入室を もとめています'); break; }
@@ -6397,6 +6582,7 @@ Net.onMsg=function(m){
     case 'in3':
       if(!S.isHost||!S.myECDH) break;
       if(m.to&&m.to!==S.me.id) break;
+      if(!S.guest||m.from!==S.guest.did) break;   /* v118: 承認した 相手 だけ */
       if(!m.pub) break;
       (async function(){
         try{
@@ -6444,12 +6630,14 @@ Net.onMsg=function(m){
       })();
       break;
     case 'ready':
+      if(!S.paired||m.__legacy) break;    /* v118: 承認前・あいことばの 鍵 だけでは 入れない */
       if(S.phase==='play'||S.linked){ try{ Net.send({t:'ready2'}); }catch(e){} break; }
       stopMigrate();
       if(m.host){ try{ Net.send({t:'ready2'}); }catch(e){} }
       startPlay();
       break;
     case 'ready2':
+      if(!S.paired||m.__legacy) break;
       if(S.phase==='play'||S.linked) break;
       stopMigrate();
       startPlay();
@@ -6496,6 +6684,11 @@ Net.onMsg=function(m){
     case 'photo':
       if(m.from===S.me.id) break;
       recvPhoto(m);
+      break;
+    case 'unpair':
+      if(m.from===S.me.id) break;
+      wipePairLocal(); show('lobby');
+      note('あいてが ペアを 解除しました。また つかうときは あたらしく ペアに なってください。');
       break;
     case 'prof':
       if(m.from===S.me.id) break;
@@ -6903,11 +7096,11 @@ async function bgPushSetup(){
 var bellLast=0;
 async function ringBell(){
   /* あいての 端末が とじて いても 通知が とどく ように「ベル」だけ ならす（1分に 1回まで） */
-  if(Date.now()-bellLast<60000) return;
+  if(Date.now()-bellLast<10000) return;
   bellLast=Date.now();
   try{
     var t=await bellTopic(); if(!t) return;
-    fetch('https://ntfy.sh/'+t,{method:'POST',headers:{'Content-Type':'text/plain'},body:'💬'});
+    fetch('https://ntfy.sh/'+t+'?cache=no',{method:'POST',headers:{'Content-Type':'text/plain'},body:'💬'});
   }catch(e){}
 }
 setTimeout(function(){ try{ if(Notification.permission==='granted') bgPushSetup(); }catch(e){} },4000);
@@ -6979,6 +7172,7 @@ function recvProf(m){
     toast('ほぞん しました。');
   });
   $('#btn-top2').addEventListener('click',function(){ show('lobby'); });
+  $('#btn-unpair').addEventListener('click',function(){ unpairBoth(this); });
 })();
 /* ===== インスタ風ライブの 操作 ===== */
 function igName(){
@@ -7038,7 +7232,7 @@ function igHeartFly(x){
 /* 送信待ちが のこって いれば 復元して 送る */
 setTimeout(function(){ try{ S.outbox=outLoad(); if(S.outbox.length){ flushOutbox(); } }catch(e){} },3000);
 /* 起動：ペアの きおくが あれば しずかに つなぐ（メッセージ・通知は とどく） */
-setTimeout(function(){ try{ if(pairHasKeys()) resumeConnect(true); }catch(e){} },1200);
+setTimeout(function(){ try{ if(pairHasKeys()&&!Net.topic) resumeConnect(true); }catch(e){} },1200);
 
 /* 起動 */
 if(isLocalFile()){
