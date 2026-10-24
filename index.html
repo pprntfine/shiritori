@@ -741,6 +741,17 @@ body.in-play .leave-row{display:none!important}
 .hero h1{cursor:pointer;touch-action:manipulation}
 #hero-badge{position:absolute;top:-6px;right:-22px;min-width:22px;height:22px;padding:0 6px;border-radius:11px;background:#FF3B30;color:#fff;font:800 13px/22px system-ui,sans-serif;text-align:center}
 #hero-badge[hidden]{display:none}
+/* v121: かわいい 送信ボタン（肉球） */
+.line-composer .line-send.cute-send{width:48px!important;height:48px!important;min-width:48px!important;padding:0!important;border-radius:50%!important;
+  background:radial-gradient(circle at 30% 28%,#FFC2D6 0%,#FF8FB8 45%,#FF5C9A 100%)!important;color:#fff!important;
+  box-shadow:0 4px 10px rgba(255,92,154,.45),inset 0 -3px 0 rgba(0,0,0,.08),inset 0 2px 0 rgba(255,255,255,.55)!important;
+  display:grid!important;place-items:center!important;font-size:0!important;transition:transform .12s ease!important;border:2px solid #fff!important}
+.line-composer .line-send.cute-send:after{content:none!important;display:none!important}
+.line-composer .line-send.cute-send .cs-ico{font-size:24px;line-height:1;filter:drop-shadow(0 1px 0 rgba(0,0,0,.12));transform:rotate(-12deg)}
+.line-composer .line-send.cute-send:active{transform:scale(.88) rotate(-6deg)!important}
+.line-composer .line-send.cute-send.pop .cs-ico{animation:cspop .45s ease}
+@keyframes cspop{0%{transform:rotate(-12deg) scale(1)}40%{transform:rotate(8deg) scale(1.35)}100%{transform:rotate(-12deg) scale(1)}}
+#ig-eye{cursor:help}
 </style>
 </head>
 <body>
@@ -771,7 +782,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v120</b>｜ビルド 2026-10-24（もどった 直後も すぐ 送信・ライブの コメントと ♡・通知バッジ）</p>
+      <p class="verline">バージョン <b id="ver">v121</b>｜ビルド 2026-10-24（とどくまで 自動再送・中継所の 自動きりかえ・ライブ開始の 合図・バッジの 数）</p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -844,7 +855,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v114</b>｜ビルド 2026-10-24（もどった 直後も すぐ 送信・ライブの コメントと ♡・通知バッジ）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v114</b>｜ビルド 2026-10-24（とどくまで 自動再送・中継所の 自動きりかえ・ライブ開始の 合図・バッジの 数）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -936,7 +947,7 @@ body.in-play .leave-row{display:none!important}
         <button id="btn-notify" type="button" class="notify-btn" title="メッセージ通知(内容は表示しません)">通知:オフ</button>
       </div>
       <input id="in-chat" maxlength="300" placeholder="メッセージを入力" enterkeyhint="send" autocomplete="off" spellcheck="false" inputmode="text">
-      <button class="line-send" type="submit" id="btn-chat-send">送信</button>
+      <button class="line-send cute-send" type="submit" id="btn-chat-send" aria-label="送信"><span class="cs-ico">🐾</span></button>
     </form>
     <button id="btn-home" class="ghost" type="button" style="margin:10px auto 0;display:block">トップへ</button>
   </div>
@@ -991,7 +1002,7 @@ body.in-play .leave-row{display:none!important}
       <b id="ig-name">あいて</b>
       <span class="ig-live"><i></i>LIVE</span>
     </div>
-    <div class="ig-view"><span id="ig-eye">👁</span><b id="ig-view">1</b></div>
+    <div class="ig-view"><span id="ig-eye">👁</span><b id="ig-view">0</b></div>
     <button id="call-end" type="button" class="ig-x">終了</button>
   </div>
   <div id="ig-comments" class="ig-comments"></div>
@@ -1936,23 +1947,29 @@ var Fast={
         self.onPkt(type,body,guard);
       }
     };
-    w.onclose=function(){ clearTimeout(guard); var was=self.open; self.open=false; if(self.ws===w){ self.ws=null; if(!was) self.ui++; self.retry(); } };
+    w.onclose=function(){ clearTimeout(guard); var was=self.open; self.open=false; self.subOk=false; if(self.ws===w){ self.ws=null; self.ui++; self.retry(); } };
     w.onerror=function(){};
   },
   onPkt:function(type,body,guard){
     var self=this, t=type>>4;
     if(t===2){                                   /* CONNACK */
       if(body[1]!==0){ try{ this.ws.close(); }catch(e){} return; }
-      clearTimeout(guard); this.open=true;
+      clearTimeout(guard); this.open=true; this.subOk=false; this.fails=0;
       var tp=this.enc('zgk/'+this.topic);
       this.ws.send(this.pkt(0x82,this.cat([new Uint8Array([0,this.pid++&255||1]),tp,new Uint8Array([0])])));
-      clearInterval(this.pingT); this.pingT=setInterval(function(){ try{ if(self.open) self.ws.send(new Uint8Array([0xC0,0])); }catch(e){} },25000);
+      /* 購読の 返事(SUBACK)が 4秒 こなければ べつの 中継所へ */
+      var wsNow=this.ws; setTimeout(function(){ if(self.ws===wsNow&&!self.subOk){ self.ui++; self.renew(); } },4000);
+      clearInterval(this.pingT); this.pingT=setInterval(function(){ try{ if(self.open) self.ws.send(new Uint8Array([0xC0,0])); }catch(e){} },8000);
+      this.lastRx=Date.now();
       var q=this.buf; this.buf=[]; q.forEach(function(x){ self.pub(x); });
       try{ if(Vid.rxTopic) this.sub(Vid.rxTopic); }catch(e){}
       try{ paintTopicTag(); }catch(e){}
+    }else if(t===9){                             /* SUBACK */
+      if(body[2]!==0x80) this.subOk=true; else { this.ui++; this.renew(); }
     }else if(t===3){                             /* PUBLISH */
       var tl=(body[0]<<8)|body[1], q=(type>>1)&3, off=2+tl+(q?2:0);
       var tname=new TextDecoder().decode(body.slice(2,2+tl));
+      if(tname==='zgk/'+this.topic+'/e'){ this.echoAt=Date.now(); return; }
       if(tname.indexOf('zgv/')===0){ try{ Vid.onBin(body.slice(off)); }catch(e){} return; }
       var msg=new TextDecoder().decode(body.slice(off));
       try{ Net.lastAlive=Date.now(); Net.recvFast(msg); }catch(e){}
@@ -1976,7 +1993,7 @@ var Fast={
     if(!this.open||!this.ws){ this.buf.push(str); if(this.buf.length>30) this.buf.shift(); return false; }
     try{ this.ws.send(this.pkt(0x30,this.cat([this.enc('zgk/'+this.topic),new TextEncoder().encode(str)]))); return true; }catch(e){ return false; }
   },
-  retry:function(){ var self=this; if(this.retryT||!this.topic) return; this.retryT=setTimeout(function(){ self.retryT=null; self.go(); },2500); },
+  retry:function(){ var self=this; if(this.retryT||!this.topic) return; this.retryT=setTimeout(function(){ self.retryT=null; self.go(); },1200); },
   close:function(){ clearInterval(this.pingT); clearTimeout(this.retryT); this.retryT=null; this.open=false; this.topic=null;
     if(this.ws){ try{ this.ws.onclose=null; this.ws.close(); }catch(e){} this.ws=null; } this.buf=[]; },
   kick:function(){ if(this.topic&&!this.open&&!this.ws){ clearTimeout(this.retryT); this.retryT=null; this.go(); } },
@@ -1991,14 +2008,26 @@ var Fast={
   /* 生きているか 確かめる: ping を おくり 1.5秒 返事が なければ つなぎなおす */
   probe:function(){
     var self=this; if(!this.topic) return;
+    if(this.probing&&Date.now()-this.probing<2500) return;
     if(!this.open||!this.ws){ this.kick(); return; }
-    var t0=Date.now();
+    var t0=Date.now(); this.probing=t0;
     try{ this.ws.send(new Uint8Array([0xC0,0])); }catch(e){ this.renew(); return; }
-    setTimeout(function(){ if(!(self.lastRx>t0)) self.renew(); },1500);
+    setTimeout(function(){ self.probing=0; if(!(self.lastRx>t0)){ self.ui++; self.renew(); } },1500);
+  },
+  /* 30秒ごとに 自分あてに 小さな 合図を おくり、もどって こなければ べつの 中継所へ */
+  echo:function(){
+    var self=this; if(!this.open||!this.ws||!this.topic) return;
+    var nm='zgk/'+this.topic+'/e';
+    if(!this.echoSub){ this.sub(nm); this.echoSub=this.ws; }
+    else if(this.echoSub!==this.ws){ this.sub(nm); this.echoSub=this.ws; }
+    var t0=Date.now();
+    try{ this.ws.send(this.pkt(0x30,this.cat([this.enc(nm),new Uint8Array([1])]))); }catch(e){ this.renew(); return; }
+    setTimeout(function(){ if(!(self.echoAt>=t0)){ self.ui++; self.renew(); } },3500);
   }
 };
 /* 40秒 なにも 受けとらなければ 切れたと みなす */
-setInterval(function(){ try{ if(Fast.topic&&Fast.open&&Fast.lastRx&&Date.now()-Fast.lastRx>40000) Fast.renew(); }catch(e){} },5000);
+setInterval(function(){ try{ if(Fast.topic&&Fast.open&&Fast.lastRx&&Date.now()-Fast.lastRx>18000){ Fast.ui++; Fast.renew(); } }catch(e){} },3000);
+setInterval(function(){ try{ if(Fast.topic&&!document.hidden) Fast.echo(); }catch(e){} },15000);
 
 /* ================================================================
    v119: なめらか ライブ（直接つながらない 回線でも 15コマ/秒）
@@ -2020,7 +2049,8 @@ var Vid={
   listen:async function(){
     var t=await this.topicFor(this.peerDir()); if(!t) return;
     if(this.rxTopic&&this.rxTopic!==t) Fast.unsub(this.rxTopic);
-    this.rxTopic=t; this.rxOn=true; Fast.sub(t);
+    this.rxTopic=t; this.rxOn=true;
+    if(!Fast.sub(t)){ try{ Fast.probe(); }catch(e){} }
   },
   stopListen:function(){ if(this.rxTopic) Fast.unsub(this.rxTopic); this.rxTopic=null; this.rxOn=false; this.rxSeq=-1; },
   start:async function(){
@@ -2036,7 +2066,8 @@ var Vid={
   },
   stop:function(){ this.on=false; if(this.timer){ clearInterval(this.timer); this.timer=null; } },
   snap:function(){
-    if(!this.on||this.busy||!callStream||!Fast.open) return;
+    if(!this.on||this.busy||!callStream) return;
+    if(!Fast.open){ if(!this._kickAt||Date.now()-this._kickAt>3000){ this._kickAt=Date.now(); try{ Fast.kick(); }catch(e){} } return; }
     if(document.hidden||callHide) return;
     var v=$('#call-local'); if(!v||!v.videoWidth) return;
     var self=this; this.busy=true;
@@ -2072,8 +2103,9 @@ var Vid={
     this.rxSeq=n;
     var jpg=pt.slice(4); if(jpg[0]!==0xFF||jpg[1]!==0xD8) return;
     this.lastRx=Date.now();
+    if(!this.seeT||Date.now()-this.seeT>5000){ this.seeT=Date.now(); try{ Net.send({t:'live-see'}); }catch(e){} }
     var box=$('#call-box'); if(!box) return;
-    if(box.hidden){ openCallUI(); toast(peerName()+' の ライブが とどきました。'); }
+    if(box.hidden){ if(Vid.closedSid&&Vid.closedSid===Vid.curSid) return; openCallUI(); toast(peerName()+' の ライブが とどきました。'); }
     var cvs=$('#call-remote-cv');
     if(!cvs){ cvs=document.createElement('canvas'); cvs.id='call-remote-cv'; box.insertBefore(cvs,box.firstChild.nextSibling); }
     try{
@@ -2085,13 +2117,25 @@ var Vid={
     }catch(e){}
   }
 };
+/* v121: ライブ開始の 合図（即時の とおりみちで 3秒ごと・相手が 見はじめるまで） */
+var annT=null;
+function liveAnnounce(){
+  if(annT) clearInterval(annT);
+  var n=0; Vid.sid=Date.now().toString(36)+((Math.random()*1e5)|0).toString(36);
+  var go=function(){
+    if(!callOn||!callVideo||n++>40){ clearInterval(annT); annT=null; return; }
+    if(Vid.peerSeen&&Date.now()-Vid.peerSeen<8000) return;
+    try{ Net.send({t:'live-on',sid:Vid.sid}); }catch(e){}
+  };
+  go(); annT=setInterval(go,3000);
+}
 /* 番号は 時刻ベース：入りなおしても 前より 小さく ならない */
 function nextSeq(){ S.seq=Math.max((S.seq||0)+1,Date.now()); return S.seq; }
 /* つながって いるのに 受信が とまった(スマホで よく おきる)ら、とりなおす */
 setInterval(function(){
   try{
     if(!Net.topic) return;
-    if(Net.open&&Net.lastAlive&&Date.now()-Net.lastAlive>100000){ Net.open=false; Net.openStream(); }
+    if(Net.open&&Net.lastAlive&&Date.now()-Net.lastAlive>65000){ Net.open=false; Net.openStream(); Net.poll(); }
     Fast.kick();
   }catch(e){}
 },15000);
@@ -5384,7 +5428,8 @@ function metaText(m,mine,at,groupEnd){
   if(!mine) return groupEnd?tm:'';
   if(m.sent===false||!m.n) return '送信中…';
   if(m.read||(S.peerRead&&m.n<=S.peerRead)) return '既読 '+tm;
-  return '未読 '+tm;
+  if(m.acked||(S.peerAck&&m.n<=S.peerAck)) return '未読 '+tm;
+  return (Date.now()-(m.at||0)>2500)?'送信中…':('未読 '+tm);
 }
 function scrollChatBottom(){
   var box=$('#chat-log'); if(!box) return;
@@ -5823,6 +5868,7 @@ $('#btn-live').addEventListener('click',async function(){
     if(last){ callFail('createOffer',last); return; }
     toast('ライブを はじめました。');
     try{ Vid.listen(); Vid.start(); }catch(e){}
+    liveAnnounce();
   }catch(e){
     callFail('live-button',e);
   }finally{
@@ -5927,6 +5973,8 @@ function ensureRtcAudio(){
 }
 function stopCall(notify){
   rtcOn=false; callOn=false;
+  try{ if(Vid.curSid) Vid.closedSid=Vid.curSid; } catch(e){}
+  try{ if(annT){ clearInterval(annT); annT=null; } if(Vid.rtcSeeT){ clearInterval(Vid.rtcSeeT); Vid.rtcSeeT=null; } Vid.peerSeen=0; if(notify!==false) Net.send({t:'live-off'}); }catch(e){}
   try{ Vid.stop(); Vid.stopListen(); var rc=$('#call-remote-cv'); if(rc) rc.remove(); var cbx0=$('#call-box'); if(cbx0) cbx0.classList.remove('rtc-ok'); }catch(e){}
   try{ stopJpg(); var ri=$('#call-remote-img'); if(ri) ri.remove(); }catch(e){}
   if(fbT){ clearTimeout(fbT); fbT=0; }
@@ -6010,6 +6058,8 @@ function rtcStart(isCaller){
           var rv=$('#call-remote');
           if(pc&&pc.connectionState==='connected'&&rv&&rv.videoWidth>0){
             Vid.stop(); var cb2=$('#call-box'); if(cb2) cb2.classList.add('rtc-ok');
+            if(!Vid.rtcSeeT) Vid.rtcSeeT=setInterval(function(){ try{ if(pc&&pc.connectionState==='connected') Net.send({t:'live-see'}); else { clearInterval(Vid.rtcSeeT); Vid.rtcSeeT=null; } }catch(e){} },5000);
+            try{ Net.send({t:'live-see'}); }catch(e){}
             var st3=$('#call-state'); if(st3) st3.textContent='ライブ中（直接）';
           }
         }catch(e){}
@@ -6055,7 +6105,7 @@ function rtcSendSdp(kind,sdpStr){
   var tries=0;
   (function go(){
     Net.sendFile({t:'rtc2',k:kind,v:callVideo?1:0},new TextEncoder().encode(sdpStr),function(ok){
-      if(!ok&&tries++<4&&rtcOn) setTimeout(go,1500*tries);
+      if(!ok&&tries++<8&&rtcOn) setTimeout(go,1200*tries);
     });
   })();
   return;
@@ -6220,7 +6270,8 @@ function flashHint(msg){
   var h=$('#hint'); h.textContent=msg; h.classList.add('bad');
   setTimeout(function(){ h.classList.remove('bad'); },2600);
 }
-$('#form-chat').addEventListener('submit',function(e){ e.preventDefault(); submitChat(); });
+$('#form-chat').addEventListener('submit',function(e){ e.preventDefault(); submitChat();
+  var bs=$('#btn-chat-send'); if(bs){ bs.classList.remove('pop'); void bs.offsetWidth; bs.classList.add('pop'); } });
 $('#in-chat').addEventListener('keydown',function(e){ if(e.key==='Enter'&&e.isComposing) e.preventDefault(); });
 /* ===== 入力まわり(Line風) ===== */
 (function(){
@@ -6334,13 +6385,16 @@ function sendAgain(msg){
   }catch(e){}
 }
 function resendUnacked(all){
+  var any=false;
   for(var i=0;i<S.chat.length;i++){
     var m=S.chat[i];
-    if(!m||m.sys||m.from!==S.me.id||m.acked||!m.env) continue;
-    if((m.tries||0)<3){ if(all||Date.now()-(m.at||0)>4000){ m.tries=(m.tries||0)+1; Net.resendEnv(m.env); } }
+    if(!m||m.sys||m.from!==S.me.id||m.acked||m.read||!m.env) continue;
+    if((S.peerAck&&m.n<=S.peerAck)||(S.peerRead&&m.n<=S.peerRead)){ m.acked=true; continue; }
+    if((m.tries||0)<12&&(all||Date.now()-(m.lastTry||m.at||0)>3000)){ m.tries=(m.tries||0)+1; m.lastTry=Date.now(); try{ Fast.probe(); }catch(e){} Net.resendEnv(m.env); any=true; }
   }
-  if(S.tab==='chat') renderChat(true);
+  if(any&&S.tab==='chat') renderChat(true);
 }
+setInterval(function(){ try{ if(Net.topic&&!document.hidden) resendUnacked(false); }catch(e){} },2000);
 /* 未達トークの再送：あいての端末に届く(受領証が返る)まで、送り側の端末だけが保持する */
 function resendUndelivered(){
   if((S.phase!=='play'||!S.paired)&&!S.linked) return;
@@ -6534,7 +6588,7 @@ Net.onMsg=function(m){
     if(S.isHost && S.guest && m.from!==S.guest.did) return;
     if(!S.isHost && S.paired && S.opp.id && m.from!==S.opp.id) return;
   }
-  var PRIV={igh:1,chats:1,chat:1,photo:1,'photo-chunk':1,read:1,ack:1,prof:1,unpair:1,rtc2:1,'rtc-sdp':1,'rtc-ice':1,'live-jpg':1,'live-ctl':1,'live-frame':1,'live-audio':1,call:1,'call-end':1};
+  var PRIV={'live-on':1,'live-see':1,'live-off':1,igh:1,chats:1,chat:1,photo:1,'photo-chunk':1,read:1,ack:1,prof:1,unpair:1,rtc2:1,'rtc-sdp':1,'rtc-ice':1,'live-jpg':1,'live-ctl':1,'live-frame':1,'live-audio':1,call:1,'call-end':1};
   if(PRIV[m.t]&&(m.__legacy||!S.sealed)) return;
   /* 連投よけ(1秒60通まで) */
   var nowMs=Date.now();
@@ -6693,6 +6747,7 @@ Net.onMsg=function(m){
     /* 既読 */
     case 'read':
       if(m.from===S.me.id) break;
+      bellReset();
       S.peerRead=Math.max(S.peerRead,m.upTo||0);
       S.peerAck=Math.max(S.peerAck,m.upTo||0);
       (function(up){ for(var i=0;i<S.chat.length;i++){ var x=S.chat[i]; if(x&&!x.sys&&x.from===S.me.id&&x.n&&x.n<=up){ x.read=true; x.acked=true; } } })(m.upTo||0);
@@ -6713,6 +6768,26 @@ Net.onMsg=function(m){
     case 'photo':
       if(m.from===S.me.id) break;
       recvPhoto(m);
+      break;
+    case 'live-on':
+      if(m.from===S.me.id) break;
+      (function(){
+        if(m.sid&&Vid.closedSid===m.sid) return;   /* 自分で とじた ライブは もう ひらかない */
+        Vid.curSid=m.sid||'';
+        var box=$('#call-box');
+        if(box&&box.hidden){ openCallUI(); toast(peerName()+' が ライブを はじめました。'); }
+        try{ Vid.listen(); }catch(e){}
+        try{ Net.send({t:'live-see'}); }catch(e){}
+      })();
+      break;
+    case 'live-see':
+      if(m.from===S.me.id) break;
+      Vid.peerSeen=Date.now(); try{ updateViewers(); }catch(e){}
+      break;
+    case 'live-off':
+      if(m.from===S.me.id) break;
+      Vid.peerSeen=0; try{ updateViewers(); }catch(e){}
+      if(annT){ clearInterval(annT); annT=null; }   /* あいてが とじたら 合図を とめる */
       break;
     case 'igh':
       if(m.from===S.me.id) break;
@@ -6901,6 +6976,7 @@ case 'ack':
           S.chat.push({from:m.from,text:tx,at:(typeof it.at==='number'?it.at:Date.now()),sent:true,n:m.n||0});
           added++;
         }
+        try{ if(m.n) Net.send({t:'ack',upTo:m.n}); }catch(e){}
         if(!added) return;
         try{ var cbI=$('#call-box'); if(cbI&&!cbI.hidden){ for(var j=0;j<list.length&&j<16;j++){ var tj=String((list[j]||{}).text||''); if(tj) igComment(peerName(),tj,false); } } }catch(e){}
         S.lastPeerN=Math.max(S.lastPeerN||0,m.n||0);
@@ -7136,8 +7212,22 @@ async function bgPushSetup(){
       body:JSON.stringify({endpoint:j.endpoint,auth:j.keys.auth,p256dh:j.keys.p256dh,topics:[mine]})});
   }catch(e){}
 }
-var bellLast=0;
+var bellLast=0, bellCount=0, bellT=null;
 async function ringBell(){
+  /* v121: 送った 数を 数える。0.8秒 まとめて「いま 未読 何通か」を 合図に のせる */
+  bellCount++;
+  if(bellT) return;
+  bellT=setTimeout(async function(){
+    bellT=null; var n=bellCount;
+    try{
+      var t=await bellTopic(); if(!t) return;
+      fetch('https://ntfy.sh/'+t,{method:'POST',headers:{'Content-Type':'text/plain'},body:'zgn:'+n});
+    }catch(e){}
+  },800);
+}
+/* あいてが 読んだら 数を リセット */
+function bellReset(){ bellCount=0; }
+async function ringBellOld(){
   /* あいての 端末が とじて いても 通知が とどく ように「ベル」だけ ならす（1分に 1回まで） */
   if(Date.now()-bellLast<5000) return;
   bellLast=Date.now();
@@ -7259,6 +7349,13 @@ function sendHeart(){
   if(heartT) return;
   heartT=setTimeout(function(){ var n=Math.min(heartN,8); heartN=0; heartT=null; try{ Net.send({t:'igh',k:n}); }catch(e){} },250);
 }
+function updateViewers(){
+  var vw=$('#ig-view'); if(!vw) return;
+  var on=Vid.peerSeen&&Date.now()-Vid.peerSeen<12000;
+  vw.textContent=on?'1':'0';
+  var ey=$('#ig-eye'); if(ey) ey.title=on?'あいてが 見ています':'あいては まだ 見ていません';
+}
+setInterval(function(){ try{ var b=$('#call-box'); if(b&&!b.hidden) updateViewers(); }catch(e){} },2000);
 function igHeartFly(x){
   var layer=$('#ig-hearts'); if(!layer) return;
   var sp=document.createElement('span');
@@ -7297,7 +7394,7 @@ function igHeartFly(x){
   openCallUI=function(){
     oc();
     igName();
-    var vw=$('#ig-view'); if(vw) vw.textContent='1';
+    updateViewers();
     try{ $('#ig-name').textContent=peerName(); }catch(e){}
   };
 })();

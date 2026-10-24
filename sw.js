@@ -1,4 +1,4 @@
-/* 雑学王 サービスワーカー（v120）
+/* 雑学王 サービスワーカー（v121）
    - アプリを とじていても「メッセージが とどきました」の 通知を だす
    - 通知が あると Android は アイコンに バッジ（点・数字）が つく
    メッセージの 中身は ここには とどきません（合図だけ） */
@@ -17,16 +17,19 @@ self.addEventListener('push', function(e){
     for (var i = 0; i < list.length; i++) { if (list[i].visibilityState === 'visible' && list[i].focused !== false) visible = true; }
     /* アプリを 見ている ときは アプリ側で 知らせる（テストは つねに 出す） */
     if (visible && !isTest) return;
-    unread++;
+    /* 合図 'zgn:数' = 前回 読まれてから 送られた 通数（中身は ふくまない） */
+    var m = /zgn:(\d+)/.exec(raw);
+    if (m) unread = Math.max(unread, parseInt(m[1], 10) || 1); else unread++;
     try { if (self.navigator && self.navigator.setAppBadge) await self.navigator.setAppBadge(unread); } catch (err) {}
     await self.registration.showNotification('雑学王', {
-      body: isTest ? 'テスト通知です。とどいています！' : 'メッセージが とどきました',
+      body: isTest ? 'テスト通知です。とどいています！' : (unread > 1 ? ('メッセージが ' + unread + '件 とどいています') : 'メッセージが とどきました'),
       tag: isTest ? 'mtp-test' : 'mtp-chat',
       renotify: true,
       icon: './icon-192.png',
       badge: './icon-192.png',
       vibrate: [150, 80, 150],
-      data: { n: unread }
+      data: { n: unread },
+      silent: false
     });
   })());
 });
