@@ -787,7 +787,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v139</b>｜ビルド 2026-10-24（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v140</b>｜ビルド 2026-10-24（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -5898,6 +5898,29 @@ function askLiveMode(){
   });
 }
 var liveAsking=false;
+/* v140: でんわの 着信画面（でる／ことわる）。でるまで マイクは つけない */
+var callAsking=false, ringT=null;
+function askCall(){
+  return new Promise(function(res){
+    var old=$('#call-ask'); if(old) old.remove();
+    var w=document.createElement('div'); w.id='call-ask';
+    w.style.cssText='position:fixed;inset:0;z-index:9999;background:rgba(20,16,24,.6);display:flex;align-items:center;justify-content:center;padding:20px';
+    w.innerHTML='<div style="background:#fff;border-radius:22px;padding:24px 18px 18px;max-width:330px;width:100%;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.25)">'+
+      '<div style="font-size:2.4rem;animation:zgring 1s ease-in-out infinite">📞</div>'+
+      '<div style="font-weight:900;font-size:1.1rem;margin:8px 0 2px;color:#3B3B3B">'+peerName().replace(/[<>&"]/g,'')+' から でんわです</div>'+
+      '<div style="font-size:.82rem;color:#8a8177;margin-bottom:16px">でるまで あなたの マイクは オフです</div>'+
+      '<div style="display:flex;gap:10px">'+
+      '<button type="button" id="ca-no" style="flex:1;padding:14px;border:0;border-radius:14px;background:#F4F0EA;color:#C62828;font-weight:900;font-size:1rem">ことわる</button>'+
+      '<button type="button" id="ca-yes" style="flex:1;padding:14px;border:0;border-radius:14px;background:#06C755;color:#fff;font-weight:900;font-size:1rem">でる</button></div></div>'+
+      '<style>@keyframes zgring{0%,100%{transform:rotate(0)}25%{transform:rotate(-14deg)}75%{transform:rotate(14deg)}}</style>';
+    document.body.appendChild(w);
+    var done=function(v){ clearTimeout(ringT); ringT=null; try{ w.remove(); }catch(e){} res(v); };
+    $('#ca-yes').addEventListener('click',function(){ done('yes'); });
+    $('#ca-no').addEventListener('click',function(){ done('no'); });
+    ringT=setTimeout(function(){ if(document.body.contains(w)) done('timeout'); },45000);   /* 45秒 でなければ おわり */
+  });
+}
+function closeCallAsk(){ var w=$('#call-ask'); if(w){ try{ w.remove(); }catch(e){} } if(ringT){ clearTimeout(ringT); ringT=null; } }
 var callOn=false, callVideo=false, callStream=null, curFacing='user', callT0=0, callTimer=null, callHide=false;
 function tuneSenders(){
   if(!pc) return;
@@ -6196,7 +6219,8 @@ $('#btn-call').addEventListener('click',async function(){
   if(gm!==true){ this.textContent='電話:不可'; toast('マイクを つかえません（'+((gm&&gm.name)||'')+'）。'); return; }
   voiceChunkOn=false;
   var self2=this;
-  rtcStart(true).then(function(){ self2.textContent='電話:つなぐ中…'; })
+  rtcStart(true).then(function(){ self2.textContent='電話:よびだし中…'; toast(peerName()+' を よびだしています…');
+      setTimeout(function(){ if(rtcOn&&!callVideo&&pc&&pc.connectionState!=='connected'){ stopCall(); toast(peerName()+' は でませんでした。'); } },50000); })
     .catch(function(e){ callDiagLog('rtcStart-voice',e); stopMic(); self2.textContent='電話:不可'; toast('電話を はじめられませんでした（'+(e&&e.name||'')+'）。'); });
 });
 /* 通話は いつでも 『どこでも つながる』ように STUN を つかう。
@@ -6338,9 +6362,16 @@ async function rtcHandleSdp(m,sdp){
         try{ Vid.listen(); if(mode==='both'&&callVideo) Vid.start(); }catch(e){}
       }else{
         callVideo=false;
+        if(callAsking) return; callAsking=true;
+        var ans0;
+        try{ ans0=await askCall(); }finally{ callAsking=false; }
+        if(ans0!=='yes'){
+          try{ Net.send({t:'call-no',r:ans0==='timeout'?'busy':'no'}); }catch(e){}
+          return;
+        }
+        try{ Aud.unlock(); }catch(e){}
         gm=await getCallMedia(false);
-        if(gm!==true){ note('あいてから でんわですが マイクを つかえません（'+((gm&&gm.name)||'')+'）。','#note2'); }
-        toast(peerName()+' から 電話です。');
+        if(gm!==true){ note('マイクを つかえません（'+((gm&&gm.name)||'')+'）。','#note2'); try{ Net.send({t:'call-no',r:'mic'}); }catch(e){} return; }
       }
       rtcStart(false);
       if(m.vid===1&&mode==='watch'){ try{ pc.addTransceiver('video',{direction:'recvonly'}); pc.addTransceiver('audio',{direction:'recvonly'}); }catch(e){} }
@@ -6390,9 +6421,16 @@ async function rtcRecvSdp(m){
         try{ Vid.listen(); if(mode==='both'&&callVideo) Vid.start(); }catch(e){}
       }else{
         callVideo=false;
+        if(callAsking) return; callAsking=true;
+        var ans0;
+        try{ ans0=await askCall(); }finally{ callAsking=false; }
+        if(ans0!=='yes'){
+          try{ Net.send({t:'call-no',r:ans0==='timeout'?'busy':'no'}); }catch(e){}
+          return;
+        }
+        try{ Aud.unlock(); }catch(e){}
         gm=await getCallMedia(false);
-        if(gm!==true){ note('あいてから でんわですが マイクを つかえません（'+((gm&&gm.name)||'')+'）。','#note2'); }
-        toast(peerName()+' から 電話です。');
+        if(gm!==true){ note('マイクを つかえません（'+((gm&&gm.name)||'')+'）。','#note2'); try{ Net.send({t:'call-no',r:'mic'}); }catch(e){} return; }
       }
       rtcStart(false);
       if(m.vid===1&&mode==='watch'){ try{ pc.addTransceiver('video',{direction:'recvonly'}); pc.addTransceiver('audio',{direction:'recvonly'}); }catch(e){} }
@@ -6817,7 +6855,7 @@ Net.onMsg=function(m){
     if(S.isHost && S.guest && m.from!==S.guest.did) return;
     if(!S.isHost && S.paired && S.opp.id && m.from!==S.opp.id) return;
   }
-  var PRIV={'live-on':1,'live-see':1,'live-off':1,igh:1,chats:1,chat:1,photo:1,'photo-chunk':1,read:1,ack:1,prof:1,unpair:1,rtc2:1,rtc:1,'rtc-bye':1,'rtc-sdp':1,'rtc-ice':1,'live-jpg':1,'live-ctl':1,'live-frame':1,'live-audio':1,call:1,'call-end':1};
+  var PRIV={'live-on':1,'live-see':1,'live-off':1,igh:1,chats:1,chat:1,photo:1,'photo-chunk':1,read:1,ack:1,prof:1,unpair:1,rtc2:1,rtc:1,'rtc-bye':1,'call-no':1,'rtc-sdp':1,'rtc-ice':1,'live-jpg':1,'live-ctl':1,'live-frame':1,'live-audio':1,call:1,'call-end':1};
   if(PRIV[m.t]&&(m.__legacy||!S.sealed)) return;
   /* 連投よけ(1秒60通まで) */
   var nowMs=Date.now();
@@ -7080,7 +7118,15 @@ Net.onMsg=function(m){
 
     case 'rtc-bye':
       if(m.from===S.me.id) break;
+      closeCallAsk();
       stopCall(false);
+      break;
+    case 'call-no':
+      if(m.from===S.me.id) break;
+      if(rtcOn&&!callVideo){
+        stopCall(false);
+        toast(m.r==='busy'?(peerName()+' は でませんでした。'):(m.r==='mic'?(peerName()+' の マイクが つかえませんでした。'):(peerName()+' に ことわられました。')));
+      }
       break;
 
     /* ob */
