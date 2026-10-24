@@ -784,7 +784,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v129</b>｜ビルド 2026-10-24（アプリが 裏でも スマホに 直接とどく）</p>
+      <p class="verline">バージョン <b id="ver">v130</b>｜ビルド 2026-10-24（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -7246,7 +7246,7 @@ function paintTopicTag(){
 var swReg=null;
 (function(){
   if(!('serviceWorker' in navigator)||location.protocol!=='https:') return;
-  navigator.serviceWorker.register('./sw.js').then(function(r){ swReg=r; try{ if(Notification.permission==='granted') bgPushSetup(); }catch(e){} }).catch(function(){});
+  navigator.serviceWorker.register('./sw.js').then(function(r){ swReg=r; try{ r.update(); }catch(e){} try{ if(r.active) r.active.postMessage({get:'ver'}); }catch(e){} try{ if(Notification.permission==='granted') bgPushSetup(); }catch(e){} }).catch(function(){});
 })();
 var NTFY_VAPID='BEMjM0sNxh41x0a6Lz3YaqkJ7AUhZefxsOQgw-at69i0fM1CybVBcj7-QQXf4N_tPCgFnOXdRbQ5jrSrr9Yg9Lc';
 /* 「ベル」専用の とおりみち（中身は なし・だれから かも わからない）。2人の 鍵から つくる */
@@ -7328,7 +7328,7 @@ async function drainInbox(){
 }
 setTimeout(drainInbox,1500);
 document.addEventListener('visibilitychange',function(){ if(!document.hidden){ setTimeout(drainInbox,100); try{ if(Date.now()-(window.__bgLast||0)>3600000){ window.__bgLast=Date.now(); bgPushSetup(); } }catch(e){} } });
-try{ navigator.serviceWorker&&navigator.serviceWorker.addEventListener('message',function(e){ if(e.data==='zg-new') drainInbox(); }); }catch(e){}
+try{ navigator.serviceWorker&&navigator.serviceWorker.addEventListener('message',function(e){ if(e.data==='zg-new') drainInbox(); else if(e.data&&typeof e.data==='object'&&e.data.swver){ var sv=document.getElementById('swver'); if(sv) sv.textContent=e.data.swver; } }); }catch(e){}
 async function ringBellOld(){
   /* あいての 端末が とじて いても 通知が とどく ように「ベル」だけ ならす（1分に 1回まで） */
   if(Date.now()-bellLast<5000) return;
