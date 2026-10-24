@@ -1,6 +1,6 @@
-/* 雑学王 サービスワーカー（v126）
+/* 雑学王 サービスワーカー（v127）
    - アプリが 裏・画面オフ・まるごと とじて いても、通知と おなじ 通り道で メッセージ（あんごう文のまま）を 受けとる
-   - v126: 通知を いちばん さいしょに だす！（しまう 仕事で つかれて 通知が でない ことが ないように）
+   - v127: 通知アイコンは ファイルの ままで（画像の直もじれつは iPhoneで だめな ことが わかった）。通知は さいしょに だす！（しまう 仕事で つかれて 通知が でない ことが ないように）
      あんごう文は 通知の おくにも いれて おくので、しまい場所が だめでも アプリを ひらけば わかる
    - 通知は 音なし。バッジは 数字なし（iPhoneの 決まりで 画像は だせない）
    ここでは 中身を 読めません（鍵は ここに ありません） */
@@ -57,7 +57,7 @@ async function handlePush(raw){
       await self.registration.showNotification('雑学王', {
         body: isTest ? '🐾 テスト通知です。とどいています！' : (cnt > 1 ? ('🐾 メッセージが ' + cnt + '件 とどいたよ！') : '🐾 メッセージが とどいたよ！'),
         tag: isTest ? 'mtp-test' : ('mtp-' + Date.now() + '-' + Math.floor(Math.random()*1000000)),
-        renotify: true, silent: true, icon: PAW, badge: PAW,
+        renotify: true, silent: true, icon: './icon-192.png', badge: './icon-192.png',
         data: { app:'zg', zgm: mm ? mm[2] : null, n: unread }
       });
     } catch (err) {}

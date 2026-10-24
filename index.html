@@ -784,7 +784,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v126</b>｜ビルド 2026-10-24（アプリが 裏でも スマホに 直接とどく）</p>
+      <p class="verline">バージョン <b id="ver">v127</b>｜ビルド 2026-10-24（アプリが 裏でも スマホに 直接とどく）</p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -5590,7 +5590,7 @@ function notifyIncoming(){
   if(localStorage.getItem('mtp_notify_off')==='1') return;
   var cnt=S.unread||1;
   var body=peerName()+' から メッセージが とどいたよ🐾';
-  var opt={body:body,tag:'mtp-chat',renotify:true,silent:true,badge:ZG_PAW,icon:ZG_PAW,data:{n:cnt}};
+  var opt={body:body,tag:'mtp-chat',renotify:true,silent:true,badge:'./icon-192.png',icon:'./icon-192.png',data:{n:cnt}};
   /* スマホ(とくに Android)は サービスワーカー 経由で ないと 通知が でない */
   try{
     if(navigator.serviceWorker&&swReg){ swReg.showNotification('雑学王',opt); return; }
@@ -7326,7 +7326,7 @@ async function drainInbox(){
   }catch(e){}
 }
 setTimeout(drainInbox,1500);
-document.addEventListener('visibilitychange',function(){ if(!document.hidden) setTimeout(drainInbox,100); });
+document.addEventListener('visibilitychange',function(){ if(!document.hidden){ setTimeout(drainInbox,100); try{ if(Date.now()-(window.__bgLast||0)>3600000){ window.__bgLast=Date.now(); bgPushSetup(); } }catch(e){} } });
 try{ navigator.serviceWorker&&navigator.serviceWorker.addEventListener('message',function(e){ if(e.data==='zg-new') drainInbox(); }); }catch(e){}
 async function ringBellOld(){
   /* あいての 端末が とじて いても 通知が とどく ように「ベル」だけ ならす（1分に 1回まで） */
