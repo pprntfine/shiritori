@@ -784,7 +784,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v127</b>｜ビルド 2026-10-24（アプリが 裏でも スマホに 直接とどく）</p>
+      <p class="verline">バージョン <b id="ver">v129</b>｜ビルド 2026-10-24（アプリが 裏でも スマホに 直接とどく）</p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -2261,18 +2261,17 @@ function updateBadge(){
 }
 /* v125: ホーム画面の バッジに 数字を 出さない（iPhoneの 決まりで 画像は だせないため。●だけで 出る 端末も あり） */
 function setAppBadgeCount(n){
+  /* v128: あるときは「1」だけ（iPhoneは 数字しか だせないので）。なければ かならず けす */
   try{
-    if(n>0){ if('setAppBadge' in navigator){ var p=navigator.setAppBadge(); if(p&&p.catch) p.catch(function(){}); } }
-    else if('clearAppBadge' in navigator){ var q=navigator.clearAppBadge(); if(q&&q.catch) q.catch(function(){}); }
+    if(n>0){ if(navigator.setAppBadge) { var p=navigator.setAppBadge(1); if(p&&p.catch) p.catch(function(){}); } }
+    else if(navigator.clearAppBadge) { var q=navigator.clearAppBadge(); if(q&&q.catch) q.catch(function(){}); }
+    else if(navigator.setAppBadge) navigator.setAppBadge(0);
   }catch(e){}
 }
-/* ホーム画面の アイコンに 数値バッジ（対応端末のみ） */
-function setAppBadgeCount(n){
-  try{
-    if(n>0){ if(navigator.setAppBadge) navigator.setAppBadge(n); }
-    else { if(navigator.clearAppBadge) navigator.clearAppBadge(); else if(navigator.setAppBadge) navigator.setAppBadge(0); }
-  }catch(e){}
-}
+/* v128: アプリを ひらいた ときに まちがった バッジを かならず けす（けす 仕事を 誰も していなかった ため） */
+function appBadgeSync(){ try{ setAppBadgeCount(S.unread||0); }catch(e){} }
+[300,1500,5000].forEach(function(ms){ setTimeout(appBadgeSync,ms); });
+document.addEventListener('visibilitychange',function(){ if(!document.hidden) setTimeout(appBadgeSync,150); });
 function note(msg,el){ var t=$(el||'#note'); if(t) t.textContent=msg||''; }
 function setNet(state){
   try{ var dt=$('#lh-dot'); if(dt) dt.classList.toggle('on',state==='open'&&(Fast.open||Net.open)); }catch(e){}
@@ -7270,7 +7269,9 @@ async function bgPushSetup(){
     if(!swReg||!swReg.pushManager||Notification.permission!=='granted') return;
     var mine=await myBellTopic(); if(!mine) return;
     var sub=await swReg.pushManager.getSubscription();
-    if(!sub) sub=await swReg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:unb64(NTFY_VAPID)});
+    /* v129: 古い 購読が こわれて いると とどかないので、つかいまわしを しない（するたびに つくりなおす） */
+    try{ if(sub){ await sub.unsubscribe(); sub=null; } }catch(e){}
+    try{ sub=await swReg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:unb64(NTFY_VAPID)}); }catch(e){ return; }
     var j=sub.toJSON();
     await fetch('https://ntfy.sh/v1/webpush',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({endpoint:j.endpoint,auth:j.keys.auth,p256dh:j.keys.p256dh,topics:[mine]})});
