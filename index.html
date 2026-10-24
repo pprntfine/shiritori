@@ -784,7 +784,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v134</b>｜ビルド 2026-10-24（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v135</b>｜ビルド 2026-10-24（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
       <div style="text-align:center;margin:8px 0 0"><button id="btn-prof2" type="button" class="notify-btn" title="名前とアイコンと つうちサーバー">名前と アイコン</button></div>
     </section>
 
@@ -7295,7 +7295,7 @@ async function psrvSetup(){
 }
 async function psrvPush(topic,payload){
   var u=psrvGet(); if(!u) return false;
-  try{ var r=await fetch(u+'/push',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topic:topic,msg:payload})}); var j=await r.json(); return !!(j&&j.ok); }catch(e){ return false; }
+  try{ var r=await fetch(u+'/push',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topic:topic,msg:payload})}); return await r.json(); }catch(e){ return null; }
 }
 async function bgPushSetup(){
   /* v132: つうちサーバーが あれば そちらを つかう（ntfy の 回数せいげんが ない） */
@@ -7454,7 +7454,7 @@ function recvProf(m){
       }
       psrvSet(pu);
       try{ if(Notification.permission!=='granted') await Notification.requestPermission(); }catch(e){}
-      try{ await bgPushSetup(); }catch(e){}
+      try{ var ok=await psrvSetup(); $('#pf-pres').textContent = ok ? 'つうちサーバー：せってい ずみ ✓' : 'つうちサーバー：とうろくに しっぱい。「通知:オン」を おして から また ほぞん してください。'; }catch(e){}
     }
     var nm=($('#pf-me-nm').value||'').trim().slice(0,12)||'ぶー';
     PROF.me={name:nm,emo:pick,img:img};
@@ -7477,8 +7477,11 @@ function recvProf(m){
       var mine=await myBellTopic();
       r.textContent='10秒後に テスト通知を おくります。いまのうちに ホーム画面に もどってください。';
       setTimeout(function(){
-        if(mine&&psrvGet()) psrvPush(mine,'zg-test');
-        else if(mine) fetch('https://ntfy.sh/'+mine,{method:'POST',headers:{'Content-Type':'text/plain'},body:'zg-test'});
+        var nr=$('#pf-nres');
+        if(mine&&psrvGet()) psrvPush(mine,'zg-test').then(function(j){
+          if(nr) nr.textContent = (j&&j.ok) ? ('テストを おくりました（とどけさき '+(j.sent||0)+'台）。'+((j.sent||0)?'ホームがめんで 待っていてください。':'スマホの とうろくが ありません。「通知:オン」を おして 10秒後に もう一度。')) : 'つうちサーバーへ とどけられませんでした。アドレスを たしかめて ください。';
+        });
+        else if(mine){ if(nr) nr.textContent='つうちサーバーが まだ せっていされて いないので 以前の 経路（回数せいげんあり）で 送ります。'; fetch('https://ntfy.sh/'+mine,{method:'POST',headers:{'Content-Type':'text/plain'},body:'zg-test'}); }
         else swReg.showNotification('雑学王',{body:'テスト通知です',tag:'mtp-test',icon:'./icon-192.png'});
       },10000);
     }catch(e){ r.textContent='テストに 失敗しました（'+(e&&e.name||e)+'）'; }
