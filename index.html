@@ -711,7 +711,10 @@ body.in-play .leave-row{display:none!important}
 .lhead .lh-dot{width:9px;height:9px;border-radius:50%;background:#C3CAD2;flex:none}
 .lhead .lh-dot.on{background:#06C755}
 .lhead #btn-unpair{background:#FFECEC;color:#C62828}
-.lhead button{flex:none;border:0;background:#F1F3F6;color:#334;border-radius:999px;padding:7px 11px;font-size:.78rem;font-weight:800}
+.lhead button{flex:none;border:0;background:#F1F3F6;color:#334;border-radius:999px;padding:5px 8px;font-size:.66rem;font-weight:800;white-space:nowrap}
+.lhead{gap:6px!important;padding:6px 8px!important}
+.lhead .lh-av{width:30px!important;height:30px!important;font-size:17px!important}
+.lhead .lh-nm{font-size:.92rem!important;min-width:3.5em}
 .msg .av{display:grid!important;width:34px;height:34px;border-radius:50%;flex:none;place-items:center;background:#E8EEF4;font-size:20px;overflow:hidden;align-self:flex-start}
 .msg .av.blank{visibility:hidden}
 .msg .av img{width:100%;height:100%;object-fit:cover}
@@ -784,12 +787,12 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v135</b>｜ビルド 2026-10-24（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
-      <div style="text-align:center;margin:8px 0 0"><button id="btn-prof2" type="button" class="notify-btn" title="名前とアイコンと つうちサーバー">名前と アイコン</button></div>
+      <p class="verline">バージョン <b id="ver">v136</b>｜ビルド 2026-10-24（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
     <section id="s-secret" class="screen">
+      <div style="text-align:right;margin:0 0 6px"><button id="btn-prof2" type="button" class="notify-btn" title="名前とアイコンと つうちサーバー">名前と アイコン・つうち</button></div>
       <p class="sub" style="margin:0 0 4px">ルーム</p>
       <div class="panel">
         <label class="fld"><span>なまえ（任意）</span>
@@ -939,16 +942,14 @@ body.in-play .leave-row{display:none!important}
   </div>
 
   <div id="pane-chat" class="pane chatpane on">
-    <div class="lhead"><span class="lh-av" id="lh-av">🐱</span><span class="lh-nm" id="lh-nm">にゃん</span><span class="lh-dot" id="lh-dot"></span><button type="button" id="btn-prof">名前・アイコン</button><button type="button" id="btn-top2">トップへ</button><button type="button" id="btn-unpair">部屋を でる</button></div>
+    <div class="lhead"><span class="lh-av" id="lh-av">🐱</span><span class="lh-nm" id="lh-nm">にゃん</span><span class="lh-dot" id="lh-dot"></span><button type="button" id="btn-prof">名前</button><button type="button" id="btn-top2">トップ</button><button type="button" id="btn-unpair">でる</button></div>
     <div id="chat-log" class="line-chat" role="log" aria-live="polite"></div>
     <form id="form-chat" class="line-composer" autocomplete="off">
       <div class="tools">
         <button id="btn-live" type="button" class="notify-btn" title="ライブ えいぞう">ライブ</button>
         <button id="btn-call" type="button" class="notify-btn" title="こえで はなす">電話:オフ</button>
-        <button id="btn-voice" type="button" class="notify-btn" title="こえだけ でおくる">声:オフ</button>
         <button id="btn-photo" type="button" class="notify-btn" title="しゃしんを おくる">カメラ</button>
         <button id="btn-notify" type="button" class="notify-btn" title="メッセージ通知(内容は表示しません)">通知:オフ</button>
-        <button id="btn-prof" type="button" class="notify-btn" title="名前とアイコンと つうちサーバー">名前と アイコン</button>
       </div>
       <input id="in-chat" maxlength="300" placeholder="メッセージを入力" enterkeyhint="send" autocomplete="off" spellcheck="false" inputmode="text">
       <button class="line-send cute-send" type="submit" id="btn-chat-send" aria-label="送信"><span class="cs-ico">🐾</span></button>
@@ -6143,12 +6144,7 @@ function rtcStart(isCaller){
         if(!rtcOn) return;
         if(callVideo){ return; }   /* v119: 映像は 中継で つづける */
         stopCall(false);
-        if(!voiceChunkOn){
-          voiceChunkOn=true; micOn=true;
-          var vb2=$('#btn-voice'); if(vb2) vb2.textContent='声:オン';
-          micLoop();
-          note('でんわの せつぞくが うまく いかないので、こえを おくるほうで つづけます。','#note2');
-        }
+        note('でんわが つながりませんでした。もう一度 「電話」を おしてください。','#note2');
       },8000);
     }
   };
@@ -6171,22 +6167,19 @@ function rtcStart(isCaller){
 }
 function rtcSendSdp(kind,sdpStr){
   /* v115: SDP は あんごうファイル 1つで おくる（かけらが 欠けて つながらない のを なくす） */
-  var tries=0;
-  (function go(){
-    Net.sendFile({t:'rtc2',k:kind,v:callVideo?1:0},new TextEncoder().encode(sdpStr),function(ok){
-      if(!ok&&tries++<8&&rtcOn) setTimeout(go,1200*tries);
-    });
-  })();
-  return;
+  /* v136: ntfy の ファイル（回数せいげんで とまる）を やめ、即時路で かけらを 3回 おくる（重複は うけがわで すてる） */
   var id='S'+Date.now().toString(36)+((Math.random()*1e6)|0).toString(36);
   var total=Math.ceil(sdpStr.length/PHOTO_PIECE);
-  var i=0;
-  (function next(){
-    if(i>=total) return;
-    if(kind==='offer'&&!rtcOn) return;
-    Net.send({t:'rtc',k:kind,v:callVideo?1:0,id:id,i:i,total:total,data:sdpStr.slice(i*PHOTO_PIECE,(i+1)*PHOTO_PIECE)});
-    i++;
-    setTimeout(next,150);
+  var round=0;
+  (function burst(){
+    var i=0;
+    (function next(){
+      if(i>=total){ if(++round<3) setTimeout(burst,1500); return; }
+      if(kind==='offer'&&!rtcOn) return;
+      Net.send({t:'rtc',k:kind,v:callVideo?1:0,id:id,i:i,total:total,data:sdpStr.slice(i*PHOTO_PIECE,(i+1)*PHOTO_PIECE)});
+      i++;
+      setTimeout(next,120);
+    })();
   })();
 }
 async function rtcRecvFile(m){
@@ -6219,23 +6212,27 @@ async function rtcHandleSdp(m,sdp){
     }
   }catch(e){ callDiagLog('sdp',e); }
 }
+var rtcDone={};
 async function rtcRecvSdp(m){
   var id=String(m.id||'').slice(0,24), total=m.total|0, i=m.i|0;
   if(!id||total<1||total>12||i<0||i>=total) return;
+  if(rtcDone[id]) return;
   var b=rtcBuf[id]||(rtcBuf[id]={got:[],timer:null});
   if(!b.got[i]) b.got[i]=String(m.data||'').slice(0,1600);
   clearTimeout(b.timer); b.timer=setTimeout(function(){ delete rtcBuf[id]; },30000);
   for(var k=0;k<total;k++) if(!b.got[k]) return;
   var all=''; for(k=0;k<total;k++) all+=b.got[k];
-  delete rtcBuf[id];
+  delete rtcBuf[id]; rtcDone[id]=1;
   var sdp; try{ sdp=JSON.parse(all); }catch(e){ return; }
   try{
     if(m.k==='offer'){
-      if(rtcOn) return;
+      if(rtcOn) stopCall(false);
       callVideo=!!m.v;
       var gm=await getCallMedia(callVideo);
-      if(gm!==true){ note('あいてから でんわですが カメラ／マイクを つかえません（'+((gm&&gm.name)||'')+'）。','#note2'); return; }
-      if(callVideo){ openCallUI(); toast('あいてから テレビ電話が かかってきました。'); }
+      if(gm!==true&&callVideo){ callVideo=false; gm=await getCallMedia(false); }
+      if(gm!==true){ note('あいてから でんわですが マイクを つかえません（'+((gm&&gm.name)||'')+'）。','#note2'); }
+      if(m.v){ openCallUI(); toast('あいてから ライブが とどきました。'); try{ Vid.listen(); if(callVideo) Vid.start(); }catch(e){} }
+      else toast(peerName()+' から 電話です。');
       rtcStart(false);
       await pc.setRemoteDescription(new RTCSessionDescription(sdp));
       var ans=await pc.createAnswer();
