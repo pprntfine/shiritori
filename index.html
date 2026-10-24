@@ -782,7 +782,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v121</b>｜ビルド 2026-10-24（とどくまで 自動再送・中継所の 自動きりかえ・ライブ開始の 合図・バッジの 数）</p>
+      <p class="verline">バージョン <b id="ver">v122</b>｜ビルド 2026-10-24（中継所 2か所 同時・つまらない 送信・通知音なし）</p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -855,7 +855,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v114</b>｜ビルド 2026-10-24（とどくまで 自動再送・中継所の 自動きりかえ・ライブ開始の 合図・バッジの 数）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v114</b>｜ビルド 2026-10-24（中継所 2か所 同時・つまらない 送信・通知音なし）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -1831,6 +1831,8 @@ var Net={
     /* ntfy は 保存用(相手が いない ときの 受けとり用)。制限中は 2本目だけで 成功あつかい */
     if(this.coolUntil&&Date.now()<this.coolUntil) return fastOk;
     if(!this.allow(typeof prio==='number'?prio:1)) return fastOk;
+    /* v122: 即時路で おくれたら 保存路は 待たずに うしろで（つぎの メッセージが つまらない） */
+    if(fastOk){ this.postStore(body); return true; }
     try{
       /* トーク・既読・受領証は中継サーバーに保存させない（接続中の相手へ直接届くのみ） */
       var noCache='';   /* v105: 中継所に のこす（暗号文のみ・最長12時間）。ポーリングで 取りもどせる ようにする */   /* 中継サーバーに 一切 保存させない(記録を のこさない) */  /* メッセージ・写真・ライブは中継に保存させない */
@@ -1853,11 +1855,19 @@ var Net={
       return true;
     }catch(e){ return fastOk; }
   },
+  postStore:function(body){
+    var self=this;
+    if(this.coolUntil&&Date.now()<this.coolUntil) return;
+    try{
+      fetch('https://ntfy.sh/'+this.topic,{method:'POST',headers:{'Content-Type':'text/plain'},body:body})
+        .then(function(r){ if(r.status===429||r.status===503) self.hit429(45000); }).catch(function(){});
+    }catch(e){}
+  },
   /* 未達のメッセージを同じ番号のまま再送（相手は重複を自動で捨てる） */
   resendEnv:function(env){
     var self=this;
     if(!env||!this.topic||!this.key) return false;
-    this.sendQueue=this.sendQueue.then(function(){ return self.post(env,false,0); }).catch(function(){ return false; });
+    self.post(env,false,0).catch(function(){});
     return env.n;
   },
   /* v115: 写真・ライブの 合図など 大きい ものは 「あんごうした ファイル」として 1回で おくる */
@@ -2025,8 +2035,31 @@ var Fast={
     setTimeout(function(){ if(!(self.echoAt>=t0)){ self.ui++; self.renew(); } },3500);
   }
 };
+
+/* v122: 中継所 2か所に 同時接続。おくる ときは 両方へ、うけとりは 先に きた ほう（重複は 番号で すてる） */
+var FastH=Fast;
+var FastE=Object.assign({},Fast,{urls:['wss://broker.emqx.io:8084/mqtt','wss://broker.hivemq.com:8884/mqtt'],
+  ws:null,open:false,topic:null,ui:0,pid:1,pingT:null,retryT:null,buf:[],subOk:false,lastRx:0,echoAt:0,echoSub:null,probing:0});
+var FASTS=[FastH,FastE];
+Fast={
+  get open(){ return FastH.open||FastE.open; },
+  get topic(){ return FastH.topic||FastE.topic; },
+  get lastRx(){ return Math.max(FastH.lastRx||0,FastE.lastRx||0); },
+  get count(){ return (FastH.open?1:0)+(FastE.open?1:0); },
+  connect:function(t){ FASTS.forEach(function(f){ f.connect(t); }); },
+  close:function(){ FASTS.forEach(function(f){ f.close(); }); },
+  kick:function(){ FASTS.forEach(function(f){ f.kick(); }); },
+  renew:function(){ FASTS.forEach(function(f){ f.renew(); }); },
+  probe:function(){ FASTS.forEach(function(f){ f.probe(); }); },
+  echo:function(){ FASTS.forEach(function(f){ f.echo(); }); },
+  pub:function(str){ var ok=false; FASTS.forEach(function(f){ if(f.pub(str)) ok=true; }); return ok; },
+  sub:function(n){ var ok=false; FASTS.forEach(function(f){ if(f.sub(n)) ok=true; }); return ok; },
+  unsub:function(n){ FASTS.forEach(function(f){ f.unsub(n); }); },
+  /* 映像は 通信量が 大きいので 1か所(つながっている 方)だけ */
+  pubBin:function(n,b){ return (FastH.open&&FastH.pubBin(n,b))||(FastE.open&&FastE.pubBin(n,b))||false; }
+};
 /* 40秒 なにも 受けとらなければ 切れたと みなす */
-setInterval(function(){ try{ if(Fast.topic&&Fast.open&&Fast.lastRx&&Date.now()-Fast.lastRx>18000){ Fast.ui++; Fast.renew(); } }catch(e){} },3000);
+setInterval(function(){ FASTS.forEach(function(f){ try{ if(f.topic&&f.open&&f.lastRx&&Date.now()-f.lastRx>18000){ f.ui++; f.renew(); } else if(f.topic&&!f.open&&!f.ws) f.kick(); }catch(e){} }); },3000);
 setInterval(function(){ try{ if(Fast.topic&&!document.hidden) Fast.echo(); }catch(e){} },15000);
 
 /* ================================================================
@@ -5516,8 +5549,7 @@ function beepHost(){
 function notifyHostAccess(txt){
   if(!S.isHost||S.roomClosed) return;
   S.hostAlert=true; updateTitleBadge();
-  beepHost();
-  try{ if('Notification' in window&&Notification.permission==='granted') new Notification('雑学王',{body:txt}); }catch(e){}
+  try{ if('Notification' in window&&Notification.permission==='granted') new Notification('雑学王',{body:txt,silent:true}); }catch(e){}
 }
 /* メッセージ着信：中身は 出さない。数値バッジと 短い通知だけ */
 function notifyIncoming(){
@@ -5525,12 +5557,12 @@ function notifyIncoming(){
   if(viewing) return;
   updateBadge(); updateTalkbackBadges(); updateTitleBadge();
   setAppBadgeCount(S.unread||1);
-  try{ if(navigator.vibrate) navigator.vibrate([120,60,120]); }catch(e){}
-  beepHost();
+  /* v122: 音・振動は 出さない（マナーモードでも 鳴っていた ため） */
   if(!('Notification' in window)||Notification.permission!=='granted') return;
   if(localStorage.getItem('mtp_notify_off')==='1') return;
-  var body=peerName()+' から メッセージが とどきました';
-  var opt={body:body,tag:'mtp-chat',renotify:true,badge:'./icon-192.png',icon:'./icon-192.png',data:{n:S.unread||1}};
+  var cnt=S.unread||1;
+  var body=peerName()+(cnt>1?(' から メッセージが '+cnt+'件 とどいています'):' から メッセージが とどきました');
+  var opt={body:body,tag:'mtp-chat',renotify:true,silent:true,badge:'./icon-192.png',icon:'./icon-192.png',data:{n:cnt}};
   /* スマホ(とくに Android)は サービスワーカー 経由で ないと 通知が でない */
   try{
     if(navigator.serviceWorker&&swReg){ swReg.showNotification('雑学王',opt); return; }
@@ -6976,7 +7008,7 @@ case 'ack':
           S.chat.push({from:m.from,text:tx,at:(typeof it.at==='number'?it.at:Date.now()),sent:true,n:m.n||0});
           added++;
         }
-        try{ if(m.n) Net.send({t:'ack',upTo:m.n}); }catch(e){}
+        try{ if(m.n){ Net.send({t:'ack',upTo:m.n}); setTimeout(function(){ try{ Net.send({t:'ack',upTo:m.n}); }catch(e){} },1500); } }catch(e){}
         if(!added) return;
         try{ var cbI=$('#call-box'); if(cbI&&!cbI.hidden){ for(var j=0;j<list.length&&j<16;j++){ var tj=String((list[j]||{}).text||''); if(tj) igComment(peerName(),tj,false); } } }catch(e){}
         S.lastPeerN=Math.max(S.lastPeerN||0,m.n||0);
@@ -7223,7 +7255,7 @@ async function ringBell(){
       var t=await bellTopic(); if(!t) return;
       fetch('https://ntfy.sh/'+t,{method:'POST',headers:{'Content-Type':'text/plain'},body:'zgn:'+n});
     }catch(e){}
-  },800);
+  },300);
 }
 /* あいてが 読んだら 数を リセット */
 function bellReset(){ bellCount=0; }

@@ -1,4 +1,4 @@
-/* 雑学王 サービスワーカー（v121）
+/* 雑学王 サービスワーカー（v122）
    - アプリを とじていても「メッセージが とどきました」の 通知を だす
    - 通知が あると Android は アイコンに バッジ（点・数字）が つく
    メッセージの 中身は ここには とどきません（合図だけ） */
@@ -27,9 +27,8 @@ self.addEventListener('push', function(e){
       renotify: true,
       icon: './icon-192.png',
       badge: './icon-192.png',
-      vibrate: [150, 80, 150],
-      data: { n: unread },
-      silent: false
+      silent: true,
+      data: { n: unread }
     });
   })());
 });
