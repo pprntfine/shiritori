@@ -787,7 +787,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v136</b>｜ビルド 2026-10-24（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v139</b>｜ビルド 2026-10-24（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1999,6 +1999,7 @@ var Fast={
       var tname=new TextDecoder().decode(body.slice(2,2+tl));
       if(tname==='zgk/'+this.topic+'/e'){ this.echoAt=Date.now(); return; }
       if(tname.indexOf('zgv/')===0){ try{ Vid.onBin(body.slice(off)); }catch(e){} return; }
+      if(tname.indexOf('zga/')===0){ try{ Aud.onBin(body.slice(off)); }catch(e){} return; }
       var msg=new TextDecoder().decode(body.slice(off));
       try{ Net.lastAlive=Date.now(); Net.recvFast(msg); }catch(e){}
     }
@@ -2112,8 +2113,9 @@ var Vid={
     if(this.rxTopic&&this.rxTopic!==t) Fast.unsub(this.rxTopic);
     this.rxTopic=t; this.rxOn=true;
     if(!Fast.sub(t)){ try{ Fast.probe(); }catch(e){} }
+    try{ Aud.listen(); }catch(e){}
   },
-  stopListen:function(){ if(this.rxTopic) Fast.unsub(this.rxTopic); this.rxTopic=null; this.rxOn=false; this.rxSeq=-1; },
+  stopListen:function(){ if(this.rxTopic) Fast.unsub(this.rxTopic); this.rxTopic=null; this.rxOn=false; this.rxSeq=-1; try{ Aud.stopListen(); }catch(e){} },
   start:async function(){
     if(this.on) return;
     if(!callStream){ return; }
@@ -2124,8 +2126,9 @@ var Vid={
     var self=this, iv=Math.round(1000/this.FPS);
     this.timer=setInterval(function(){ self.snap(); },iv);
     var st=$('#call-state'); if(st) st.textContent='ライブ中（あんごう中継）';
+    try{ Aud.start(); }catch(e){}
   },
-  stop:function(){ this.on=false; if(this.timer){ clearInterval(this.timer); this.timer=null; } },
+  stop:function(){ this.on=false; if(this.timer){ clearInterval(this.timer); this.timer=null; } try{ Aud.stop(); }catch(e){} },
   snap:function(){
     if(!this.on||this.busy||!callStream) return;
     if(!Fast.open){ if(!this._kickAt||Date.now()-this._kickAt>3000){ this._kickAt=Date.now(); try{ Fast.kick(); }catch(e){} } return; }
@@ -2166,7 +2169,7 @@ var Vid={
     this.lastRx=Date.now();
     if(!this.seeT||Date.now()-this.seeT>5000){ this.seeT=Date.now(); try{ Net.send({t:'live-see'}); }catch(e){} }
     var box=$('#call-box'); if(!box) return;
-    if(box.hidden){ if(Vid.closedSid&&Vid.closedSid===Vid.curSid) return; openCallUI(); toast(peerName()+' の ライブが とどきました。'); }
+    if(box.hidden){ if(Vid.closedSid&&Vid.closedSid===Vid.curSid) return; if(liveAsking||$('#live-ask')) return; openCallUI(); }
     var cvs=$('#call-remote-cv');
     if(!cvs){ cvs=document.createElement('canvas'); cvs.id='call-remote-cv'; box.insertBefore(cvs,box.firstChild.nextSibling); }
     try{
@@ -2178,6 +2181,104 @@ var Vid={
     }catch(e){}
   }
 };
+/* ================================================================
+   v137: 中継の こえ（直接 つながらない とき・映像と いっしょに）
+   - マイクを 0.5秒ごとの 小さな 音の かけらにして、2人の 鍵で あんごう化 → 即時路（zga/…）
+   - うけがわは じゅんばんに すきまなく 再生（中継所には 読めない データだけ）
+   ================================================================ */
+var Aud={
+  on:false, rxOn:false, rec:null, txTopic:null, rxTopic:null, seq:0, rxSeq:-1, ctx:null, playAt:0, mime:'', lastRx:0,
+  topicFor:async function(dir){
+    var k=(Net.key&&S.sealed)?Net.key:null; if(!k) return null;
+    var raw; try{ raw=new Uint8Array(await crypto.subtle.exportKey('raw',k)); }catch(e){ return null; }
+    var h=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('aud|'+dir+'|'+b64(raw)));
+    return 'zga/'+toHex(h).slice(0,32);
+  },
+  pickMime:function(){
+    if(!window.MediaRecorder) return '';
+    var c=['audio/webm;codecs=opus','audio/mp4','audio/webm'];
+    for(var i=0;i<c.length;i++){ try{ if(MediaRecorder.isTypeSupported(c[i])) return c[i]; }catch(e){} }
+    return '';
+  },
+  /* 1かけら ずつ 単独で 再生できる よう、0.5秒ごとに 録りなおす */
+  start:async function(){
+    if(this.on) return;
+    var src=callStream||micStream; if(!src||!src.getAudioTracks||!src.getAudioTracks().length) return;
+    this.txTopic=await this.topicFor(Vid.myDir()); if(!this.txTopic) return;
+    this.mime=this.pickMime(); if(!this.mime) return;
+    this.on=true; this.seq=0;
+    var self=this, stream=new MediaStream(src.getAudioTracks());
+    (function loop(){
+      if(!self.on) return;
+      var mr; try{ mr=new MediaRecorder(stream,{mimeType:self.mime,audioBitsPerSecond:24000}); }catch(e){ self.on=false; return; }
+      var parts=[];
+      mr.ondataavailable=function(e){ if(e.data&&e.data.size) parts.push(e.data); };
+      mr.onstop=function(){ if(parts.length) self.send(new Blob(parts,{type:self.mime})); if(self.on) loop(); };
+      try{ mr.start(); }catch(e){ self.on=false; return; }
+      self.rec=mr;
+      setTimeout(function(){ try{ if(mr.state!=='inactive') mr.stop(); }catch(e){} },500);
+    })();
+  },
+  stop:function(){ this.on=false; try{ if(this.rec&&this.rec.state!=='inactive') this.rec.stop(); }catch(e){} this.rec=null; },
+  send:async function(blob){
+    try{
+      if(!Fast.open) return;
+      var key=Net.key; if(!key||!S.sealed) return;
+      var ab=new Uint8Array(await blob.arrayBuffer());
+      var m=new TextEncoder().encode(this.mime.slice(0,40));
+      var n=(++this.seq)>>>0;
+      var pt=new Uint8Array(5+m.length+ab.length);
+      pt[0]=n>>>24; pt[1]=(n>>>16)&255; pt[2]=(n>>>8)&255; pt[3]=n&255; pt[4]=m.length;
+      pt.set(m,5); pt.set(ab,5+m.length);
+      var iv=randFrom(12);
+      var ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv:iv},key,pt));
+      var out=new Uint8Array(12+ct.length); out.set(iv,0); out.set(ct,12);
+      Fast.pubBin(this.txTopic,out);
+    }catch(e){}
+  },
+  listen:async function(){
+    var t=await this.topicFor(Vid.peerDir()); if(!t) return;
+    if(this.rxTopic&&this.rxTopic!==t) Fast.unsub(this.rxTopic);
+    this.rxTopic=t; this.rxOn=true; this.rxSeq=-1;
+    if(!Fast.sub(t)){ try{ Fast.probe(); }catch(e){} }
+  },
+  stopListen:function(){ if(this.rxTopic) Fast.unsub(this.rxTopic); this.rxTopic=null; this.rxOn=false; this.rxSeq=-1; this.playAt=0; },
+  /* iPhone は タップで 音を ゆるす 必要が ある */
+  unlock:function(){
+    try{
+      if(!this.ctx){ var AC=window.AudioContext||window.webkitAudioContext; if(AC) this.ctx=new AC(); }
+      if(this.ctx&&this.ctx.state==='suspended') this.ctx.resume();
+    }catch(e){}
+  },
+  onBin:async function(buf){
+    if(!this.rxOn||buf.length<30) return;
+    if(pc&&pc.connectionState==='connected'&&$('#call-box')&&$('#call-box').classList.contains('rtc-ok')) return;   /* 直接の 音が ある ときは つかわない */
+    var key=Net.key; if(!key||!S.sealed) return;
+    var pt;
+    try{ pt=new Uint8Array(await crypto.subtle.decrypt({name:'AES-GCM',iv:buf.slice(0,12)},key,buf.slice(12))); }catch(e){ return; }
+    var n=((pt[0]<<24)|(pt[1]<<16)|(pt[2]<<8)|pt[3])>>>0;
+    if(n<=this.rxSeq&&n>5) return;
+    this.rxSeq=n; this.lastRx=Date.now();
+    var ml=pt[4]; var data=pt.slice(5+ml);
+    this.unlock(); var ctx=this.ctx; if(!ctx) return;
+    try{
+      var ab=await ctx.decodeAudioData(data.buffer.slice(data.byteOffset,data.byteOffset+data.byteLength));
+      var src=ctx.createBufferSource(); src.buffer=ab; src.connect(ctx.destination);
+      var now=ctx.currentTime;
+      if(this.playAt<now||this.playAt>now+1.5) this.playAt=now+0.12;   /* おくれすぎたら おいつく */
+      src.start(this.playAt); this.playAt+=ab.duration;
+      if(ctx.state==='suspended') showTapForSound();
+    }catch(e){}
+  }
+};
+function showTapForSound(){
+  var b=$('#tap-sound'); var box=$('#call-box'); if(!box) return;
+  if(!b){ b=document.createElement('button'); b.id='tap-sound'; b.type='button'; b.textContent='🔊 タップで 声を きく';
+    b.style.cssText='position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);z-index:20;padding:14px 22px;border-radius:999px;border:0;background:#FF7FA8;color:#fff;font-weight:900;font-size:1rem;box-shadow:0 6px 18px rgba(0,0,0,.3)';
+    box.appendChild(b); }
+  b.hidden=false;
+}
+function hideTapForSound(){ var b=$('#tap-sound'); if(b) b.hidden=true; }
 /* v121: ライブ開始の 合図（即時の とおりみちで 3秒ごと・相手が 見はじめるまで） */
 var annT=null;
 function liveAnnounce(){
@@ -5775,6 +5876,28 @@ function callFail(where,err){
   try{ stopCall(false); }catch(e){}
 }
 /* ===== v92: テレビ電話(WebRTC) ===== */
+/* v139: 見る側の えらびかた（'watch'=見るだけ / 'both'=じぶんも 配信） */
+function askLiveMode(){
+  return new Promise(function(res){
+    var old=$('#live-ask'); if(old) old.remove();
+    var w=document.createElement('div'); w.id='live-ask';
+    w.style.cssText='position:fixed;inset:0;z-index:9999;background:rgba(20,16,24,.55);display:flex;align-items:center;justify-content:center;padding:20px';
+    w.innerHTML='<div style="background:#fff;border-radius:20px;padding:22px 18px 16px;max-width:340px;width:100%;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.25)">'+
+      '<div style="font-size:2rem">🐾</div>'+
+      '<div style="font-weight:900;font-size:1.05rem;margin:6px 0 4px;color:#3B3B3B">'+peerName().replace(/[<>&"]/g,'')+' が ライブを はじめました</div>'+
+      '<div style="font-size:.82rem;color:#8a8177;margin-bottom:14px">あなたの カメラは まだ オフです</div>'+
+      '<button type="button" id="la-watch" style="display:block;width:100%;padding:13px;border:0;border-radius:12px;background:#FF7FA8;color:#fff;font-weight:900;font-size:.98rem;margin-bottom:8px">👀 見るだけ（カメラ・マイク オフ）</button>'+
+      '<button type="button" id="la-both" style="display:block;width:100%;padding:13px;border:0;border-radius:12px;background:#F4F0EA;color:#3B3B3B;font-weight:900;font-size:.98rem;margin-bottom:8px">📹 じぶんも 配信する</button>'+
+      '<button type="button" id="la-no" style="display:block;width:100%;padding:10px;border:0;background:none;color:#8a8177;font-size:.86rem">いまは 見ない</button></div>';
+    document.body.appendChild(w);
+    var done=function(v){ try{ w.remove(); }catch(e){} res(v); };
+    $('#la-watch').addEventListener('click',function(){ done('watch'); });
+    $('#la-both').addEventListener('click',function(){ done('both'); });
+    $('#la-no').addEventListener('click',function(){ done('no'); });
+    setTimeout(function(){ if(document.body.contains(w)) done('watch'); },60000);   /* こたえが ないときは 見るだけ */
+  });
+}
+var liveAsking=false;
 var callOn=false, callVideo=false, callStream=null, curFacing='user', callT0=0, callTimer=null, callHide=false;
 function tuneSenders(){
   if(!pc) return;
@@ -5899,6 +6022,7 @@ async function flipCam(){
 }
 var callBusy=false;
 $('#btn-live').addEventListener('click',async function(){
+  try{ Aud.unlock(); }catch(e){}
   if(callOn&&callVideo){ stopCall(); return; }
   if(S.phase!=='play'&&!S.linked){ toast('まだ 部屋に 入っていません。'); return; }
   if(!(window.RTCPeerConnection&&navigator.mediaDevices&&navigator.mediaDevices.getUserMedia)){
@@ -6045,6 +6169,7 @@ function stopCall(notify){
   rtcOn=false; callOn=false;
   try{ if(Vid.curSid) Vid.closedSid=Vid.curSid; } catch(e){}
   try{ if(annT){ clearInterval(annT); annT=null; } if(Vid.rtcSeeT){ clearInterval(Vid.rtcSeeT); Vid.rtcSeeT=null; } Vid.peerSeen=0; if(notify!==false) Net.send({t:'live-off'}); }catch(e){}
+  try{ hideTapForSound(); }catch(e){}
   try{ Vid.stop(); Vid.stopListen(); var rc=$('#call-remote-cv'); if(rc) rc.remove(); var cbx0=$('#call-box'); if(cbx0) cbx0.classList.remove('rtc-ok'); }catch(e){}
   try{ stopJpg(); var ri=$('#call-remote-img'); if(ri) ri.remove(); }catch(e){}
   if(fbT){ clearTimeout(fbT); fbT=0; }
@@ -6103,7 +6228,8 @@ function rtcStart(isCaller){
       var rv=$('#call-remote');
       if(rv){
         rv.srcObject=st;
-        var pr=rv.play(); if(pr&&pr.catch) pr.catch(function(){ rv.muted=true; rv.play().catch(function(){}); toast('画面を タップすると 音が 出ます。'); });
+        rv.muted=false;
+        var pr=rv.play(); if(pr&&pr.catch) pr.catch(function(){ rv.muted=true; rv.play().catch(function(){}); showTapForSound(); });
       }
     }else{
       var a=ensureRtcAudio();
@@ -6170,13 +6296,13 @@ function rtcSendSdp(kind,sdpStr){
   /* v136: ntfy の ファイル（回数せいげんで とまる）を やめ、即時路で かけらを 3回 おくる（重複は うけがわで すてる） */
   var id='S'+Date.now().toString(36)+((Math.random()*1e6)|0).toString(36);
   var total=Math.ceil(sdpStr.length/PHOTO_PIECE);
-  var round=0;
+  var round=0, vflag=(kind==='offer')?(callVideo?1:0):0;   /* v139: 電話の 答えに ライブの しるしを つけない */
   (function burst(){
     var i=0;
     (function next(){
       if(i>=total){ if(++round<3) setTimeout(burst,1500); return; }
       if(kind==='offer'&&!rtcOn) return;
-      Net.send({t:'rtc',k:kind,v:callVideo?1:0,id:id,i:i,total:total,data:sdpStr.slice(i*PHOTO_PIECE,(i+1)*PHOTO_PIECE)});
+      Net.send({t:'rtc',k:kind,vid:vflag,id:id,i:i,total:total,data:sdpStr.slice(i*PHOTO_PIECE,(i+1)*PHOTO_PIECE)});
       i++;
       setTimeout(next,120);
     })();
@@ -6192,15 +6318,32 @@ async function rtcHandleSdp(m,sdp){
   try{
     if(m.k==='offer'){
       if(rtcOn) stopCall(false);
-      callVideo=!!m.v;
-      var gm=await getCallMedia(callVideo);
-      if(gm!==true){
-        if(callVideo){ callVideo=false; gm=await getCallMedia(false); }   /* カメラが だめでも 見るだけは できる ように */
-        if(gm!==true){ note('あいてから でんわですが カメラ／マイクを つかえません（'+((gm&&gm.name)||'')+'）。','#note2'); }
+      var gm=true, mode='both';
+      if(m.vid===1){
+        /* v139: ライブは 見る側が えらぶ。えらぶまで カメラ・マイクは つけない */
+        if(liveAsking) return; liveAsking=true;
+        try{ mode=await askLiveMode(); }finally{ liveAsking=false; }
+        if(mode==='no'){
+          /* v139: 見ない ときは だまって とじる（配信している 人の ライブは とめない） */
+          try{ Vid.closedSid=Vid.curSid||('x'+Date.now()); Vid.stopListen(); var rc=$('#call-remote-cv'); if(rc) rc.remove(); var bx=$('#call-box'); if(bx) bx.hidden=true; }catch(e){}
+          return;
+        }
+        try{ Aud.unlock(); }catch(e){}
+        if(mode==='both'){
+          callVideo=true; gm=await getCallMedia(true);
+          if(gm!==true){ callVideo=false; mode='watch'; toast('カメラを つかえないので 見るだけに します。'); }
+        }
+        if(mode==='watch'){ callVideo=false; callStream=null; micStream=null; }
+        openCallUI();
+        try{ Vid.listen(); if(mode==='both'&&callVideo) Vid.start(); }catch(e){}
+      }else{
+        callVideo=false;
+        gm=await getCallMedia(false);
+        if(gm!==true){ note('あいてから でんわですが マイクを つかえません（'+((gm&&gm.name)||'')+'）。','#note2'); }
+        toast(peerName()+' から 電話です。');
       }
-      if(m.v){ openCallUI(); toast('あいてから ライブが とどきました。'); }
-      try{ Vid.listen(); if(callVideo) Vid.start(); }catch(e){}
       rtcStart(false);
+      if(m.vid===1&&mode==='watch'){ try{ pc.addTransceiver('video',{direction:'recvonly'}); pc.addTransceiver('audio',{direction:'recvonly'}); }catch(e){} }
       await pc.setRemoteDescription(new RTCSessionDescription(sdp));
       var ans=await pc.createAnswer();
       await pc.setLocalDescription(ans);
@@ -6227,13 +6370,32 @@ async function rtcRecvSdp(m){
   try{
     if(m.k==='offer'){
       if(rtcOn) stopCall(false);
-      callVideo=!!m.v;
-      var gm=await getCallMedia(callVideo);
-      if(gm!==true&&callVideo){ callVideo=false; gm=await getCallMedia(false); }
-      if(gm!==true){ note('あいてから でんわですが マイクを つかえません（'+((gm&&gm.name)||'')+'）。','#note2'); }
-      if(m.v){ openCallUI(); toast('あいてから ライブが とどきました。'); try{ Vid.listen(); if(callVideo) Vid.start(); }catch(e){} }
-      else toast(peerName()+' から 電話です。');
+      var gm=true, mode='both';
+      if(m.vid===1){
+        /* v139: ライブは 見る側が えらぶ。えらぶまで カメラ・マイクは つけない */
+        if(liveAsking) return; liveAsking=true;
+        try{ mode=await askLiveMode(); }finally{ liveAsking=false; }
+        if(mode==='no'){
+          /* v139: 見ない ときは だまって とじる（配信している 人の ライブは とめない） */
+          try{ Vid.closedSid=Vid.curSid||('x'+Date.now()); Vid.stopListen(); var rc=$('#call-remote-cv'); if(rc) rc.remove(); var bx=$('#call-box'); if(bx) bx.hidden=true; }catch(e){}
+          return;
+        }
+        try{ Aud.unlock(); }catch(e){}
+        if(mode==='both'){
+          callVideo=true; gm=await getCallMedia(true);
+          if(gm!==true){ callVideo=false; mode='watch'; toast('カメラを つかえないので 見るだけに します。'); }
+        }
+        if(mode==='watch'){ callVideo=false; callStream=null; micStream=null; }
+        openCallUI();
+        try{ Vid.listen(); if(mode==='both'&&callVideo) Vid.start(); }catch(e){}
+      }else{
+        callVideo=false;
+        gm=await getCallMedia(false);
+        if(gm!==true){ note('あいてから でんわですが マイクを つかえません（'+((gm&&gm.name)||'')+'）。','#note2'); }
+        toast(peerName()+' から 電話です。');
+      }
       rtcStart(false);
+      if(m.vid===1&&mode==='watch'){ try{ pc.addTransceiver('video',{direction:'recvonly'}); pc.addTransceiver('audio',{direction:'recvonly'}); }catch(e){} }
       await pc.setRemoteDescription(new RTCSessionDescription(sdp));
       var ans=await pc.createAnswer();
       await pc.setLocalDescription(ans);
@@ -6655,7 +6817,7 @@ Net.onMsg=function(m){
     if(S.isHost && S.guest && m.from!==S.guest.did) return;
     if(!S.isHost && S.paired && S.opp.id && m.from!==S.opp.id) return;
   }
-  var PRIV={'live-on':1,'live-see':1,'live-off':1,igh:1,chats:1,chat:1,photo:1,'photo-chunk':1,read:1,ack:1,prof:1,unpair:1,rtc2:1,'rtc-sdp':1,'rtc-ice':1,'live-jpg':1,'live-ctl':1,'live-frame':1,'live-audio':1,call:1,'call-end':1};
+  var PRIV={'live-on':1,'live-see':1,'live-off':1,igh:1,chats:1,chat:1,photo:1,'photo-chunk':1,read:1,ack:1,prof:1,unpair:1,rtc2:1,rtc:1,'rtc-bye':1,'rtc-sdp':1,'rtc-ice':1,'live-jpg':1,'live-ctl':1,'live-frame':1,'live-audio':1,call:1,'call-end':1};
   if(PRIV[m.t]&&(m.__legacy||!S.sealed)) return;
   /* 連投よけ(1秒60通まで) */
   var nowMs=Date.now();
@@ -6845,7 +7007,7 @@ Net.onMsg=function(m){
         if(m.sid&&Vid.closedSid===m.sid) return;   /* 自分で とじた ライブは もう ひらかない */
         Vid.curSid=m.sid||'';
         var box=$('#call-box');
-        if(box&&box.hidden){ openCallUI(); toast(peerName()+' が ライブを はじめました。'); }
+        /* v139: 見る側は カメラを つけない（中継の 映像は 見るだけ）。えらぶ 画面は rtc の 合図で だす */
         try{ Vid.listen(); }catch(e){}
         try{ Net.send({t:'live-see'}); }catch(e){}
       })();
@@ -6856,6 +7018,7 @@ Net.onMsg=function(m){
       break;
     case 'live-off':
       if(m.from===S.me.id) break;
+      try{ var la=$('#live-ask'); if(la) la.remove(); }catch(e){}
       Vid.peerSeen=0; try{ updateViewers(); }catch(e){}
       if(annT){ clearInterval(annT); annT=null; }   /* あいてが とじたら 合図を とめる */
       break;
@@ -7141,7 +7304,7 @@ $('#call-hide').addEventListener('click',function(){
   this.textContent=callHide?'映像を出す':'画面を隠す';
 });
 $('#call-end').addEventListener('click',function(){ stopCall(); });
-$('#call-box').addEventListener('click',function(){ var rv=$('#call-remote'); if(rv&&rv.muted&&rv.srcObject){ rv.muted=false; rv.play().catch(function(){}); } });
+$('#call-box').addEventListener('click',function(){ var rv=$('#call-remote'); if(rv&&rv.muted&&rv.srcObject){ rv.muted=false; rv.play().catch(function(){}); } try{ Aud.unlock(); }catch(e){} hideTapForSound(); });
 document.addEventListener('visibilitychange',function(){
   /* 画面を はなれたら カメラを とめる(いきのこり配信を ふせぐ) */
   if(document.hidden&&rtcOn&&callVideo&&callStream){
