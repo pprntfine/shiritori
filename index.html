@@ -784,7 +784,8 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v133</b>｜ビルド 2026-10-24（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v134</b>｜ビルド 2026-10-24（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <div style="text-align:center;margin:8px 0 0"><button id="btn-prof2" type="button" class="notify-btn" title="名前とアイコンと つうちサーバー">名前と アイコン</button></div>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -7423,7 +7424,7 @@ function recvProf(m){
     draw(); $('#prof-modal').classList.add('on');
   }
   window.openProf=open;
-  var bp=$('#btn-prof'); if(bp) bp.addEventListener('click',open);
+  var bp=$('#btn-prof'); if(bp) bp.addEventListener('click',open); var bp2=$('#btn-prof2'); if(bp2) bp2.addEventListener('click',open);
   $('#pf-cancel').addEventListener('click',function(){ $('#prof-modal').classList.remove('on'); });
   $('#prof-modal').addEventListener('click',function(e){ if(e.target===this) this.classList.remove('on'); });
   $('#pf-me-photo').addEventListener('click',function(){ $('#pf-file').click(); });
