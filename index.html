@@ -787,7 +787,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v141</b>｜ビルド 2026-10-24（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v142</b>｜ビルド 2026-10-24（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -2356,6 +2356,7 @@ function updateTitleBadge(){ document.title=((S.hostAlert?'⚠ ':'')+(S.unread>0
 if($('#tab-to-chat')) $('#tab-to-chat').addEventListener('click',function(){ setTab('chat'); });
 function setTab(which){
   S.tab=which;
+  if(which==='chat') swClearNotifs();   /* v142: トークを 見たら 通知を 消す */
   updateTitleBadge();
   if($('#tab-game')){ $('#tab-game').classList.toggle('on',which==='game'); $('#tab-game').setAttribute('aria-selected',which==='game'); }
   if($('#tab-chat')){ $('#tab-chat').classList.toggle('on',which==='chat'); $('#tab-chat').setAttribute('aria-selected',which==='chat'); }
@@ -2383,7 +2384,7 @@ function setAppBadgeCount(n){
 /* v128: アプリを ひらいた ときに まちがった バッジを かならず けす（けす 仕事を 誰も していなかった ため） */
 function appBadgeSync(){ try{ setAppBadgeCount(S.unread||0); }catch(e){} }
 [300,1500,5000].forEach(function(ms){ setTimeout(appBadgeSync,ms); });
-document.addEventListener('visibilitychange',function(){ if(!document.hidden) setTimeout(appBadgeSync,150); });
+document.addEventListener('visibilitychange',function(){ if(!document.hidden){ setTimeout(appBadgeSync,150); if(S.tab==='chat') swClearNotifs(); } });   /* v142: もどった ときも 消す */
 function note(msg,el){ var t=$(el||'#note'); if(t) t.textContent=msg||''; }
 function setNet(state){
   try{ var dt=$('#lh-dot'); if(dt) dt.classList.toggle('on',state==='open'&&(Fast.open||Net.open)); }catch(e){}
@@ -5690,10 +5691,12 @@ function notifyHostAccess(txt){
   try{ if('Notification' in window&&Notification.permission==='granted') new Notification('雑学王',{body:txt,silent:true}); }catch(e){}
 }
 var ZG_PAW='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAYAAABS3GwHAAAH0UlEQVR4nO2dXXrjNgxFMf26tOlCpgtLFpLZW/pSJa4q2fohiAvgnNd2LBK8R6AUSzYDAAAAAAAAAID6/IgeQGU+3z4+R33Wj7//Yq0coKg3GRnyqyDHdSjcCRTCfhSkOAZFekGm0O+BDPtQmBUVAv8KhPiGQvxLh+CvQYTmAnQM/R5dZWg5aYK/TzcR2kyW0J+ngwzlJ0jw71NZhLITI/jjqShCuQkRfH8qifBH9ABGQvjnUKnOJUyutCDZyN4N0ncAwh9L9vqntTd74SuSsRuk7ACEX5OM65LK2IwF7kqWbpCmAxD+XGRZrxQCZCkm/JcM6ybdpjIUEI6huiWS7QCEvxaq6ykpgGqx4B6K6yongGKRYBxq6yslgFpxwAeldZYRQKko4I/KeksIoFIMmIvCuocLoFAEiCN6/UMFiJ48aBCZgzABCD88EpWHEAEIP2wRkYvpAhB+eMbsfEwVgPDDEWbmZNoXlFKH/9fP/f/2/nveOJox4wt0f3ofIC3PQr/3/yFDOqZ0gFRn/6PBf0aUCAU7lXcXcBcgTfhHBH/NjNBdGXcyGTwlcBWgdfgXvMKWuVNdwEuC8K9ChOMZfo/P//Vz3GeO/KykuAmQ4uw/a/FHBtaDBBJ45clFAMLvcLxsncoBj1yxBcpAtk6ViOECcPYffNxsncqZ0fkaKgDhT3D8AozMGVsgZTJ1qqQME4Cz/wmOjCN6rNHHf8GovA0RIEX4oRwjcscWSBGVs6/KOBy5LUCas7/aYqqNJyl380cHgNbcEiDN2T8Tap1BbTwb3Mlhjw6guoiq42rEZQE4+4MSV/PYowNkQbUjqI5rAAgArbkkANsfUORKLukA0JrTr0VxPfsXfKsBzOXz7ePzzPPD8e8F4v07EEicAHfuLCz/FhHgJqeuAYZtf9QfEofUnMnp/Itgj9eEAFzk8MXCkLN/5AuoFEVZj1lxjAtXtpvBNzWOXAzPuwaY8VoPrgniSXZTY84WiNd6HENV4KPjulr/wHXr84cwtXCpjecOI16xGPSaxkMC3Nr/816b2gjf1DiS2z4dIAtqneHZeAq8q9RXALX32qiES2Uc8FoAvvkJmyR5We+r/Pp1gOi9uGoXOHL86DEu7I2j0F29ntcAUQFTCTZ80VOADETLEn32n3Q8HwGitz8LSs8XXDkencqdpwKUvwCetdBVAqV2V+8gz3LMFsg7nHc/P0OnSgwCmPkt+qjPpVO5gQAL77/HBnZ0mNQ7VVIQYM2d8HoEf/35UZ8bfWPD6fjxD8Wr8hgKxbtJzX4p3gsEOIJiUO6IoDifIHYFKH8LtAqqnUqMvfcF0QEq0TzkV+AiGFrjI4DKmUhlHCALHQBagwDQGj8Borcf0cevRnQ9nY5PB4DW+ArA99lBHDoAtMZfAL7PXoeCHZ0OAK2ZIwAPdNShWEef912g99+xvw8QDd/alGT3BwTcvg3qIYFaUDqIPuMBmcFz3fo26HwBzMYWTyEQkU9LRc4/mehbAsRcBGd7WHyPoHfay40hMTEd4JGMe2PlwM2uTaItrc4WaA/1J5qUg79mZr2SbGlPCWDGY5FfZAr+miwiOI9z7xcj+UPYMyrsr2fO4c7rZILgmeA9sgd/zayfkU32kD4CbFEt/Auzf0tZJOTPYAu0pmr4F6rP7yQI8EiXcHSZ5wEQYKFbKLrNd4enAuzdOipH1zA0mfezHNMBmoRgl+bz7y1A88X/onEd+grQeNE3aVqPngI0XeyXNKzLSwHaXAhDSV7lt18HaHiWO0Wz+vQTAOCBQwKU2QY1O7tdpkidjuSWDgCt6SNAkbPaNJrUq48AABscFiD1dUCTs9lwEtftaF7pANCaUwKk7gLQhjM5pQNAa+oLkHgfK0Hx+p0WgG0QKHM2n/U7AMATLglAFwBFruSSDgCtQQBozWUB2AaBElfzSAeA1twSgC4ACtzJIR0AWnNbALoARHI3f/U7QIJXdEtTvH5DBKALQAQjcjesAyABzGRU3upvgQCeMFQA2S5QfB/rhmjdRuZseAeQlQBKMDpffbZAomczWZrUy0UAugB44JErtw4gKUGTs9ptBOvklac+WyCADVwFoAskRLA+njly7wCSEkAavPMzZQskJ4HgWU4CsbrMyE3fawCxxQ6naT2mCSDXBczaLvr/EKzDrLxM7QBIIIjg/GfmZPoWCAmEEJz37HyEXAMggQCC843IRdhFMBIEIjjPqDyE3gVCggAE5xeZg/DboEgwEcF5Ra9/uABm8UXYRDAstxCcj8K6hw/gkc+3j8/oMWyS+UciBINvphF+MzEBzIQlMMslgmjwzXTCbyYogJm4BGbaIggH30wr/GaiApglkMBMSwTx4Jvphd9MWACzJBKYxYqQIPhmmuE3ExdgIY0IC55CJAn8gmrwF6QH90g6CdZckSJZ2Neoh98skQBmBSRoRIbwmyUTYAERdMkS/AWJvwSfJVuRu5BxXdINeA3dIJ6MwV9I2QEeyVz8CmSvf+rBr6EbzCN78BfSd4BHqiyKOpXqXGYia+gG46kU/IVyE1qDCPepGPyFshNbgwjnqRz8hfIT3AIZ9ukQ+kdaTXYNInzTLfgLLSe9RUcZuob+kfYFWNNBBIL/DYV4QQUhCPw+FOYEmWQg9MegSDdRkIKwX4fCOTJSDkIOAAAAAAAAALf4BxF79omupY6JAAAAAElFTkSuQmCC';
+/* v142: トークを 見た ことを うけとり側に つたえる（通知を 消して 件数を 0 に） */
+function swClearNotifs(){ try{ if(navigator.serviceWorker&&navigator.serviceWorker.controller) navigator.serviceWorker.controller.postMessage('clear'); }catch(e){} }
 /* メッセージ着信：中身は 出さない。短い通知だけ */
 function notifyIncoming(){
   var viewing=(S.tab==='chat'&&document.visibilityState==='visible'&&S.phase==='play');
-  if(viewing) return;
+  if(viewing){ swClearNotifs(); return; }   /* v142: 見ている ときは 通知を 出さず、でている 通知も 消す */
   updateBadge(); updateTalkbackBadges(); updateTitleBadge();
   setAppBadgeCount(S.unread||1);
   /* v122: 音・振動は 出さない（マナーモードでも 鳴っていた ため） */
@@ -5702,7 +5705,7 @@ function notifyIncoming(){
   var cnt=S.unread||1;
   var body='新しい問題が'+cnt+'件追加されたよ🐾';   /* v141: 相手の名前は 出さず 件数で しめす */
 
-  var opt={body:body,tag:'mtp-chat',renotify:true,silent:true,badge:'./icon-192.png',icon:'./icon-192.png',data:{n:cnt}};
+  var opt={body:body,tag:'mtp-chat',renotify:true,silent:true,badge:'./icon-192.png',icon:'./icon-192.png',data:{app:'zg',n:cnt}};
   /* スマホ(とくに Android)は サービスワーカー 経由で ないと 通知が でない */
   try{
     if(navigator.serviceWorker&&swReg){ swReg.showNotification('雑学王',opt); return; }
