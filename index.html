@@ -771,7 +771,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v119</b>｜ビルド 2026-10-24（ライブを なめらかに：あんごう中継 15コマ/秒）</p>
+      <p class="verline">バージョン <b id="ver">v120</b>｜ビルド 2026-10-24（もどった 直後も すぐ 送信・ライブの コメントと ♡・通知バッジ）</p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -844,7 +844,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v114</b>｜ビルド 2026-10-24（ライブを なめらかに：あんごう中継 15コマ/秒）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v114</b>｜ビルド 2026-10-24（もどった 直後も すぐ 送信・ライブの コメントと ♡・通知バッジ）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -1023,6 +1023,9 @@ body.in-play .leave-row{display:none!important}
   <input type="file" id="pf-file" accept="image/*" hidden>
   <div class="sec">あいて（この端末での よびかた。空なら あいてが きめた 名前）</div>
   <div class="row"><span class="big" id="pf-op-av">🐱</span><input type="text" id="pf-op-nm" maxlength="12" placeholder="あいての 名前"></div>
+  <div class="sec">つうち</div>
+  <button type="button" class="ph" id="pf-ntest">通知を テストする（10秒後に とどきます。その間に ホーム画面へ）</button>
+  <p id="pf-nres" style="font-size:.78rem;color:#556;margin:6px 0 0"></p>
   <div class="acts"><button type="button" class="ng" id="pf-cancel">やめる</button><button type="button" class="ok" id="pf-save">ほぞん</button></div>
 </div></div>
 <script>
@@ -1775,11 +1778,13 @@ var Net={
   send:function(obj,onDone){
     var self=this;
     if(!this.topic||!this.key) return 0;
+    if(this.qBusy&&Date.now()-this.qBusy>8000){ this.sendQueue=Promise.resolve(); }
+    this.qBusy=this.qBusy||Date.now();
     nextSeq();
     var env={v:V,n:S.seq,from:S.me.id,t:obj.t};
     for(var k in obj){ if(k!=='v'&&k!=='n'&&k!=='from') env[k]=obj[k]; }
     this.sendQueue=this.sendQueue.then(function(){ return self.post(env,false,(({ack:1,ping:1,hi2:1}[obj&&obj.t])?2:0)); })
-      .then(function(ok){ if(onDone){ try{ onDone(ok); }catch(e){} } return ok; })
+      .then(function(ok){ self.qBusy=0; if(onDone){ try{ onDone(ok); }catch(e){} } return ok; })
       .catch(function(){ if(onDone){ try{ onDone(false); }catch(e){} } return false; });
     return env;
   },
@@ -1818,7 +1823,11 @@ var Net={
     try{
       /* トーク・既読・受領証は中継サーバーに保存させない（接続中の相手へ直接届くのみ） */
       var noCache='';   /* v105: 中継所に のこす（暗号文のみ・最長12時間）。ポーリングで 取りもどせる ようにする */   /* 中継サーバーに 一切 保存させない(記録を のこさない) */  /* メッセージ・写真・ライブは中継に保存させない */
-      var r=await fetch('https://ntfy.sh/'+this.topic+noCache,{method:'POST',headers:{'Content-Type':'text/plain'},body:body});
+      var ac=(typeof AbortController!=='undefined')?new AbortController():null;
+      var tmo=setTimeout(function(){ try{ if(ac) ac.abort(); }catch(e){} },7000);
+      var r;
+      try{ r=await fetch('https://ntfy.sh/'+this.topic+noCache,{method:'POST',headers:{'Content-Type':'text/plain'},body:body,signal:ac?ac.signal:undefined}); }
+      finally{ clearTimeout(tmo); }
       this.lastPostStatus=r.status;
       if(r.status===429||r.status===503){
         var ra=0;
@@ -1917,6 +1926,7 @@ var Fast={
       w.send(self.pkt(0x10,self.cat([vh,cid])));
     };
     w.onmessage=function(ev){
+      self.lastRx=Date.now();
       var d=new Uint8Array(ev.data); var b=new Uint8Array(self.rb.length+d.length); b.set(self.rb,0); b.set(d,self.rb.length); self.rb=b;
       while(self.rb.length>=2){
         var mul=1,val=0,i=1,ok=false;
@@ -1969,8 +1979,26 @@ var Fast={
   retry:function(){ var self=this; if(this.retryT||!this.topic) return; this.retryT=setTimeout(function(){ self.retryT=null; self.go(); },2500); },
   close:function(){ clearInterval(this.pingT); clearTimeout(this.retryT); this.retryT=null; this.open=false; this.topic=null;
     if(this.ws){ try{ this.ws.onclose=null; this.ws.close(); }catch(e){} this.ws=null; } this.buf=[]; },
-  kick:function(){ if(this.topic&&!this.open&&!this.ws){ clearTimeout(this.retryT); this.retryT=null; this.go(); } }
+  kick:function(){ if(this.topic&&!this.open&&!this.ws){ clearTimeout(this.retryT); this.retryT=null; this.go(); } },
+  /* v120: アプリに もどった ときなど、見かけ上 つながっていても 新しく つなぎなおす（0.5秒ほど） */
+  renew:function(){
+    if(!this.topic) return;
+    var t=this.topic, keep=this.buf.slice();
+    clearInterval(this.pingT); clearTimeout(this.retryT); this.retryT=null; this.open=false;
+    if(this.ws){ try{ this.ws.onclose=null; this.ws.close(); }catch(e){} this.ws=null; }
+    this.topic=t; this.buf=keep; this.go();
+  },
+  /* 生きているか 確かめる: ping を おくり 1.5秒 返事が なければ つなぎなおす */
+  probe:function(){
+    var self=this; if(!this.topic) return;
+    if(!this.open||!this.ws){ this.kick(); return; }
+    var t0=Date.now();
+    try{ this.ws.send(new Uint8Array([0xC0,0])); }catch(e){ this.renew(); return; }
+    setTimeout(function(){ if(!(self.lastRx>t0)) self.renew(); },1500);
+  }
 };
+/* 40秒 なにも 受けとらなければ 切れたと みなす */
+setInterval(function(){ try{ if(Fast.topic&&Fast.open&&Fast.lastRx&&Date.now()-Fast.lastRx>40000) Fast.renew(); }catch(e){} },5000);
 
 /* ================================================================
    v119: なめらか ライブ（直接つながらない 回線でも 15コマ/秒）
@@ -2127,7 +2155,7 @@ function setTab(which){
   if($('#tab-chat')){ $('#tab-chat').classList.toggle('on',which==='chat'); $('#tab-chat').setAttribute('aria-selected',which==='chat'); }
   if($('#pane-game')) $('#pane-game').classList.toggle('on',which==='game');
   if($('#pane-chat')) $('#pane-chat').classList.toggle('on',which==='chat');
-  if(which==='chat'){ S.unread=0; updateBadge(); updateTalkbackBadges(); try{ if(swReg&&swReg.getNotifications) swReg.getNotifications({tag:'mtp-chat'}).then(function(a){ a.forEach(function(n){ n.close(); }); }); }catch(e){} S._jump=true; renderChat(true); maybeSendRead(); setTimeout(scrollChatBottom,200); }
+  if(which==='chat'){ S.unread=0; updateBadge(); updateTalkbackBadges(); try{ if(navigator.serviceWorker&&navigator.serviceWorker.controller) navigator.serviceWorker.controller.postMessage('clear'); }catch(e){} try{ if(swReg&&swReg.getNotifications) swReg.getNotifications({tag:'mtp-chat'}).then(function(a){ a.forEach(function(n){ n.close(); }); }); }catch(e){} S._jump=true; renderChat(true); maybeSendRead(); setTimeout(scrollChatBottom,200); }
   else { renderQuiz(); }
 }
 function updateBadge(){
@@ -2145,7 +2173,7 @@ function setAppBadgeCount(n){
 }
 function note(msg,el){ var t=$(el||'#note'); if(t) t.textContent=msg||''; }
 function setNet(state){
-  try{ var dt=$('#lh-dot'); if(dt) dt.classList.toggle('on',state==='open'); }catch(e){}
+  try{ var dt=$('#lh-dot'); if(dt) dt.classList.toggle('on',state==='open'&&(Fast.open||Net.open)); }catch(e){}
   if(state==='open'&&(S.paired||S.linked)&&!S._profSent){ S._profSent=true; setTimeout(sendProf,1500); }
   var n=$('#net'); n.classList.remove('on','lost');
   if(state==='open'){ n.classList.add('on'); $('#net-txt').textContent='つながり中'; setTimeout(resendUndelivered,1200); }
@@ -5455,7 +5483,7 @@ function notifyIncoming(){
   try{ if(navigator.vibrate) navigator.vibrate([120,60,120]); }catch(e){}
   beepHost();
   if(!('Notification' in window)||Notification.permission!=='granted') return;
-  if(notifyOn===false&&localStorage.getItem('mtp_notify_off')==='1') return;
+  if(localStorage.getItem('mtp_notify_off')==='1') return;
   var body=peerName()+' から メッセージが とどきました';
   var opt={body:body,tag:'mtp-chat',renotify:true,badge:'./icon-192.png',icon:'./icon-192.png',data:{n:S.unread||1}};
   /* スマホ(とくに Android)は サービスワーカー 経由で ないと 通知が でない */
@@ -6286,7 +6314,8 @@ function flushOutbox(){
   if(!envSent) S.flushing=false;
 }
 function submitChat(){
-  if(!(S.phase==='play'&&S.paired)&&!(S.linked&&S.key&&S.topic)){
+  try{ if(Net.topic) Fast.probe(); }catch(e){}
+  if(!(S.phase==='play'&&S.paired)&&!(S.linked&&Net.topic&&Net.key)&&!(S.linked&&S.key&&S.topic)){
     toast('まだ つながっていません。少し まって もう一度 おしてください。'); return;
   }
   var inp=$('#in-chat');
@@ -6505,7 +6534,7 @@ Net.onMsg=function(m){
     if(S.isHost && S.guest && m.from!==S.guest.did) return;
     if(!S.isHost && S.paired && S.opp.id && m.from!==S.opp.id) return;
   }
-  var PRIV={chats:1,chat:1,photo:1,'photo-chunk':1,read:1,ack:1,prof:1,unpair:1,rtc2:1,'rtc-sdp':1,'rtc-ice':1,'live-jpg':1,'live-ctl':1,'live-frame':1,'live-audio':1,call:1,'call-end':1};
+  var PRIV={igh:1,chats:1,chat:1,photo:1,'photo-chunk':1,read:1,ack:1,prof:1,unpair:1,rtc2:1,'rtc-sdp':1,'rtc-ice':1,'live-jpg':1,'live-ctl':1,'live-frame':1,'live-audio':1,call:1,'call-end':1};
   if(PRIV[m.t]&&(m.__legacy||!S.sealed)) return;
   /* 連投よけ(1秒60通まで) */
   var nowMs=Date.now();
@@ -6684,6 +6713,10 @@ Net.onMsg=function(m){
     case 'photo':
       if(m.from===S.me.id) break;
       recvPhoto(m);
+      break;
+    case 'igh':
+      if(m.from===S.me.id) break;
+      (function(k){ k=Math.max(1,Math.min(8,k|0)); for(var i=0;i<k;i++) setTimeout(function(){ igHeartFly(); },i*140); })(m.k);
       break;
     case 'unpair':
       if(m.from===S.me.id) break;
@@ -6869,6 +6902,7 @@ case 'ack':
           added++;
         }
         if(!added) return;
+        try{ var cbI=$('#call-box'); if(cbI&&!cbI.hidden){ for(var j=0;j<list.length&&j<16;j++){ var tj=String((list[j]||{}).text||''); if(tj) igComment(peerName(),tj,false); } } }catch(e){}
         S.lastPeerN=Math.max(S.lastPeerN||0,m.n||0);
         if(!viewing){ S.unread=(S.unread||0)+added; }
         notifyIncoming();
@@ -6973,11 +7007,20 @@ document.addEventListener('visibilitychange',function(){
 
 
 /* 画面に もどった／回線が もどった ときに すぐ 再接続（スマホの スリープ対策） */
+var hiddenAt=0;
 document.addEventListener('visibilitychange',function(){
-  if(document.hidden) return;
-  try{ if(Net.topic){ if(!Net.open){ Net.openStream(); } Net.poll(); } Fast.kick(); }catch(e){}
-  try{ resendUnacked(true); }catch(e){}
+  if(document.hidden){ hiddenAt=Date.now(); return; }
+  var away=hiddenAt?Date.now()-hiddenAt:0;
+  try{
+    if(Net.topic){
+      if(away>1500){ Fast.renew(); Net.open=false; Net.openStream(); Net.sendQueue=Promise.resolve(); Net.qBusy=0; }
+      else { Fast.probe(); if(!Net.open) Net.openStream(); }
+      Net.poll();
+    }
+  }catch(e){}
+  try{ setTimeout(function(){ resendUnacked(true); if(S.outbox&&S.outbox.length) flushOutbox(); },900); }catch(e){}
 });
+window.addEventListener('focus',function(){ try{ if(Net.topic) Fast.probe(); }catch(e){} });
 window.addEventListener('online',function(){
   try{ if(Net.topic){ Net.poll(); Net.openWs(); } Fast.kick(); }catch(e){}
   try{ resendUnacked(true); }catch(e){}
@@ -7096,14 +7139,15 @@ async function bgPushSetup(){
 var bellLast=0;
 async function ringBell(){
   /* あいての 端末が とじて いても 通知が とどく ように「ベル」だけ ならす（1分に 1回まで） */
-  if(Date.now()-bellLast<10000) return;
+  if(Date.now()-bellLast<5000) return;
   bellLast=Date.now();
   try{
     var t=await bellTopic(); if(!t) return;
-    fetch('https://ntfy.sh/'+t+'?cache=no',{method:'POST',headers:{'Content-Type':'text/plain'},body:'💬'});
+    fetch('https://ntfy.sh/'+t,{method:'POST',headers:{'Content-Type':'text/plain'},body:'💬'});
   }catch(e){}
 }
 setTimeout(function(){ try{ if(Notification.permission==='granted') bgPushSetup(); }catch(e){} },4000);
+document.addEventListener('visibilitychange',function(){ if(!document.hidden){ try{ if(Notification.permission==='granted') bgPushSetup(); }catch(e){} } });
 /* ================================================================
    v117: 名前・アイコン（LINE風）。じぶんの 名前・アイコンは あいてに あんごうで つたえる
    ================================================================ */
@@ -7172,6 +7216,24 @@ function recvProf(m){
     toast('ほぞん しました。');
   });
   $('#btn-top2').addEventListener('click',function(){ show('lobby'); });
+  $('#pf-ntest').addEventListener('click',async function(){
+    var r=$('#pf-nres');
+    try{
+      if(!('Notification' in window)){ r.textContent='この ブラウザは 通知に たいおう していません。'; return; }
+      var p=await Notification.requestPermission();
+      if(p!=='granted'){ r.textContent='通知が ゆるされていません。スマホの 設定 → アプリ → Chrome(または 雑学王) → 通知 を オンに してください。'; return; }
+      try{ localStorage.removeItem('mtp_notify_off'); }catch(e){} notifyOn=true; updateNotifyBtns();
+      if(!swReg&&navigator.serviceWorker){ try{ swReg=await navigator.serviceWorker.register('./sw.js'); await navigator.serviceWorker.ready; }catch(e){} }
+      if(!swReg){ r.textContent='sw.js が 見つかりません。GitHub に sw.js も アップロード してください。'; return; }
+      await bgPushSetup();
+      var mine=await myBellTopic();
+      r.textContent='10秒後に テスト通知を おくります。いまのうちに ホーム画面に もどってください。';
+      setTimeout(function(){
+        if(mine) fetch('https://ntfy.sh/'+mine,{method:'POST',headers:{'Content-Type':'text/plain'},body:'zg-test'});
+        else swReg.showNotification('雑学王',{body:'テスト通知です',tag:'mtp-test',icon:'./icon-192.png'});
+      },10000);
+    }catch(e){ r.textContent='テストに 失敗しました（'+(e&&e.name||e)+'）'; }
+  });
   $('#btn-unpair').addEventListener('click',function(){ unpairBoth(this); });
 })();
 /* ===== インスタ風ライブの 操作 ===== */
@@ -7191,6 +7253,12 @@ function igComment(name,text,mine){
   box.appendChild(d);
   while(box.children.length>6) box.removeChild(box.firstChild);
 }
+var heartLast=0, heartN=0, heartT=null;
+function sendHeart(){
+  heartN++;
+  if(heartT) return;
+  heartT=setTimeout(function(){ var n=Math.min(heartN,8); heartN=0; heartT=null; try{ Net.send({t:'igh',k:n}); }catch(e){} },250);
+}
 function igHeartFly(x){
   var layer=$('#ig-hearts'); if(!layer) return;
   var sp=document.createElement('span');
@@ -7201,23 +7269,27 @@ function igHeartFly(x){
   setTimeout(function(){ try{ layer.removeChild(sp); }catch(e){} },2500);
 }
 (function(){
-  var hb=$('#ig-heart'); if(hb) hb.addEventListener('click',function(){ igHeartFly(); });
+  var hb=$('#ig-heart'); if(hb) hb.addEventListener('click',function(e){ e.stopPropagation(); igHeartFly(); sendHeart(); });
   var rv=$('#call-remote');
-  if(rv){ rv.addEventListener('dblclick',function(){ igHeartFly(); igHeartFly(); });
+  if(rv){ rv.addEventListener('dblclick',function(){ igHeartFly(); igHeartFly(); sendHeart(); });
     rv.addEventListener('click',function(e){
       var now=Date.now();
-      if(rv._lt&&now-rv._lt<320){ igHeartFly(); igHeartFly(); }
+      if(rv._lt&&now-rv._lt<320){ igHeartFly(); igHeartFly(); sendHeart(); }
       rv._lt=now;
     }); }
   var say=$('#ig-say'), sd=$('#ig-send');
   function shoot(){
-    var v=(say&&say.value||'').trim(); if(!v) return;
+    var v=(say&&say.value||'').trim().slice(0,120); if(!v) return;
     say.value='';
-    var inp=$('#in-chat');
-    if(inp){ inp.value=v; }
-    try{ submitChat(); }catch(e){}
-    igComment((S.me&&S.me.name)||'あなた', v, true);
+    try{ Fast.probe(); }catch(e){}
+    /* ライブの コメントは トークにも のこる（とどいたか どうかも わかる） */
+    try{ queueChat(v,Date.now(),true); }catch(e){ var inp=$('#in-chat'); if(inp){ inp.value=v; } try{ submitChat(); }catch(_){} }
+    igComment(meName(), v, true);
   }
+  ['click','touchstart','pointerdown','keydown'].forEach(function(ev){
+    if(say) say.addEventListener(ev,function(e){ e.stopPropagation(); });
+    if(sd) sd.addEventListener(ev,function(e){ e.stopPropagation(); });
+  });
   if(sd) sd.addEventListener('click',shoot);
   if(say) say.addEventListener('keydown',function(e){ if(e.key==='Enter'&&!e.isComposing){ e.preventDefault(); shoot(); } });
   /* ライブが ひらいたら 名前と 人数を そろえる */

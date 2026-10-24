@@ -1,28 +1,32 @@
-/* 雑学王 サービスワーカー（v117）
+/* 雑学王 サービスワーカー（v120）
    - アプリを とじていても「メッセージが とどきました」の 通知を だす
-   - ホーム画面アイコンに 未読バッジを つける（対応端末のみ）
-   メッセージの 中身は ここには とどきません（通知の 合図だけ） */
+   - 通知が あると Android は アイコンに バッジ（点・数字）が つく
+   メッセージの 中身は ここには とどきません（合図だけ） */
 self.addEventListener('install', function(e){ self.skipWaiting(); });
 self.addEventListener('activate', function(e){ e.waitUntil(self.clients.claim()); });
 
 var unread = 0;
 
 self.addEventListener('push', function(e){
+  var raw = '';
+  try { raw = e.data ? e.data.text() : ''; } catch (err) {}
+  var isTest = raw.indexOf('zg-test') >= 0;
   e.waitUntil((async function(){
     var list = await self.clients.matchAll({type:'window', includeUncontrolled:true});
-    /* アプリが 画面に 出ている ときは アプリ側で 知らせるので 何もしない */
-    for (var i = 0; i < list.length; i++) {
-      if (list[i].visibilityState === 'visible') return;
-    }
+    var visible = false;
+    for (var i = 0; i < list.length; i++) { if (list[i].visibilityState === 'visible' && list[i].focused !== false) visible = true; }
+    /* アプリを 見ている ときは アプリ側で 知らせる（テストは つねに 出す） */
+    if (visible && !isTest) return;
     unread++;
     try { if (self.navigator && self.navigator.setAppBadge) await self.navigator.setAppBadge(unread); } catch (err) {}
     await self.registration.showNotification('雑学王', {
-      body: 'メッセージが とどきました',
-      tag: 'mtp-chat',
+      body: isTest ? 'テスト通知です。とどいています！' : 'メッセージが とどきました',
+      tag: isTest ? 'mtp-test' : 'mtp-chat',
       renotify: true,
       icon: './icon-192.png',
       badge: './icon-192.png',
-      vibrate: [120, 60, 120]
+      vibrate: [150, 80, 150],
+      data: { n: unread }
     });
   })());
 });
@@ -33,9 +37,7 @@ self.addEventListener('notificationclick', function(e){
   e.waitUntil((async function(){
     try { if (self.navigator && self.navigator.clearAppBadge) await self.navigator.clearAppBadge(); } catch (err) {}
     var list = await self.clients.matchAll({type:'window', includeUncontrolled:true});
-    for (var i = 0; i < list.length; i++) {
-      if ('focus' in list[i]) return list[i].focus();
-    }
+    for (var i = 0; i < list.length; i++) { if ('focus' in list[i]) return list[i].focus(); }
     if (self.clients.openWindow) return self.clients.openWindow('./');
   })());
 });
@@ -44,5 +46,6 @@ self.addEventListener('message', function(e){
   if (e.data === 'clear') {
     unread = 0;
     try { if (self.navigator && self.navigator.clearAppBadge) self.navigator.clearAppBadge(); } catch (err) {}
+    e.waitUntil(self.registration.getNotifications({tag:'mtp-chat'}).then(function(a){ a.forEach(function(n){ n.close(); }); }));
   }
 });
