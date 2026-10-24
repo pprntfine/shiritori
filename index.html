@@ -19,7 +19,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="雑学王">
 <meta name="theme-color" content="#12312A">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; font-src 'none'; connect-src https://ntfy.sh wss://ntfy.sh; img-src 'self' data:; manifest-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; font-src 'none'; connect-src https://ntfy.sh wss://ntfy.sh wss://broker.emqx.io:8084 wss://broker.hivemq.com:8884; worker-src 'self'; img-src 'self' data:; manifest-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'">
 <meta http-equiv="Cache-Control" content="no-store">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -339,6 +339,7 @@ option{background:#12312A;color:#1F2430}
 }
 #re-mush{position:fixed;right:8px;bottom:18%;z-index:70;background:none;border:0;font-size:80px;line-height:1;opacity:.95;padding:6px;cursor:pointer;-webkit-tap-highlight-color:transparent}
 #re-mush.mush-on{opacity:1;transform:scale(1.18)}
+#re-mush[data-n]:not([data-n=""])::after{content:attr(data-n);position:absolute;top:2px;right:0;min-width:24px;height:24px;padding:0 6px;border-radius:12px;background:#FF3B30;color:#fff;font:800 14px/24px system-ui,sans-serif;text-align:center;box-shadow:0 0 0 2px #fff}
 
 /* ===== 通販サイト風テーマ（v62） ===== */
 :root{--board:#FFFFFF;--chalk:#15181C;--chalk-dim:#6B7280;--yellow:#FF6A00;--pink:#4B2ED6;--mint:#0A8754;--wood:#FF6A00;--wood-3:#4126C4}
@@ -690,6 +691,47 @@ body.in-play #pane-chat.on{flex:1;min-height:0;display:flex;flex-direction:colum
 body.in-play #chat-log{flex:1 1 auto;min-height:0;overflow-y:auto}
 body.in-play #btn-home{margin:6px auto 0!important}
 body.in-play .leave-row{margin:6px 0 calc(6px + env(safe-area-inset-bottom))!important}
+/* v117: 名前の 枠を けして トーク欄を ひろく（LINE風の 上部バー） */
+#s-play .players{display:none!important}
+#s-play #link-tag{display:none!important}
+#s-play .tabs{display:none!important}
+body.in-play .board{padding:0!important}
+body.in-play #s-play{padding:0!important}
+body.in-play .bar{padding:calc(6px + env(safe-area-inset-top)) 12px 6px!important}
+body.in-play #pane-chat{border-radius:0!important}
+body.in-play #btn-home{display:none!important}
+body.in-play .leave-row{display:none!important}
+.lhead{flex:none;display:flex;align-items:center;gap:10px;padding:8px 12px;background:#fff;border-bottom:1px solid #E6E9EE}
+.lhead .lh-av{width:36px;height:36px;border-radius:50%;flex:none;display:grid;place-items:center;background:#E8EEF4;font-size:22px;overflow:hidden}
+.lhead .lh-av img{width:100%;height:100%;object-fit:cover}
+.lhead .lh-nm{flex:1;min-width:0;font-weight:800;font-size:1rem;color:#15181C;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lhead .lh-dot{width:9px;height:9px;border-radius:50%;background:#C3CAD2;flex:none}
+.lhead .lh-dot.on{background:#06C755}
+.lhead button{flex:none;border:0;background:#F1F3F6;color:#334;border-radius:999px;padding:7px 11px;font-size:.78rem;font-weight:800}
+.msg .av{display:grid!important;width:34px;height:34px;border-radius:50%;flex:none;place-items:center;background:#E8EEF4;font-size:20px;overflow:hidden;align-self:flex-start}
+.msg .av.blank{visibility:hidden}
+.msg .av img{width:100%;height:100%;object-fit:cover}
+.msg .nm{display:block;font-size:.66rem;color:#5E707C;font-weight:700;margin:0 0 2px 2px}
+.msg .incol{display:flex;flex-direction:column;align-items:flex-start;max-width:78%}
+.msg .incol .bubble{max-width:100%!important}
+/* プロフィール 設定 */
+#prof-modal{position:fixed;inset:0;z-index:300;background:rgba(10,14,20,.55);display:none;align-items:flex-end;justify-content:center}
+#prof-modal.on{display:flex}
+#prof-modal .pm{width:100%;max-width:560px;background:#fff;color:#15181C;border-radius:18px 18px 0 0;padding:16px 16px calc(18px + env(safe-area-inset-bottom));max-height:92vh;overflow:auto}
+#prof-modal h3{margin:4px 0 10px;font-size:1.05rem}
+#prof-modal .row{display:flex;gap:12px;align-items:center;margin:10px 0 4px}
+#prof-modal .big{width:64px;height:64px;border-radius:50%;background:#E8EEF4;display:grid;place-items:center;font-size:38px;overflow:hidden;flex:none}
+#prof-modal .big img{width:100%;height:100%;object-fit:cover}
+#prof-modal input[type=text]{flex:1;font-size:16px;padding:10px 12px;border:1px solid #D9DEE5;border-radius:12px}
+#prof-modal .emo{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;margin:8px 0}
+#prof-modal .emo button{font-size:24px;background:#F4F6F9;border:2px solid transparent;border-radius:12px;padding:6px 0}
+#prof-modal .emo button.sel{border-color:#06C755;background:#E9FBEF}
+#prof-modal .acts{display:flex;gap:8px;margin-top:14px}
+#prof-modal .acts button{flex:1;padding:13px;border-radius:12px;border:0;font-weight:800;font-size:1rem}
+#prof-modal .ok{background:#06C755;color:#fff}
+#prof-modal .ng{background:#EEF1F4;color:#334}
+#prof-modal .ph{background:#F4F6F9;color:#334;border:0;border-radius:10px;padding:8px 10px;font-weight:800;font-size:.82rem}
+#prof-modal .sec{font-size:.78rem;color:#667;font-weight:800;margin-top:12px}
 </style>
 </head>
 <body>
@@ -720,7 +762,7 @@ body.in-play .leave-row{margin:6px 0 calc(6px + env(safe-area-inset-bottom))!imp
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v116</b>｜ビルド 2026-10-24（なまえを ぶー／にゃん に とういつ・ルーム画面の きのこカードを 除去）</p>
+      <p class="verline">バージョン <b id="ver">v117</b>｜ビルド 2026-10-24（つうしん 2本立て・名前とアイコン・通知・トップ画面に もどる）</p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -793,7 +835,7 @@ body.in-play .leave-row{margin:6px 0 calc(6px + env(safe-area-inset-bottom))!imp
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v114</b>｜ビルド 2026-10-24（なまえを ぶー／にゃん に とういつ・ルーム画面の きのこカードを 除去）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v114</b>｜ビルド 2026-10-24（つうしん 2本立て・名前とアイコン・通知・トップ画面に もどる）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -874,6 +916,7 @@ body.in-play .leave-row{margin:6px 0 calc(6px + env(safe-area-inset-bottom))!imp
   </div>
 
   <div id="pane-chat" class="pane chatpane on">
+    <div class="lhead"><span class="lh-av" id="lh-av">🐱</span><span class="lh-nm" id="lh-nm">にゃん</span><span class="lh-dot" id="lh-dot"></span><button type="button" id="btn-prof">名前・アイコン</button><button type="button" id="btn-top2">トップへ</button></div>
     <div id="chat-log" class="line-chat" role="log" aria-live="polite"></div>
     <form id="form-chat" class="line-composer" autocomplete="off">
       <div class="tools">
@@ -962,6 +1005,17 @@ body.in-play .leave-row{margin:6px 0 calc(6px + env(safe-area-inset-bottom))!imp
 </div>
 
 <button id="re-mush" type="button" aria-label="きのこ" hidden>🍄‍🟫</button>
+<div id="prof-modal"><div class="pm">
+  <h3>名前と アイコン</h3>
+  <div class="sec">じぶん（あいてにも この名前・アイコンで みえます）</div>
+  <div class="row"><span class="big" id="pf-me-av">🐷</span><input type="text" id="pf-me-nm" maxlength="12" placeholder="じぶんの 名前"></div>
+  <div class="emo" id="pf-me-emo"></div>
+  <button type="button" class="ph" id="pf-me-photo">写真を アイコンに する</button>
+  <input type="file" id="pf-file" accept="image/*" hidden>
+  <div class="sec">あいて（この端末での よびかた。空なら あいてが きめた 名前）</div>
+  <div class="row"><span class="big" id="pf-op-av">🐱</span><input type="text" id="pf-op-nm" maxlength="12" placeholder="あいての 名前"></div>
+  <div class="acts"><button type="button" class="ng" id="pf-cancel">やめる</button><button type="button" class="ok" id="pf-save">ほぞん</button></div>
+</div></div>
 <script>
 (function(){
 'use strict';
@@ -1519,8 +1573,17 @@ var Net={
     this.retry=0;
     this.openStream();
     this.startPoll();
+    try{ Fast.connect(topic); }catch(e){}
+  },
+  /* 2本目から 来た あんごう文 */
+  recvFast:function(body){
+    var self=this;
+    if(!this.topic) return;
+    this.lastRecv=Date.now();
+    this.recvQueue=this.recvQueue.then(function(){ return self.process(body,null); }).catch(function(){});
   },
   close:function(){
+    try{ Fast.close(); }catch(e){}
     if(this.retryTimer){clearTimeout(this.retryTimer);this.retryTimer=null;}
     this.stopPoll();
     this.closeStream();
@@ -1736,9 +1799,14 @@ var Net={
   post:async function(env,useLegacy,prio){
     var key=useLegacy?(this.legacy||this.key):this.key;
     if(!key||!this.topic) return false;
-    if(!this.allow(typeof prio==='number'?prio:1)) return false;
+    var body;
+    try{ body=await seal(env,key); }catch(e){ return false; }
+    /* v117: まず 2本目(即時)で おくる → 相手に すぐ とどく */
+    var fastOk=false; try{ fastOk=Fast.pub(body); }catch(e){}
+    /* ntfy は 保存用(相手が いない ときの 受けとり用)。制限中は 2本目だけで 成功あつかい */
+    if(this.coolUntil&&Date.now()<this.coolUntil) return fastOk;
+    if(!this.allow(typeof prio==='number'?prio:1)) return fastOk;
     try{
-      var body=await seal(env,key);
       /* トーク・既読・受領証は中継サーバーに保存させない（接続中の相手へ直接届くのみ） */
       var noCache='';   /* v105: 中継所に のこす（暗号文のみ・最長12時間）。ポーリングで 取りもどせる ようにする */   /* 中継サーバーに 一切 保存させない(記録を のこさない) */  /* メッセージ・写真・ライブは中継に保存させない */
       var r=await fetch('https://ntfy.sh/'+this.topic+noCache,{method:'POST',headers:{'Content-Type':'text/plain'},body:body});
@@ -1747,14 +1815,14 @@ var Net={
         var ra=0;
         try{ ra=parseInt(r.headers&&r.headers.get&&r.headers.get('retry-after')||'0',10); }catch(e){}
         this.hit429(ra>0?ra*1000:45000);
-        return false;
+        return fastOk;
       }
       if(!r.ok){
         if(r.status===413){ try{ note('メッセージが 大きすぎます。みじかくして ください。','#note2'); }catch(e){} }
-        return false;
+        return fastOk;
       }
       return true;
-    }catch(e){ return false; }
+    }catch(e){ return fastOk; }
   },
   /* 未達のメッセージを同じ番号のまま再送（相手は重複を自動で捨てる） */
   resendEnv:function(env){
@@ -1811,6 +1879,73 @@ var Net={
     return null;
   }
 };
+
+/* ================================================================
+   v117: 2本目の 即時とおりみち（MQTT over WebSocket・回数制限なし）
+   ntfy と 同じ あんごう文を 同時に ながす。どちらか 早い ほうが とどけば OK（重複は 番号で すてる）
+   ================================================================ */
+var Fast={
+  urls:['wss://broker.emqx.io:8084/mqtt','wss://broker.hivemq.com:8884/mqtt'],
+  ws:null,open:false,topic:null,ui:0,pid:1,pingT:null,retryT:null,buf:[],
+  enc:function(str){ var b=new TextEncoder().encode(str); var a=new Uint8Array(2+b.length); a[0]=b.length>>8; a[1]=b.length&255; a.set(b,2); return a; },
+  len:function(n){ var o=[]; do{ var d=n%128; n=Math.floor(n/128); if(n>0) d|=128; o.push(d); }while(n>0); return o; },
+  pkt:function(type,body){ var l=this.len(body.length); var a=new Uint8Array(1+l.length+body.length); a[0]=type; a.set(l,1); a.set(body,1+l.length); return a; },
+  cat:function(arrs){ var n=0; arrs.forEach(function(x){ n+=x.length; }); var o=new Uint8Array(n),p=0; arrs.forEach(function(x){ o.set(x,p); p+=x.length; }); return o; },
+  connect:function(topic){
+    if(!topic) return;
+    if(this.topic===topic&&this.ws&&(this.open||this.ws.readyState===0)) return;
+    this.close(); this.topic=topic; this.go();
+  },
+  go:function(){
+    var self=this; if(!this.topic) return;
+    var url=this.urls[this.ui%this.urls.length];
+    var w; try{ w=new WebSocket(url,['mqtt']); }catch(e){ this.retry(); return; }
+    w.binaryType='arraybuffer'; this.ws=w; this.rb=new Uint8Array(0);
+    var guard=setTimeout(function(){ if(!self.open){ try{ w.close(); }catch(e){} } },9000);
+    w.onopen=function(){
+      var cid=self.enc('zg'+Math.random().toString(36).slice(2,12));
+      var vh=self.cat([self.enc('MQTT'),new Uint8Array([4,2,0,45])]);   /* v3.1.1 / clean / keepalive 45s */
+      w.send(self.pkt(0x10,self.cat([vh,cid])));
+    };
+    w.onmessage=function(ev){
+      var d=new Uint8Array(ev.data); var b=new Uint8Array(self.rb.length+d.length); b.set(self.rb,0); b.set(d,self.rb.length); self.rb=b;
+      while(self.rb.length>=2){
+        var mul=1,val=0,i=1,ok=false;
+        while(i<self.rb.length&&i<5){ var c=self.rb[i]; val+=(c&127)*mul; mul*=128; i++; if(!(c&128)){ ok=true; break; } }
+        if(!ok||self.rb.length<i+val) break;
+        var type=self.rb[0], body=self.rb.slice(i,i+val); self.rb=self.rb.slice(i+val);
+        self.onPkt(type,body,guard);
+      }
+    };
+    w.onclose=function(){ clearTimeout(guard); var was=self.open; self.open=false; if(self.ws===w){ self.ws=null; if(!was) self.ui++; self.retry(); } };
+    w.onerror=function(){};
+  },
+  onPkt:function(type,body,guard){
+    var self=this, t=type>>4;
+    if(t===2){                                   /* CONNACK */
+      if(body[1]!==0){ try{ this.ws.close(); }catch(e){} return; }
+      clearTimeout(guard); this.open=true;
+      var tp=this.enc('zgk/'+this.topic);
+      this.ws.send(this.pkt(0x82,this.cat([new Uint8Array([0,this.pid++&255||1]),tp,new Uint8Array([0])])));
+      clearInterval(this.pingT); this.pingT=setInterval(function(){ try{ if(self.open) self.ws.send(new Uint8Array([0xC0,0])); }catch(e){} },25000);
+      var q=this.buf; this.buf=[]; q.forEach(function(x){ self.pub(x); });
+      try{ paintTopicTag(); }catch(e){}
+    }else if(t===3){                             /* PUBLISH */
+      var tl=(body[0]<<8)|body[1], q=(type>>1)&3, off=2+tl+(q?2:0);
+      var msg=new TextDecoder().decode(body.slice(off));
+      try{ Net.lastAlive=Date.now(); Net.recvFast(msg); }catch(e){}
+    }
+  },
+  pub:function(str){
+    if(!this.topic) return false;
+    if(!this.open||!this.ws){ this.buf.push(str); if(this.buf.length>30) this.buf.shift(); return false; }
+    try{ this.ws.send(this.pkt(0x30,this.cat([this.enc('zgk/'+this.topic),new TextEncoder().encode(str)]))); return true; }catch(e){ return false; }
+  },
+  retry:function(){ var self=this; if(this.retryT||!this.topic) return; this.retryT=setTimeout(function(){ self.retryT=null; self.go(); },2500); },
+  close:function(){ clearInterval(this.pingT); clearTimeout(this.retryT); this.retryT=null; this.open=false; this.topic=null;
+    if(this.ws){ try{ this.ws.onclose=null; this.ws.close(); }catch(e){} this.ws=null; } this.buf=[]; },
+  kick:function(){ if(this.topic&&!this.open&&!this.ws){ clearTimeout(this.retryT); this.retryT=null; this.go(); } }
+};
 /* 番号は 時刻ベース：入りなおしても 前より 小さく ならない */
 function nextSeq(){ S.seq=Math.max((S.seq||0)+1,Date.now()); return S.seq; }
 /* つながって いるのに 受信が とまった(スマホで よく おきる)ら、とりなおす */
@@ -1818,6 +1953,7 @@ setInterval(function(){
   try{
     if(!Net.topic) return;
     if(Net.open&&Net.lastAlive&&Date.now()-Net.lastAlive>100000){ Net.open=false; Net.openStream(); }
+    Fast.kick();
   }catch(e){}
 },15000);
 
@@ -1843,7 +1979,7 @@ var S={
 
 function usedMap(){ S.used=Object.create(null); }
 function other(id){ return id===S.me.id ? S.opp.id : S.me.id; }
-function nameOf(id){ return id===S.me.id ? 'ぶー' : 'にゃん'; }
+function nameOf(id){ return id===S.me.id ? meName() : peerName(); }
 
 /* =================================================================
    5. 画面まわり
@@ -1853,7 +1989,7 @@ function show(which){
   try{ document.body.classList.toggle('in-play',which==='play'); }catch(e){}
   Object.keys(screens).forEach(function(k){ screens[k].classList.toggle('on',k===which); });
   $('#btn-quit').hidden = (which!=='play');
-  updateTalkbackBadges();
+  updateTalkbackBadges(); updateTitleBadge();
   window.scrollTo(0,0);
 }
 /* ペア成立後は 部屋を でても トークだけ つづく */
@@ -1864,7 +2000,7 @@ function updateTalkbackBadges(){
     if(bg){ bg.hidden=!S.unread; bg.textContent=String(S.unread); }
   });
   var mu=$('#re-mush');
-  if(mu) mu.hidden=!(S.linked&&S.phase!=='play');
+  if(mu){ mu.hidden=!(S.linked&&S.phase!=='play'); mu.setAttribute('data-n',S.unread>0?String(S.unread>99?'99+':S.unread):''); }
 }
 document.querySelectorAll('.talk-back').forEach(function(b){
   b.addEventListener('click',function(){
@@ -1880,7 +2016,7 @@ function setTab(which){
   if($('#tab-chat')){ $('#tab-chat').classList.toggle('on',which==='chat'); $('#tab-chat').setAttribute('aria-selected',which==='chat'); }
   if($('#pane-game')) $('#pane-game').classList.toggle('on',which==='game');
   if($('#pane-chat')) $('#pane-chat').classList.toggle('on',which==='chat');
-  if(which==='chat'){ S.unread=0; updateBadge(); S._jump=true; renderChat(true); maybeSendRead(); setTimeout(scrollChatBottom,200); }
+  if(which==='chat'){ S.unread=0; updateBadge(); updateTalkbackBadges(); try{ if(swReg&&swReg.getNotifications) swReg.getNotifications({tag:'mtp-chat'}).then(function(a){ a.forEach(function(n){ n.close(); }); }); }catch(e){} S._jump=true; renderChat(true); maybeSendRead(); setTimeout(scrollChatBottom,200); }
   else { renderQuiz(); }
 }
 function updateBadge(){
@@ -1898,6 +2034,8 @@ function setAppBadgeCount(n){
 }
 function note(msg,el){ var t=$(el||'#note'); if(t) t.textContent=msg||''; }
 function setNet(state){
+  try{ var dt=$('#lh-dot'); if(dt) dt.classList.toggle('on',state==='open'); }catch(e){}
+  if(state==='open'&&(S.paired||S.linked)&&!S._profSent){ S._profSent=true; setTimeout(sendProf,1500); }
   var n=$('#net'); n.classList.remove('on','lost');
   if(state==='open'){ n.classList.add('on'); $('#net-txt').textContent='つながり中'; setTimeout(resendUndelivered,1200); }
   else if(state==='lost'){ n.classList.add('lost'); $('#net-txt').textContent='再接続中…'; }
@@ -4650,7 +4788,13 @@ function tapSecret(){
   var t=Date.now();
   if(t-tapAt>1500) tapN=0;
   tapAt=t; tapN++;
-  if(tapN>=5){ tapN=0; show('secret'); renderMush(); }
+  if(tapN>=5){
+    tapN=0;
+    /* v117: つながりが あれば トーク画面へ。なければ ルーム画面へ */
+    if(S.linked&&Net.topic){ show('play'); setTab('chat'); renderChat(true); updateTalkbackBadges(); return; }
+    if(pairHasKeys()){ resumeConnect(false).then(function(ok){ if(!ok){ show('secret'); renderMush(); } }); return; }
+    show('secret'); renderMush();
+  }
 }
 /* 裏メニュー：ペアの きおくが あれば 🍄‍🟫 を 出す（5回で 再ログイン） */
 function renderMush(){
@@ -4758,8 +4902,8 @@ async function resumeConnect(silent){
     Net.switchTo(sk);
     S.phase='play';
     S.chatRendered=-1;
-    if($('#p-me')) $('#p-me').textContent='ぶー';
-    if($('#p-opp')) $('#p-opp').textContent='にゃん';
+    if($('#p-me')) $('#p-me').textContent=meName();
+    if($('#p-opp')) $('#p-opp').textContent=peerName();
     startPing(); startWatch(); if(S.isHost) startFullWatch();
     /* v111: hi2 は 送らない */
     try{ renderChat(true); }catch(e){}
@@ -4790,8 +4934,8 @@ function openChatUI(){
   S.linked=true;
   stopAnnounce();
   renderProduct();
-  $('#p-me').textContent='ぶー';
-  $('#p-opp').textContent='にゃん';
+  $('#p-me').textContent=meName();
+  $('#p-opp').textContent=peerName();
   show('play');
   document.querySelector('.bar').classList.add('compact');
   $('#btn-eject').hidden = !(S.isHost && S.guest);
@@ -4819,11 +4963,12 @@ function startPlay(){
   $('#hint').classList.remove('bad');
   $('#hint').textContent='さいしょは なんでも OK';
   renderProduct();
-  $('#p-me').textContent='ぶー';
-  $('#p-opp').textContent='にゃん';
+  $('#p-me').textContent=meName();
+  $('#p-opp').textContent=peerName();
   sysChat('この部屋のトークは、あなたと あいて だけが よめます。');
   S.peerRead=0; S.lastPeerN=0; S.readSent=0; S.peerAck=0;
   S.linked=true;   /* v115: 部屋を でても つながりを たもつ（🍄‍🟫 で もどれる・相手を 追い出さない） */
+  setTimeout(sendProf,2500); paintProf();
   show('play');
   document.querySelector('.bar').classList.add('compact');
   $('#btn-eject').hidden = !(S.isHost && S.guest);
@@ -5053,7 +5198,7 @@ function renderChat(forceBottom){
       if(mine){ pbub.title='タップで とりけし'; prow.dataset.uid=m.uid||''; prow.appendChild(pmeta); prow.appendChild(pbub); }
       else{
         var pav=document.createElement('div'); pav.className='av'+(cont?' blank':'');
-        pav.textContent=cont?'':(S.opp.name||'あ').slice(0,1);
+        if(!cont) fillAv(pav,PROF.peer,'🐱');
         prow.appendChild(pav); prow.appendChild(pbub); prow.appendChild(pmeta);
       }
       box.appendChild(prow);
@@ -5072,8 +5217,11 @@ function renderChat(forceBottom){
     else{
       var av=document.createElement('div');
       av.className='av'+(cont?' blank':'');
-      av.textContent=cont?'':(S.opp.name||'あ').slice(0,1);
-      row.appendChild(av); row.appendChild(bub); row.appendChild(meta);
+      if(!cont) fillAv(av,PROF.peer,'🐱');
+      var col=document.createElement('div'); col.className='incol';
+      if(!cont){ var nmE=document.createElement('span'); nmE.className='nm'; nmE.textContent=peerName(); col.appendChild(nmE); }
+      col.appendChild(bub);
+      row.appendChild(av); row.appendChild(col); row.appendChild(meta);
     }
     box.appendChild(row);
     prevFrom=m.from; prevAt=at;
@@ -5140,10 +5288,16 @@ function toggleNotify(){
   if(notifyOn){ notifyOn=false; updateNotifyBtns(); return; }
   if(!('Notification' in window)){ $('#btn-notify').textContent='通知:不可'; var l=$('#btn-notify-lobby'); if(l) l.textContent='通知:不可'; return; }
   try{
-    Notification.requestPermission().then(function(p){ notifyOn=(p==='granted'); updateNotifyBtns(); }).catch(function(){});
+    Notification.requestPermission().then(function(p){ notifyOn=(p==='granted'); updateNotifyBtns(); if(notifyOn) bgPushSetup(); }).catch(function(){});
   }catch(e){ $('#btn-notify').textContent='通知:不可'; }
 }
 $('#btn-notify').addEventListener('click',toggleNotify);
+/* v117: 通知は 一度 ゆるせば つねに オン */
+try{ if('Notification' in window&&Notification.permission==='granted'){ notifyOn=true; setTimeout(updateNotifyBtns,0); } }catch(e){}
+document.addEventListener('click',function askOnce(){
+  document.removeEventListener('click',askOnce,true);
+  try{ if('Notification' in window&&Notification.permission==='default'&&(S.linked||pairHasKeys())) Notification.requestPermission().then(function(p){ notifyOn=(p==='granted'); updateNotifyBtns(); if(notifyOn) bgPushSetup(); }); }catch(e){}
+},true);
 if($('#btn-notify-lobby')) $('#btn-notify-lobby').addEventListener('click',toggleNotify);
 /* ホストへの入室通知：タイトル表示・通知音・ブラウザ通知(内容はなし) */
 var hostAC=null;
@@ -5171,14 +5325,20 @@ function notifyHostAccess(txt){
 }
 /* メッセージ着信：中身は 出さない。数値バッジと 短い通知だけ */
 function notifyIncoming(){
+  var viewing=(S.tab==='chat'&&document.visibilityState==='visible'&&S.phase==='play');
+  if(viewing) return;
+  updateBadge(); updateTalkbackBadges(); updateTitleBadge();
   setAppBadgeCount(S.unread||1);
-  if(!notifyOn) return;
-  if(S.tab==='chat'&&document.visibilityState==='visible'&&S.phase==='play') return;
+  try{ if(navigator.vibrate) navigator.vibrate([120,60,120]); }catch(e){}
   beepHost();
+  if(!('Notification' in window)||Notification.permission!=='granted') return;
+  var body=peerName()+' から メッセージが とどきました';
+  var opt={body:body,tag:'mtp-chat',renotify:true,badge:'./icon-192.png',icon:'./icon-192.png',data:{n:S.unread||1}};
+  /* スマホ(とくに Android)は サービスワーカー 経由で ないと 通知が でない */
   try{
-    var n=new Notification('雑学王',{body:'あいてから メッセージが とどきました',tag:'mtp-chat',renotify:true});
-    n.onclick=function(){ try{ window.focus(); show('play'); setTab('chat'); }catch(e){} try{ n.close(); }catch(e){} };
+    if(navigator.serviceWorker&&swReg){ swReg.showNotification('雑学王',opt); return; }
   }catch(e){}
+  try{ var n=new Notification('雑学王',opt); n.onclick=function(){ try{ window.focus(); }catch(e){} try{ n.close(); }catch(e){} }; }catch(e){}
 }
 /* しゃしん：カメラでとって あんごうチャンクで そうしんする(きろくには のこらない) */
 var PHOTO_PIECE=1300, PHOTO_MAXSIDE=1024, photoBuf={};
@@ -5260,7 +5420,7 @@ async function recvPhoto(m){
   var viewing=(S.phase==='play'&&S.tab==='chat'&&document.visibilityState==='visible');
   S.chat.push({photo:true,from:m.from,at:(typeof m.at==='number'?m.at:Date.now()),data:url,pid:m.id,uid:String(++UID),n:m.n||0,sent:true});
   S.lastPeerN=Math.max(S.lastPeerN||0,m.n||0);
-  if(!viewing){ S.unread++; updateBadge(); updateTitleBadge(); updateTalkbackBadges(); }
+  if(!viewing){ S.unread++; }
   notifyIncoming();
   if(S.tab==='chat') renderChat(true);
   maybeSendRead();
@@ -5946,17 +6106,18 @@ function queueChat(txt,at){
   S.outbox.push(item);
   outSave();
   var msg={from:S.me.id,text:txt,at:item.at,sent:false,acked:false,delivered:false,tries:0,n:0,uid:String(++UID)};
+  try{ ringBell(); }catch(e){}
   S.chat.push(msg);
   item.msg=msg;
   renderChat(true);
-  if(!S.flushT) S.flushT=setTimeout(function(){ S.flushT=null; flushOutbox(); },400);
+  if(!S.flushT) S.flushT=setTimeout(function(){ S.flushT=null; flushOutbox(); },60);
   return msg;
 }
 function flushOutbox(){
   S.outbox=S.outbox||outLoad();
   if(!S.outbox.length) return;
   if(!Net.topic||!Net.key) return;
-  if(Net.coolUntil&&Date.now()<Net.coolUntil){ setTimeout(flushOutbox,3000); return; }
+  if(Net.coolUntil&&Date.now()<Net.coolUntil&&!Fast.open){ setTimeout(flushOutbox,3000); return; }
   if(S.flushing) return;
   /* 1通の 封筒に 入る ぶんだけ まとめる（入りきらないと 送れなかった） */
   var items=[], bytes=0;
@@ -5977,7 +6138,7 @@ function flushOutbox(){
       if(S.outbox.length) setTimeout(flushOutbox,300);
     }else{
       msgs.forEach(function(m){ if(m){ m.tries=(m.tries||0)+1; } });
-      setTimeout(flushOutbox,2500);
+      setTimeout(flushOutbox,1500);
     }
     if(S.tab==='chat') renderChat(true);
   });
@@ -6014,7 +6175,6 @@ function resendUnacked(all){
 /* 未達トークの再送：あいての端末に届く(受領証が返る)まで、送り側の端末だけが保持する */
 function resendUndelivered(){
   if((S.phase!=='play'||!S.paired)&&!S.linked) return;
-  if(Net.coolUntil&&Date.now()<Net.coolUntil) return;
   if(S.outbox&&S.outbox.length) flushOutbox();
 }
 setInterval(function(){
@@ -6037,8 +6197,14 @@ $('#btn-eject').addEventListener('click',function(){
   setTimeout(resetToWait,900);
 });
 document.addEventListener('visibilitychange',function(){
+  /* v117: ホーム画面などに もどったら トップ画面に して おく（つながりと 受信は そのまま） */
+  if(document.visibilityState==='hidden'){
+    if(S.phase==='play'&&S.linked){ try{ show('lobby'); }catch(e){} }
+    S._hiddenAt=Date.now();
+  }
   if(document.visibilityState==='visible') maybeSendRead();
 });
+window.addEventListener('pageshow',function(e){ if(e.persisted&&S.phase==='play'&&S.linked){ try{ show('lobby'); }catch(_){} } });
 $('#btn-quit').addEventListener('click',function(){
   Net.send({t:'surrender'});
   finish(S.me.id,'surrender');
@@ -6119,8 +6285,7 @@ Net.onState=setNet;
 /* 制限で 送れなかった トークを、復帰したら 順に 送りなおす */
 setInterval(function(){
   try{
-    if(!Net.open) return;
-    if(Net.coolUntil&&Date.now()<Net.coolUntil) return;
+    if(!Net.open&&!Fast.open) return;
     if(!S.paired&&!S.linked) return;
     if(S.outbox&&S.outbox.length){ flushOutbox(); }
     if(S.tab==='chat') renderChat(true);
@@ -6130,6 +6295,7 @@ $('#link-tag')&&$('#link-tag').addEventListener('click',function(){
   var t=this.title||''; if(t) toast(t);
 });
 Net.onCool=function(ms){
+  return;   /* v117: 制限中も 2本目の とおりみちで とどくため、おしらせは 出さない */
   try{
     toast('いま 少し こんでいます。'+Math.ceil(ms/1000)+'秒後に 自動で つながります。');
     var e=$('#link-tag');
@@ -6331,6 +6497,11 @@ Net.onMsg=function(m){
       if(m.from===S.me.id) break;
       recvPhoto(m);
       break;
+    case 'prof':
+      if(m.from===S.me.id) break;
+      recvProf(m);
+      if(!m.r) setTimeout(function(){ try{ Net.send({t:'prof',r:1,nm:meName(),emo:(PROF.me&&PROF.me.emo)||'🐷',img:(PROF.me&&PROF.me.img)||''}); }catch(e){} },400);
+      break;
     case 'rtc2':
       if(m.from===S.me.id) break;
       rtcRecvFile(m);
@@ -6506,7 +6677,7 @@ case 'ack':
         }
         if(!added) return;
         S.lastPeerN=Math.max(S.lastPeerN||0,m.n||0);
-        if(!viewing){ S.unread=(S.unread||0)+added; updateBadge(); updateTalkbackBadges(); }
+        if(!viewing){ S.unread=(S.unread||0)+added; }
         notifyIncoming();
         if(S.tab==='chat') renderChat(true);
         maybeSendRead();
@@ -6611,11 +6782,11 @@ document.addEventListener('visibilitychange',function(){
 /* 画面に もどった／回線が もどった ときに すぐ 再接続（スマホの スリープ対策） */
 document.addEventListener('visibilitychange',function(){
   if(document.hidden) return;
-  try{ if(Net.topic){ if(!Net.open){ Net.openStream(); } Net.poll(); } }catch(e){}
+  try{ if(Net.topic){ if(!Net.open){ Net.openStream(); } Net.poll(); } Fast.kick(); }catch(e){}
   try{ resendUnacked(true); }catch(e){}
 });
 window.addEventListener('online',function(){
-  try{ if(Net.topic){ Net.poll(); Net.openWs(); } }catch(e){}
+  try{ if(Net.topic){ Net.poll(); Net.openWs(); } Fast.kick(); }catch(e){}
   try{ resendUnacked(true); }catch(e){}
 });
 window.addEventListener('offline',function(){ try{ toast('回線が きれました。もどると 自動で つなぎ直します。'); }catch(e){} });
@@ -6661,11 +6832,10 @@ function topicTag(){
 }
 function paintTopicTag(){
   var e=$('#link-tag'); if(!e) return;
-  var bad=(!Net.open)||!Net.secure||(Net.coolUntil&&Date.now()<Net.coolUntil);
+  var live=Net.open||Fast.open;
+  var bad=(!live)||!Net.secure;
   if(bad){
-    var msg = (Net.coolUntil&&Date.now()<Net.coolUntil)
-      ? ('つうしん まち（あと'+Math.max(0,Math.ceil((Net.coolUntil-Date.now())/1000))+'秒）')
-      : (Net.open ? 'あんごう かため中…' : 'つなぎ中…');
+    var msg = live ? 'あんごう かため中…' : 'つなぎ中…';
     e.textContent=msg+'　あいず '+(S.sas||'----');
     e.className='link-tag ng';
   }else{
@@ -6692,9 +6862,127 @@ function paintTopicTag(){
   b.parentNode.insertBefore(out,b.nextSibling);
 })();
 
+
+
+/* ================================================================
+   v117: サービスワーカー（スマホで 通知を だす・アプリを とじても 通知を うける）
+   sw.js を index.html と 同じ 場所に おく ひつようが ある
+   ================================================================ */
+var swReg=null;
+(function(){
+  if(!('serviceWorker' in navigator)||location.protocol!=='https:') return;
+  navigator.serviceWorker.register('./sw.js').then(function(r){ swReg=r; try{ if(Notification.permission==='granted') bgPushSetup(); }catch(e){} }).catch(function(){});
+})();
+var NTFY_VAPID='BEMjM0sNxh41x0a6Lz3YaqkJ7AUhZefxsOQgw-at69i0fM1CybVBcj7-QQXf4N_tPCgFnOXdRbQ5jrSrr9Yg9Lc';
+/* 「ベル」専用の とおりみち（中身は なし・だれから かも わからない）。2人の 鍵から つくる */
+async function bellTopic(){
+  try{
+    var p=pairLoad(); if(!p||!p.sk) return null;
+    var h=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('bell|'+p.sk+'|'+(p.h?'guest':'host')));
+    return 'gskb-'+toHex(h).slice(0,28);
+  }catch(e){ return null; }
+}
+async function myBellTopic(){
+  try{
+    var p=pairLoad(); if(!p||!p.sk) return null;
+    var h=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('bell|'+p.sk+'|'+(p.h?'host':'guest')));
+    return 'gskb-'+toHex(h).slice(0,28);
+  }catch(e){ return null; }
+}
+async function bgPushSetup(){
+  try{
+    if(!swReg||!swReg.pushManager||Notification.permission!=='granted') return;
+    var mine=await myBellTopic(); if(!mine) return;
+    var sub=await swReg.pushManager.getSubscription();
+    if(!sub) sub=await swReg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:unb64(NTFY_VAPID)});
+    var j=sub.toJSON();
+    await fetch('https://ntfy.sh/v1/webpush',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({endpoint:j.endpoint,auth:j.keys.auth,p256dh:j.keys.p256dh,topics:[mine]})});
+  }catch(e){}
+}
+var bellLast=0;
+async function ringBell(){
+  /* あいての 端末が とじて いても 通知が とどく ように「ベル」だけ ならす（1分に 1回まで） */
+  if(Date.now()-bellLast<60000) return;
+  bellLast=Date.now();
+  try{
+    var t=await bellTopic(); if(!t) return;
+    fetch('https://ntfy.sh/'+t,{method:'POST',headers:{'Content-Type':'text/plain'},body:'💬'});
+  }catch(e){}
+}
+setTimeout(function(){ try{ if(Notification.permission==='granted') bgPushSetup(); }catch(e){} },4000);
+/* ================================================================
+   v117: 名前・アイコン（LINE風）。じぶんの 名前・アイコンは あいてに あんごうで つたえる
+   ================================================================ */
+var PROF_KEY='mtp_prof_v1';
+var EMOS=['🐷','🐱','🐶','🐰','🐻','🐼','🦊','🐸','🐵','🐧','🐤','🦁','🐯','🐨','🐹','🍄‍🟫','🌸','⭐','🍓','🍙','⚽','🎮','👑','😺'];
+function profLoad(){ try{ var o=JSON.parse(localStorage.getItem(PROF_KEY)||'null'); if(o) return o; }catch(e){} return {me:{name:'ぶー',emo:'🐷',img:''},peer:{name:'にゃん',emo:'🐱',img:''},alias:''}; }
+var PROF=profLoad();
+function profSave(){ try{ localStorage.setItem(PROF_KEY,JSON.stringify(PROF)); }catch(e){ try{ var c=JSON.parse(JSON.stringify(PROF)); c.peer.img=''; localStorage.setItem(PROF_KEY,JSON.stringify(c)); }catch(_){} } }
+function meName(){ return (PROF.me&&PROF.me.name)||'ぶー'; }
+function peerName(){ return PROF.alias||(PROF.peer&&PROF.peer.name)||'にゃん'; }
+function avHTML(p,fb){ if(p&&p.img) return '<img alt="" src="'+p.img+'">'; return (p&&p.emo)||fb; }
+function fillAv(el,p,fb){ if(!el) return; if(p&&p.img){ el.innerHTML=''; var im=document.createElement('img'); im.alt=''; im.src=p.img; el.appendChild(im); } else el.textContent=(p&&p.emo)||fb; }
+function paintProf(){
+  fillAv($('#lh-av'),PROF.peer,'🐱'); var n=$('#lh-nm'); if(n) n.textContent=peerName();
+  var a=$('#p-me'); if(a) a.textContent=meName(); var b=$('#p-opp'); if(b) b.textContent=peerName();
+  try{ $('#ig-name').textContent=peerName(); }catch(e){}
+}
+function sendProf(){
+  try{ if(!Net.topic||!Net.key||!(S.paired||S.linked)) return; Net.send({t:'prof',nm:meName(),emo:(PROF.me&&PROF.me.emo)||'🐷',img:(PROF.me&&PROF.me.img)||''}); }catch(e){}
+}
+function recvProf(m){
+  PROF.peer={name:String(m.nm||'にゃん').slice(0,12),emo:String(m.emo||'🐱').slice(0,8),img:(typeof m.img==='string'&&/^data:image\/jpeg;base64,/.test(m.img)&&m.img.length<9000)?m.img:''};
+  profSave(); paintProf(); if(S.tab==='chat') renderChat(true);
+}
+(function(){
+  var pick=(PROF.me&&PROF.me.emo)||'🐷', img=(PROF.me&&PROF.me.img)||'';
+  var box=$('#pf-me-emo');
+  function draw(){
+    fillAv($('#pf-me-av'),{emo:pick,img:img},'🐷');
+    fillAv($('#pf-op-av'),PROF.peer,'🐱');
+    if(box) [].forEach.call(box.children,function(b){ b.classList.toggle('sel',!img&&b.textContent===pick); });
+  }
+  if(box) EMOS.forEach(function(e){ var b=document.createElement('button'); b.type='button'; b.textContent=e; b.addEventListener('click',function(){ pick=e; img=''; draw(); }); box.appendChild(b); });
+  function open(){
+    pick=(PROF.me&&PROF.me.emo)||'🐷'; img=(PROF.me&&PROF.me.img)||'';
+    $('#pf-me-nm').value=meName(); $('#pf-op-nm').value=PROF.alias||'';
+    $('#pf-op-nm').placeholder=(PROF.peer&&PROF.peer.name)||'にゃん';
+    draw(); $('#prof-modal').classList.add('on');
+  }
+  window.openProf=open;
+  $('#btn-prof').addEventListener('click',open);
+  $('#pf-cancel').addEventListener('click',function(){ $('#prof-modal').classList.remove('on'); });
+  $('#prof-modal').addEventListener('click',function(e){ if(e.target===this) this.classList.remove('on'); });
+  $('#pf-me-photo').addEventListener('click',function(){ $('#pf-file').click(); });
+  $('#pf-file').addEventListener('change',function(){
+    var f=this.files&&this.files[0]; if(!f) return;
+    var r=new FileReader();
+    r.onload=function(){
+      var im=new Image();
+      im.onload=function(){
+        var c=document.createElement('canvas'); c.width=c.height=96;
+        var sd=Math.min(im.width,im.height), sx=(im.width-sd)/2, sy=(im.height-sd)/2;
+        c.getContext('2d').drawImage(im,sx,sy,sd,sd,0,0,96,96);
+        img=c.toDataURL('image/jpeg',0.7); draw();
+      };
+      im.src=r.result;
+    };
+    r.readAsDataURL(f); this.value='';
+  });
+  $('#pf-save').addEventListener('click',function(){
+    var nm=($('#pf-me-nm').value||'').trim().slice(0,12)||'ぶー';
+    PROF.me={name:nm,emo:pick,img:img};
+    PROF.alias=($('#pf-op-nm').value||'').trim().slice(0,12);
+    profSave(); paintProf(); sendProf(); renderChat(true);
+    $('#prof-modal').classList.remove('on');
+    toast('ほぞん しました。');
+  });
+  $('#btn-top2').addEventListener('click',function(){ show('lobby'); });
+})();
 /* ===== インスタ風ライブの 操作 ===== */
 function igName(){
-  var n='にゃん';
+  var n=peerName();
   var e=$('#ig-name'); if(e) e.textContent=n;
   var av=$('#ig-av'); if(av) av.textContent=(n||'あ').slice(0,1);
   var nm=$('#my-tag');
@@ -6744,7 +7032,7 @@ function igHeartFly(x){
     oc();
     igName();
     var vw=$('#ig-view'); if(vw) vw.textContent='1';
-    try{ $('#ig-name').textContent='にゃん'; }catch(e){}
+    try{ $('#ig-name').textContent=peerName(); }catch(e){}
   };
 })();
 /* 送信待ちが のこって いれば 復元して 送る */
