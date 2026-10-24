@@ -19,7 +19,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="雑学王">
 <meta name="theme-color" content="#12312A">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; font-src 'none'; connect-src https://ntfy.sh wss://ntfy.sh wss://broker.emqx.io:8084 wss://broker.hivemq.com:8884; worker-src 'self'; img-src 'self' data:; manifest-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; font-src 'none'; connect-src https://ntfy.sh wss://ntfy.sh https://*.workers.dev wss://broker.emqx.io:8084 wss://broker.hivemq.com:8884; worker-src 'self'; img-src 'self' data:; manifest-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'">
 <meta http-equiv="Cache-Control" content="no-store">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -784,7 +784,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v130</b>｜ビルド 2026-10-24（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v132</b>｜ビルド 2026-10-24（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1039,6 +1039,9 @@ body.in-play .leave-row{display:none!important}
   <div class="sec">つうち</div>
   <button type="button" class="ph" id="pf-ntest">通知を テストする（10秒後に とどきます。その間に ホーム画面へ）</button>
   <p id="pf-nres" style="font-size:.78rem;color:#556;margin:6px 0 0"></p>
+  <div class="sec">つうちサーバー（アプリを 切っていても とどく）</div>
+  <input type="url" id="pf-psrv" placeholder="https://zatsugaku-push.〇〇.workers.dev" style="width:100%;box-sizing:border-box;padding:8px;border-radius:10px;border:1.5px solid #ddd;font-size:.8rem">
+  <p id="pf-pres" style="font-size:.74rem;color:#556;margin:4px 0 0">1人が 入れれば OK（あいてにも じどうで つたわります）</p>
   <div class="acts"><button type="button" class="ng" id="pf-cancel">やめる</button><button type="button" class="ok" id="pf-save">ほぞん</button></div>
 </div></div>
 <script>
@@ -1832,6 +1835,10 @@ var Net={
     var fastOk=false; try{ fastOk=Fast.pub(body); }catch(e){}
     /* v124: 相手の スマホへ 直接（アプリが 裏でも とどく）。毎回 かならず */
     if(env&&env.t==='chats'&&!env.__pushed){ env.__pushed=1; try{ pushToPeer(body); }catch(e){} }
+    /* v131: ntfy は 1日250回（同じ Wi-Fi の 2台で 合計）まで。既読・受領・ping などで つかいきると
+       アプリを 切った ときの 通知（ベル）が とまる → 大事な ものだけ ntfy に のせる */
+    var NTFY_KEEP={chats:1,unpair:1,prof:1,join:1,ok:1,eject:1,bye:1,full:1,hi2:1};
+    if(!(env&&NTFY_KEEP[env.t])&&fastOk) return true;
     /* ntfy は 保存用(相手が いない ときの 受けとり用)。制限中は 2本目だけで 成功あつかい */
     if(this.coolUntil&&Date.now()<this.coolUntil) return fastOk;
     if(!this.allow(typeof prio==='number'?prio:1)) return fastOk;
@@ -6865,7 +6872,8 @@ Net.onMsg=function(m){
     case 'prof':
       if(m.from===S.me.id) break;
       recvProf(m);
-      if(!m.r) setTimeout(function(){ try{ Net.send({t:'prof',r:1,nm:meName(),emo:(PROF.me&&PROF.me.emo)||'🐷',img:(PROF.me&&PROF.me.img)||''}); }catch(e){} },400);
+      if(typeof m.ps==='string'&&psrvOk(m.ps)&&m.ps.replace(/\/+$/,'')!==psrvGet()){ psrvSet(m.ps); setTimeout(function(){ try{ bgPushSetup(); }catch(e){} },300); }
+      if(!m.r) setTimeout(function(){ try{ Net.send({t:'prof',r:1,nm:meName(),emo:(PROF.me&&PROF.me.emo)||'🐷',img:(PROF.me&&PROF.me.img)||'',ps:psrvGet()}); }catch(e){} },400);
       break;
     case 'rtc2':
       if(m.from===S.me.id) break;
@@ -7264,7 +7272,33 @@ async function myBellTopic(){
     return 'gskb-'+toHex(h).slice(0,28);
   }catch(e){ return null; }
 }
+/* ===== v132: じぶん専用の つうちサーバー（Cloudflare Workers） ===== */
+function psrvGet(){ try{ return (localStorage.getItem('zg_psrv')||'').trim(); }catch(e){ return ''; } }
+function psrvOk(u){ return /^https:\/\/[a-z0-9-]+(\.[a-z0-9-]+)*\.workers\.dev\/?$/i.test(u||''); }
+function psrvSet(u){ u=(u||'').trim().replace(/\/+$/,''); if(u&&!psrvOk(u)) return false; try{ if(u) localStorage.setItem('zg_psrv',u); else localStorage.removeItem('zg_psrv'); }catch(e){} return true; }
+var psrvKeyCache=null;
+async function psrvSetup(){
+  var u=psrvGet(); if(!u||!swReg||!swReg.pushManager||Notification.permission!=='granted') return false;
+  try{
+    var mine=await myBellTopic(); if(!mine) return false;
+    var kr=await fetch(u+'/key'); var kj=await kr.json(); if(!kj||!kj.key) return false;
+    var sub=await swReg.pushManager.getSubscription();
+    var want=kj.key, have='';
+    try{ if(sub&&sub.options&&sub.options.applicationServerKey){ var a=new Uint8Array(sub.options.applicationServerKey); var bs=''; for(var i=0;i<a.length;i++) bs+=String.fromCharCode(a[i]); have=btoa(bs).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); } }catch(e){}
+    if(sub&&have!==want){ try{ await sub.unsubscribe(); }catch(e){} sub=null; }
+    if(!sub) sub=await swReg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:unb64(want)});
+    var r=await fetch(u+'/sub',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topic:mine,sub:sub.toJSON()})});
+    var j=await r.json(); return !!(j&&j.ok);
+  }catch(e){ return false; }
+}
+async function psrvPush(topic,payload){
+  var u=psrvGet(); if(!u) return false;
+  try{ var r=await fetch(u+'/push',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topic:topic,msg:payload})}); var j=await r.json(); return !!(j&&j.ok); }catch(e){ return false; }
+}
 async function bgPushSetup(){
+  /* v132: つうちサーバーが あれば そちらを つかう（ntfy の 回数せいげんが ない） */
+  if(psrvGet()){ var ok=await psrvSetup(); if(ok) return; }
+
   try{
     if(!swReg||!swReg.pushManager||Notification.permission!=='granted') return;
     var mine=await myBellTopic(); if(!mine) return;
@@ -7300,7 +7334,14 @@ async function pushToPeer(body){
     var t=await bellTopic(); if(!t) return;
     var payload='zgm:'+bellCount+':'+body;
     if(payload.length>3900) return;   /* 大きすぎる ものは 通常の とおりみちだけ */
-    fetch('https://ntfy.sh/'+t,{method:'POST',headers:{'Content-Type':'text/plain'},body:payload});
+    /* v131: 回数制限などで 失敗したら 20秒・60秒・3分後に やりなおす（通知を とりこぼさない） */
+    var tryPush=function(k){
+      if(psrvGet()){ psrvPush(t,payload).then(function(ok){ if(!ok&&k<3) setTimeout(function(){ tryPush(k+1); },[20000,60000,180000][k]); }); return; }
+      fetch('https://ntfy.sh/'+t,{method:'POST',headers:{'Content-Type':'text/plain'},body:payload})
+        .then(function(r){ if(!r.ok&&k<3) setTimeout(function(){ tryPush(k+1); },[20000,60000,180000][k]); })
+        .catch(function(){ if(k<3) setTimeout(function(){ tryPush(k+1); },[20000,60000,180000][k]); });
+    };
+    tryPush(0);
     bellPushed=Date.now();
   }catch(e){}
 }
@@ -7358,7 +7399,7 @@ function paintProf(){
   try{ $('#ig-name').textContent=peerName(); }catch(e){}
 }
 function sendProf(){
-  try{ if(!Net.topic||!Net.key||!(S.paired||S.linked)) return; Net.send({t:'prof',nm:meName(),emo:(PROF.me&&PROF.me.emo)||'🐷',img:(PROF.me&&PROF.me.img)||''}); }catch(e){}
+  try{ if(!Net.topic||!Net.key||!(S.paired||S.linked)) return; Net.send({t:'prof',nm:meName(),emo:(PROF.me&&PROF.me.emo)||'🐷',img:(PROF.me&&PROF.me.img)||'',ps:psrvGet()}); }catch(e){}
 }
 function recvProf(m){
   PROF.peer={name:String(m.nm||'にゃん').slice(0,12),emo:String(m.emo||'🐱').slice(0,8),img:(typeof m.img==='string'&&/^data:image\/jpeg;base64,/.test(m.img)&&m.img.length<9000)?m.img:''};
@@ -7377,6 +7418,7 @@ function recvProf(m){
     pick=(PROF.me&&PROF.me.emo)||'🐷'; img=(PROF.me&&PROF.me.img)||'';
     $('#pf-me-nm').value=meName(); $('#pf-op-nm').value=PROF.alias||'';
     $('#pf-op-nm').placeholder=(PROF.peer&&PROF.peer.name)||'にゃん';
+    try{ $('#pf-psrv').value=psrvGet(); $('#pf-pres').textContent=psrvGet()?'つうちサーバー：せってい ずみ ✓':'1人が 入れれば OK（あいてにも じどうで つたわります）'; }catch(e){}
     draw(); $('#prof-modal').classList.add('on');
   }
   window.openProf=open;
@@ -7399,7 +7441,19 @@ function recvProf(m){
     };
     r.readAsDataURL(f); this.value='';
   });
-  $('#pf-save').addEventListener('click',function(){
+  $('#pf-save').addEventListener('click',async function(){
+    var pu=($('#pf-psrv').value||'').trim().replace(/\/+$/,'');
+    if(pu!==psrvGet()){
+      if(pu&&!psrvOk(pu)){ $('#pf-pres').textContent='アドレスが ちがいます。https:// で はじまり .workers.dev で おわる アドレスを 入れてください。'; return; }
+      if(pu){
+        $('#pf-pres').textContent='つうちサーバーを たしかめて います…';
+        try{ var kr=await fetch(pu+'/key'); var kj=await kr.json(); if(!kj||kj.app!=='zatsugaku-push') throw 0; }
+        catch(e){ $('#pf-pres').textContent='つうちサーバーに つながりません。アドレスと「デプロイ」を たしかめてください。'; return; }
+      }
+      psrvSet(pu);
+      try{ if(Notification.permission!=='granted') await Notification.requestPermission(); }catch(e){}
+      try{ await bgPushSetup(); }catch(e){}
+    }
     var nm=($('#pf-me-nm').value||'').trim().slice(0,12)||'ぶー';
     PROF.me={name:nm,emo:pick,img:img};
     PROF.alias=($('#pf-op-nm').value||'').trim().slice(0,12);
@@ -7421,7 +7475,8 @@ function recvProf(m){
       var mine=await myBellTopic();
       r.textContent='10秒後に テスト通知を おくります。いまのうちに ホーム画面に もどってください。';
       setTimeout(function(){
-        if(mine) fetch('https://ntfy.sh/'+mine,{method:'POST',headers:{'Content-Type':'text/plain'},body:'zg-test'});
+        if(mine&&psrvGet()) psrvPush(mine,'zg-test');
+        else if(mine) fetch('https://ntfy.sh/'+mine,{method:'POST',headers:{'Content-Type':'text/plain'},body:'zg-test'});
         else swReg.showNotification('雑学王',{body:'テスト通知です',tag:'mtp-test',icon:'./icon-192.png'});
       },10000);
     }catch(e){ r.textContent='テストに 失敗しました（'+(e&&e.name||e)+'）'; }
