@@ -787,7 +787,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v143</b>｜ビルド 2026-10-24（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v144</b>｜ビルド 2026-10-24（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -5703,7 +5703,7 @@ function notifyIncoming(){
   if(!('Notification' in window)||Notification.permission!=='granted') return;
   if(localStorage.getItem('mtp_notify_off')==='1') return;
   var cnt=S.unread||1;
-  var body='新しい問題が追加されたよ🐾';   /* v143: 件数は 出さない（違いが 目についたため） */
+  var body=peerName()+' から メッセージが とどいたよ🐾';   /* v144: まえの 文面にもどす */
 
   var opt={body:body,tag:'mtp-chat',renotify:true,silent:true,badge:'./icon-192.png',icon:'./icon-192.png',data:{app:'zg',n:cnt}};
   /* スマホ(とくに Android)は サービスワーカー 経由で ないと 通知が でない */
