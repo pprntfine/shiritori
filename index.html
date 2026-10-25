@@ -787,7 +787,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v148</b>｜ビルド 2026-10-24（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v149</b>｜ビルド 2026-10-24（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -950,6 +950,7 @@ body.in-play .leave-row{display:none!important}
         <button id="btn-call" type="button" class="notify-btn" title="こえで はなす">電話:オフ</button>
         <button id="btn-photo" type="button" class="notify-btn" title="しゃしんを おくる">カメラ</button>
         <button id="btn-notify" type="button" class="notify-btn" title="メッセージ通知(内容は表示しません)">通知:オフ</button>
+        <button id="btn-delchat" type="button" class="notify-btn" title="この スマホの トークを ぜんぶ けす">🗑 けす</button>
       </div>
       <input id="in-chat" maxlength="300" placeholder="メッセージを入力" enterkeyhint="send" autocomplete="off" spellcheck="false" inputmode="text">
       <button class="line-send cute-send" type="submit" id="btn-chat-send" aria-label="送信"><span class="cs-ico">🐾</span></button>
@@ -5265,6 +5266,36 @@ async function unreadRestore(sk){
   }catch(e){ return 0; }
 }
 function unreadClear(){ try{ localStorage.removeItem(UNREAD_KEY); }catch(e){} }
+/* v149: この スマホの トークを ぜんぶ けす（あいての スマホは そのまま・ペアも そのまま） */
+function askDelChat(){
+  return new Promise(function(res){
+    var old=$('#del-ask'); if(old) old.remove();
+    var w=document.createElement('div'); w.id='del-ask';
+    w.style.cssText='position:fixed;inset:0;z-index:9999;background:rgba(20,16,24,.6);display:flex;align-items:center;justify-content:center;padding:20px';
+    w.innerHTML='<div style="background:#fff;border-radius:22px;padding:22px 18px 16px;max-width:330px;width:100%;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.25)">'+
+      '<div style="font-size:2rem">🗑</div>'+
+      '<div style="font-weight:900;font-size:1.05rem;margin:6px 0 4px;color:#3B3B3B">トークを ぜんぶ けしますか？</div>'+
+      '<div style="font-size:.82rem;color:#8a8177;margin-bottom:16px;line-height:1.5">この スマホの メッセージが きえます。<br>もとに もどせません。<br>（あいての スマホと ペアは そのまま）</div>'+
+      '<div style="display:flex;gap:10px">'+
+      '<button type="button" id="del-no" style="flex:1;padding:13px;border:0;border-radius:14px;background:#F4F0EA;color:#3B3B3B;font-weight:900;font-size:.98rem">やめる</button>'+
+      '<button type="button" id="del-yes" style="flex:1;padding:13px;border:0;border-radius:14px;background:#E5484D;color:#fff;font-weight:900;font-size:.98rem">けす</button></div></div>';
+    document.body.appendChild(w);
+    var done=function(v){ try{ w.remove(); }catch(e){} res(v); };
+    $('#del-no').addEventListener('click',function(){ done(false); });
+    $('#del-yes').addEventListener('click',function(){ done(true); });
+  });
+}
+function delChatAll(){
+  S.chat=S.chat.filter(function(m){ return m&&m.sys; });
+  S.chatRendered=-1; S.unread=0;
+  unreadClear();
+  try{ swClearNotifs(); }catch(e){}
+  updateBadge(); updateTalkbackBadges(); updateTitleBadge();
+  renderChat(true);
+}
+if($('#btn-delchat')) $('#btn-delchat').addEventListener('click',function(){
+  askDelChat().then(function(ok){ if(!ok) return; delChatAll(); toast('トークを けしました。'); });
+});
 function pairHasKeys(){ var p=pairLoad(); return !!(p&&p.rk&&p.sk&&p.topic); }
 function pairLoad(){
   try{
