@@ -1,4 +1,5 @@
-/* 雑学王 サービスワーカー（v145）
+/* 雑学王 サービスワーカー（v148）
+   - v148: アイコンの 赤い数字＝まだ 読んでいない 件数（同じ メッセージは 1回だけ かぞえる）
    - アプリが 裏・画面オフ・まるごと とじて いても、通知と おなじ 通り道で メッセージ（あんごう文のまま）を 受けとる
    - v128: バッジは ある/なし の み（「1」づけ）。新しい ワーカーが きどうした ときも バッジを けす
    - v127: 通知アイコンは ファイルの ままで（画像の直もじれつは iPhoneで だめな ことが わかった）。通知は さいしょに だす！（しまう 仕事で つかれて 通知が でない ことが ないように）
@@ -6,10 +7,10 @@
    - 通知は 音なし。バッジは 数字なし（iPhoneの 決まりで 画像は だせない）
    ここでは 中身を 読めません（鍵は ここに ありません） */
 self.addEventListener('install', function(e){ self.skipWaiting(); });
-self.addEventListener('activate', function(e){ e.waitUntil((async function(){ await self.clients.claim(); try { if (self.navigator && self.navigator.clearAppBadge) await self.navigator.clearAppBadge(); } catch (err) {} })()); });
+self.addEventListener('activate', function(e){ e.waitUntil((async function(){ await self.clients.claim(); try { var n0 = await cntRead(); await badgeSet(n0); } catch (err) {} })()); });
 
 var unread = 0;
-var SW_VERSION = 'sw145';
+var SW_VERSION = 'sw148';
 var PAW = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAYAAABS3GwHAAAH0UlEQVR4nO2dXXrjNgxFMf26tOlCpgtLFpLZW/pSJa4q2fohiAvgnNd2LBK8R6AUSzYDAAAAAAAAAID6/IgeQGU+3z4+R33Wj7//Yq0coKg3GRnyqyDHdSjcCRTCfhSkOAZFekGm0O+BDPtQmBUVAv8KhPiGQvxLh+CvQYTmAnQM/R5dZWg5aYK/TzcR2kyW0J+ngwzlJ0jw71NZhLITI/jjqShCuQkRfH8qifBH9ABGQvjnUKnOJUyutCDZyN4N0ncAwh9L9vqntTd74SuSsRuk7ACEX5OM65LK2IwF7kqWbpCmAxD+XGRZrxQCZCkm/JcM6ybdpjIUEI6huiWS7QCEvxaq6ykpgGqx4B6K6yongGKRYBxq6yslgFpxwAeldZYRQKko4I/KeksIoFIMmIvCuocLoFAEiCN6/UMFiJ48aBCZgzABCD88EpWHEAEIP2wRkYvpAhB+eMbsfEwVgPDDEWbmZNoXlFKH/9fP/f/2/nveOJox4wt0f3ofIC3PQr/3/yFDOqZ0gFRn/6PBf0aUCAU7lXcXcBcgTfhHBH/NjNBdGXcyGTwlcBWgdfgXvMKWuVNdwEuC8K9ChOMZfo/P//Vz3GeO/KykuAmQ4uw/a/FHBtaDBBJ45clFAMLvcLxsncoBj1yxBcpAtk6ViOECcPYffNxsncqZ0fkaKgDhT3D8AozMGVsgZTJ1qqQME4Cz/wmOjCN6rNHHf8GovA0RIEX4oRwjcscWSBGVs6/KOBy5LUCas7/aYqqNJyl380cHgNbcEiDN2T8Tap1BbTwb3Mlhjw6guoiq42rEZQE4+4MSV/PYowNkQbUjqI5rAAgArbkkANsfUORKLukA0JrTr0VxPfsXfKsBzOXz7ePzzPPD8e8F4v07EEicAHfuLCz/FhHgJqeuAYZtf9QfEofUnMnp/Itgj9eEAFzk8MXCkLN/5AuoFEVZj1lxjAtXtpvBNzWOXAzPuwaY8VoPrgniSXZTY84WiNd6HENV4KPjulr/wHXr84cwtXCpjecOI16xGPSaxkMC3Nr/816b2gjf1DiS2z4dIAtqneHZeAq8q9RXALX32qiES2Uc8FoAvvkJmyR5We+r/Pp1gOi9uGoXOHL86DEu7I2j0F29ntcAUQFTCTZ80VOADETLEn32n3Q8HwGitz8LSs8XXDkencqdpwKUvwCetdBVAqV2V+8gz3LMFsg7nHc/P0OnSgwCmPkt+qjPpVO5gQAL77/HBnZ0mNQ7VVIQYM2d8HoEf/35UZ8bfWPD6fjxD8Wr8hgKxbtJzX4p3gsEOIJiUO6IoDifIHYFKH8LtAqqnUqMvfcF0QEq0TzkV+AiGFrjI4DKmUhlHCALHQBagwDQGj8Borcf0cevRnQ9nY5PB4DW+ArA99lBHDoAtMZfAL7PXoeCHZ0OAK2ZIwAPdNShWEef912g99+xvw8QDd/alGT3BwTcvg3qIYFaUDqIPuMBmcFz3fo26HwBzMYWTyEQkU9LRc4/mehbAsRcBGd7WHyPoHfay40hMTEd4JGMe2PlwM2uTaItrc4WaA/1J5qUg79mZr2SbGlPCWDGY5FfZAr+miwiOI9z7xcj+UPYMyrsr2fO4c7rZILgmeA9sgd/zayfkU32kD4CbFEt/Auzf0tZJOTPYAu0pmr4F6rP7yQI8EiXcHSZ5wEQYKFbKLrNd4enAuzdOipH1zA0mfezHNMBmoRgl+bz7y1A88X/onEd+grQeNE3aVqPngI0XeyXNKzLSwHaXAhDSV7lt18HaHiWO0Wz+vQTAOCBQwKU2QY1O7tdpkidjuSWDgCt6SNAkbPaNJrUq48AABscFiD1dUCTs9lwEtftaF7pANCaUwKk7gLQhjM5pQNAa+oLkHgfK0Hx+p0WgG0QKHM2n/U7AMATLglAFwBFruSSDgCtQQBozWUB2AaBElfzSAeA1twSgC4ACtzJIR0AWnNbALoARHI3f/U7QIJXdEtTvH5DBKALQAQjcjesAyABzGRU3upvgQCeMFQA2S5QfB/rhmjdRuZseAeQlQBKMDpffbZAomczWZrUy0UAugB44JErtw4gKUGTs9ptBOvklac+WyCADVwFoAskRLA+njly7wCSEkAavPMzZQskJ4HgWU4CsbrMyE3fawCxxQ6naT2mCSDXBczaLvr/EKzDrLxM7QBIIIjg/GfmZPoWCAmEEJz37HyEXAMggQCC843IRdhFMBIEIjjPqDyE3gVCggAE5xeZg/DboEgwEcF5Ra9/uABm8UXYRDAstxCcj8K6hw/gkc+3j8/oMWyS+UciBINvphF+MzEBzIQlMMslgmjwzXTCbyYogJm4BGbaIggH30wr/GaiApglkMBMSwTx4Jvphd9MWACzJBKYxYqQIPhmmuE3ExdgIY0IC55CJAn8gmrwF6QH90g6CdZckSJZ2Neoh98skQBmBSRoRIbwmyUTYAERdMkS/AWJvwSfJVuRu5BxXdINeA3dIJ6MwV9I2QEeyVz8CmSvf+rBr6EbzCN78BfSd4BHqiyKOpXqXGYia+gG46kU/IVyE1qDCPepGPyFshNbgwjnqRz8hfIT3AIZ9ukQ+kdaTXYNInzTLfgLLSe9RUcZuob+kfYFWNNBBIL/DYV4QQUhCPw+FOYEmWQg9MegSDdRkIKwX4fCOTJSDkIOAAAAAAAAALf4BxF79omupY6JAAAAAElFTkSuQmCC';
 
 function idbOpen(){
@@ -35,6 +36,20 @@ function cntRead(){
     var n=parseInt(t||'0',10); return isNaN(n)?0:n;
   }).catch(function(){ return 0; });
 }
+/* v148: 同じ メッセージを 2回 かぞえない ための しるし（あんごう文の さいごの 40文字） */
+function seenRead(){
+  return caches.open('zg-count').then(function(c){ return c.match('s'); }).then(function(r){ return r?r.text():'[]'; })
+    .then(function(t){ try{ var a=JSON.parse(t); return Array.isArray(a)?a:[]; }catch(e){ return []; } }).catch(function(){ return []; });
+}
+function seenSave(a){
+  return caches.open('zg-count').then(function(c){ return c.put('s', new Response(JSON.stringify(a.slice(-80)))); }).catch(function(){});
+}
+async function badgeSet(n){
+  try {
+    if (n > 0) { if (self.navigator && self.navigator.setAppBadge) await self.navigator.setAppBadge(n); }
+    else if (self.navigator && self.navigator.clearAppBadge) await self.navigator.clearAppBadge();
+  } catch (err) {}
+}
 function cntSave(n){
   return caches.open('zg-count').then(function(c){ return c.put('u', new Response(String(n))); }).catch(function(){});
 }
@@ -51,10 +66,7 @@ async function handlePush(raw){
   var isTest = txt.indexOf('zg-test') >= 0;
   /* 本文つき: 'zgm:件数:あんごう文' / 数字だけの 合図 'zgn:件数' は v126 では つかわない（通知も ださない） */
   var mm = /^zgm:(\d+):([\s\S]+)$/.exec(txt);
-  if (/^zgn:\d+$/.test(txt)) {
-    try { if (self.navigator && self.navigator.setAppBadge) await self.navigator.setAppBadge(1); } catch (err) {}
-    return;
-  }
+  if (/^zgn:\d+$/.test(txt)) { return; }
   /* ページが 画面に でている か（でていなければ かならず 通知。判断に まよったら 通知する） */
   var viewed = false;
   try {
@@ -70,7 +82,15 @@ async function handlePush(raw){
     } catch (err) {}
     return;
   }
-  if (mm) { unread = (await cntRead()) + cnt; await cntSave(unread); }   /* まとめ送りの 件数ぶん たくす */
+  /* v148: とどいた メッセージ 1通ごとに +1（おなじ ものの くりかえしは かぞえない） */
+  var isNew = false;
+  if (mm) {
+    var sig = mm[2].slice(-40);
+    var seen = await seenRead();
+    if (seen.indexOf(sig) < 0) { seen.push(sig); await seenSave(seen); isNew = true; }
+    unread = (await cntRead()) + (isNew ? 1 : 0);
+    await cntSave(unread);
+  }
 
   /* v126: 通知を さいしょに だす。あんごう文は data の おくにも のせて おく */
   if (true) { /* v130: かならず 通知（ださないと iPhoneが 購読を はいきする） */
@@ -89,7 +109,7 @@ async function handlePush(raw){
     var list = await self.clients.matchAll({type:'window', includeUncontrolled:true});
     for (var j=0; j<list.length; j++) { try { list[j].postMessage('zg-new'); } catch (err) {} }
   } catch (err) {}
-  try { if (self.navigator && self.navigator.setAppBadge) await self.navigator.setAppBadge(1); } catch (err) {}
+  await badgeSet(unread);
 }
 
 self.addEventListener('push', function(e){
@@ -112,9 +132,7 @@ self.addEventListener('notificationclick', function(e){
 
 self.addEventListener('message', function(e){
   if (e.data && typeof e.data === 'object' && e.data.get === 'ver') { try { e.source.postMessage({swver: SW_VERSION}); } catch (err) {} return; }
-  if (e.data && typeof e.data === 'object' && typeof e.data.unread === 'number') {
-    unread = e.data.unread; e.waitUntil(cntSave(unread)); return;   /* v141: アプリ側の 未読に あわせる */
-  }
+  if (e.data && typeof e.data === 'object' && typeof e.data.unread === 'number') { return; }   /* v148: 件数は ここが もつ */
   if (e.data === 'clear') {
     unread = 0;
     e.waitUntil(cntSave(0));
