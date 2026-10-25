@@ -787,7 +787,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v145</b>｜ビルド 2026-10-24（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v146</b>｜ビルド 2026-10-24（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -5610,11 +5610,13 @@ function scrollChatBottom(){
   setTimeout(go,120);
 }
 function sysChat(text){ S.chat.push({sys:true,text:text,at:Date.now()}); if(S.tab==='chat') renderChat(true); }
+/* v146: トーク画面が ほんとうに 目に みえて いるか（裏で つながって いる だけ では ない） */
+function chatOnScreen(){
+  try{ return S.tab==='chat'&&document.visibilityState==='visible'&&!!(screens.play&&screens.play.classList.contains('on')); }catch(e){ return false; }
+}
 /* 既読：トークを開いていて画面が見えている時だけ「読んだ」と伝える */
 function maybeSendRead(){
-  if(S.tab!=='chat'||(S.phase!=='play'&&!S.linked)) return;
-  if(typeof document.visibilityState==='string'&&document.visibilityState!=='visible') return;
-  if(S.phase!=='play') return;
+  if(!chatOnScreen()) return;   /* v146: トップ画面・クイズ中は 既読に しない */
   if(!S.lastPeerN||S.lastPeerN<=S.readSent) return;
   S.readSent=S.lastPeerN;
   var exp=Date.now()+CHAT_EXP_MS, i;
@@ -5695,7 +5697,7 @@ var ZG_PAW='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAYAAABS3GwHAA
 function swClearNotifs(){ try{ if(navigator.serviceWorker&&navigator.serviceWorker.controller) navigator.serviceWorker.controller.postMessage('clear'); }catch(e){} }
 /* メッセージ着信：中身は 出さない。短い通知だけ */
 function notifyIncoming(){
-  var viewing=(S.tab==='chat'&&document.visibilityState==='visible'&&S.phase==='play');
+  var viewing=chatOnScreen();
   if(viewing){ swClearNotifs(); return; }   /* v142: 見ている ときは 通知を 出さず、でている 通知も 消す */
   updateBadge(); updateTalkbackBadges(); updateTitleBadge();
   setAppBadgeCount(S.unread||1);
@@ -7251,7 +7253,7 @@ case 'ack':
     case 'chats':
       (function(list){
         if(!Array.isArray(list)) return;
-        var viewing=(S.phase==='play'&&S.tab==='chat'&&document.visibilityState==='visible');
+        var viewing=chatOnScreen();
         var added=0;
         for(var i=0;i<list.length&&i<16;i++){
           var it=list[i]||{};
@@ -7284,7 +7286,7 @@ case 'ack':
         S.__ackAt=now;
         try{ Net.send({t:'ack',n1:m.n}); }catch(e){}
       })(); /* 受け取った証拠を返す(暗号化・保存なし) */
-      if(S.phase==='play'&&S.tab==='chat') renderChat();
+      if(chatOnScreen()) renderChat();
       else if(S.linked||S.phase==='play'){
         S.unread++; updateBadge(); updateTitleBadge(); updateTalkbackBadges(); notifyIncoming();
         var pk=$('#peek');
