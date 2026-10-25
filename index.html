@@ -787,7 +787,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v146</b>｜ビルド 2026-10-24（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v147</b>｜ビルド 2026-10-24（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -5225,6 +5225,45 @@ async function savePairState(){
     return true;
   }catch(e){ return false; }
 }
+/* v147: まだ 読んでいない メッセージだけを 2人の鍵で あんごう化して 端末に あずける
+   （iPhoneが アプリを おわらせても きえない。読んだら 消す） */
+var UNREAD_KEY='mtp_unread_v1', unreadT=null;
+function unreadSave(){
+  if(unreadT) return;
+  unreadT=setTimeout(async function(){
+    unreadT=null;
+    try{
+      var list=S.chat.filter(function(m){ return m&&!m.sys&&!m.photo&&m.from!==S.me.id&&!m.exp&&m.text; })
+        .slice(-60).map(function(m){ return {f:m.from,t:m.text,a:m.at,n:m.n||0}; });
+      if(!list.length||!S.sessKey){ localStorage.removeItem(UNREAD_KEY); return; }
+      var iv=crypto.getRandomValues(new Uint8Array(12));
+      var ct=await crypto.subtle.encrypt({name:'AES-GCM',iv:iv},S.sessKey,new TextEncoder().encode(JSON.stringify(list)));
+      var all=new Uint8Array(12+ct.byteLength); all.set(iv,0); all.set(new Uint8Array(ct),12);
+      localStorage.setItem(UNREAD_KEY,b64(all));
+    }catch(e){}
+  },200);
+}
+async function unreadRestore(sk){
+  try{
+    var v=localStorage.getItem(UNREAD_KEY); if(!v) return 0;
+    var buf=unb64(v);
+    var pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:buf.slice(0,12)},sk,buf.slice(12));
+    var list=JSON.parse(new TextDecoder().decode(pt)); if(!Array.isArray(list)) return 0;
+    if(!Net.seenN) Net.seenN=new Set();
+    var have={}; S.chat.forEach(function(m){ if(m&&m.n&&m.from) have[m.from+':'+m.n+':'+m.text]=1; });
+    var k=0;
+    list.forEach(function(it){
+      if(!it||!it.t) return;
+      if(have[it.f+':'+it.n+':'+it.t]) return;
+      S.chat.push({from:it.f,text:String(it.t).slice(0,MAX_CHAT),at:it.a||Date.now(),sent:true,n:it.n||0});
+      if(it.n) Net.seenN.add(String(it.f)+':'+it.n);
+      S.lastPeerN=Math.max(S.lastPeerN||0,it.n||0); k++;
+    });
+    if(k){ S.chat.sort(function(a,b){ return (a.at||0)-(b.at||0); }); S.unread=Math.max(S.unread||0,k); updateBadge(); updateTalkbackBadges(); }
+    return k;
+  }catch(e){ return 0; }
+}
+function unreadClear(){ try{ localStorage.removeItem(UNREAD_KEY); }catch(e){} }
 function pairHasKeys(){ var p=pairLoad(); return !!(p&&p.rk&&p.sk&&p.topic); }
 function pairLoad(){
   try{
@@ -5264,6 +5303,7 @@ async function resumeConnect(silent){
     Net.switchTo(sk);
     S.phase='play';
     S.chatRendered=-1;
+    try{ await unreadRestore(sk); }catch(e){}   /* v147: あずけて いた 未読を もどす */
     if($('#p-me')) $('#p-me').textContent=meName();
     if($('#p-opp')) $('#p-opp').textContent=peerName();
     startPing(); startWatch(); if(S.isHost) startFullWatch();
@@ -5311,7 +5351,7 @@ function openChatUI(){
 if($('#btn-secret-back')) $('#btn-secret-back').addEventListener('click',function(){ show('lobby'); });
 if($('#btn-home')) $('#btn-home').addEventListener('click',function(){ show('lobby'); });
 if($('#btn-wipe')) $('#btn-wipe').addEventListener('click',function(){
-  pairClear();
+  pairClear(); unreadClear();
   try{ S.chat=[]; }catch(e){}
   note('この端末の きろくを 消しました。','#note2');
 });
@@ -5624,6 +5664,7 @@ function maybeSendRead(){
     var mm=S.chat[i];
     if(!mm.sys&&mm.from!==S.me.id&&mm.n&&mm.n<=S.lastPeerN&&!mm.exp) mm.exp=exp;
   }
+  unreadSave();   /* v147: 読んだ ものは あずかり箱から 外す */
   /* v115: 既読を あいてに つたえる（すこし まとめてから 1通） */
   if(S.readT) return;
   S.readT=setTimeout(function(){
@@ -6724,6 +6765,7 @@ $('#btn-leave').addEventListener('click',function(){ unpairBoth(this); });
 /* v118: ペアを 両方の 端末から 解除する（再度 入るには あたらしく ペアが ひつよう） */
 function wipePairLocal(){
   try{ pairClear(); }catch(e){}
+  unreadClear();
   try{ localStorage.removeItem('mtp_since_v1'); localStorage.removeItem('mtp_cid_v1'); }catch(e){}
   try{ localStorage.removeItem(OUT_KEY); }catch(e){}
   try{ localStorage.removeItem('mtp_prof_v1'); PROF=profLoad(); }catch(e){}
@@ -7267,6 +7309,7 @@ case 'ack':
         try{ var cbI=$('#call-box'); if(cbI&&!cbI.hidden){ for(var j=0;j<list.length&&j<16;j++){ var tj=String((list[j]||{}).text||''); if(tj) igComment(peerName(),tj,false); } } }catch(e){}
         S.lastPeerN=Math.max(S.lastPeerN||0,m.n||0);
         if(!viewing){ S.unread=(S.unread||0)+added; }
+        unreadSave();
         notifyIncoming();
         if(S.tab==='chat') renderChat(true);
         maybeSendRead();
@@ -7278,6 +7321,7 @@ case 'ack':
       S.lastPeerN=Math.max(S.lastPeerN,m.n||0);
       S.chat.push({from:m.from,text:String(m.text||'').slice(0,MAX_CHAT),
         at:(typeof m.at==='number'?m.at:Date.now()),sent:true,n:m.n||0});
+      unreadSave();
       /* v111: 受領の しるしは 20秒に 1回だけ まとめて 返す */
       (function(){
         var now=Date.now();
