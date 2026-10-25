@@ -787,7 +787,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v149</b>｜ビルド 2026-10-24（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v151</b>｜ビルド 2026-10-24（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1788,6 +1788,16 @@ var Net={
       var nk=String(env.from)+':'+env.n;
       if(!this.seenN) this.seenN=new Set();
       if(this.seenN.has(nk)) return;
+      /* v151: 録画された 古い 暗号文の 再送（リプレイ）を ことわる。
+         番号は 送った 時刻（ミリ秒）から できているので、相手ごとに「ここまで うけとった」を 端末に おぼえる。
+         とどく 順番の いれかわりは 10分まで ゆるす。開きなおしても わすれない */
+      if(!legacy&&env.from&&env.from!==S.me.id){
+        var hw=hwmGet(env.from);
+        if(hw&&env.n<hw-600000) return;              /* 10分より 古い → ことわる */
+        if(env.n>Date.now()+600000) return;           /* 未来すぎる 番号も ことわる */
+        if(hwmSeen(env.from,env.n)) return;           /* 10分以内でも 一度 うけとった 番号は ことわる（開きなおしても おぼえている） */
+        hwmMark(env.from,env.n);
+      }
       this.seenN.add(nk);
       if(this.seenN.size>3000){ var it2=this.seenN.values(); for(var z=0;z<1500;z++) this.seenN.delete(it2.next().value); }
     }
@@ -5230,6 +5240,19 @@ async function savePairState(){
 /* v147: まだ 読んでいない メッセージだけを 2人の鍵で あんごう化して 端末に あずける
    （iPhoneが アプリを おわらせても きえない。読んだら 消す） */
 var UNREAD_KEY='mtp_unread_v1', unreadT=null;
+/* v151: 相手ごとの「ここまで うけとった 番号」（リプレイよけ） */
+var HWM_KEY='mtp_hwm_v1', HWM=null, hwmT=null;
+function hwmLoad(){ if(HWM) return HWM; try{ HWM=JSON.parse(localStorage.getItem(HWM_KEY)||'{}')||{}; }catch(e){ HWM={}; } return HWM; }
+function hwmGet(id){ var h=hwmLoad(); return +h[id]||0; }
+function hwmSet(id,n){ var h=hwmLoad(); h[id]=n; if(hwmT) return; hwmT=setTimeout(function(){ hwmT=null; try{ localStorage.setItem(HWM_KEY,JSON.stringify(HWM)); }catch(e){} },500); }
+function hwmSeen(id,n){ var h=hwmLoad(); var a=h['s:'+id]; return !!(a&&a.indexOf(n)>=0); }
+function hwmMark(id,n){
+  var h=hwmLoad(); var k='s:'+id; var a=h[k]||[];
+  var top=Math.max(+h[id]||0,n);
+  a.push(n); a=a.filter(function(x){ return x>=top-600000; }); if(a.length>400) a=a.slice(-400);
+  h[k]=a; hwmSet(id,top);
+}
+function hwmClear(){ HWM={}; try{ localStorage.removeItem(HWM_KEY); }catch(e){} }
 function unreadSave(){
   if(unreadT) return;
   unreadT=setTimeout(async function(){
@@ -5336,6 +5359,7 @@ async function resumeConnect(silent){
     S.phase='play';
     S.chatRendered=-1;
     try{ await unreadRestore(sk); }catch(e){}   /* v147: あずけて いた 未読を もどす */
+    try{ await outRestore(); if(S.outbox&&S.outbox.length) setTimeout(flushOutbox,1500); }catch(e){}   /* v150: 送信待ちを もどす */
     if($('#p-me')) $('#p-me').textContent=meName();
     if($('#p-opp')) $('#p-opp').textContent=peerName();
     startPing(); startWatch(); if(S.isHost) startFullWatch();
@@ -6657,12 +6681,36 @@ $('#in-chat').addEventListener('keydown',function(e){ if(e.key==='Enter'&&e.isCo
 var lastChatAt=0;
 /* 送信待ちの まとめ送り（1回の POST で 最大8通） */
 var OUT_KEY='mtp_out_v1';
-function outLoad(){ try{ return JSON.parse(localStorage.getItem(OUT_KEY)||'[]')||[]; }catch(e){ return []; } }
+/* v150: 送信待ちも 2人の鍵で あんごう化して 端末に のこす（平文で のこさない） */
+function outLoad(){
+  try{
+    var v=localStorage.getItem(OUT_KEY); if(!v) return [];
+    if(v.charAt(0)==='['){ localStorage.removeItem(OUT_KEY); return JSON.parse(v)||[]; }   /* ふるい 平文は 読んで すぐ 消す */
+    if(S.__outCache) return S.__outCache.slice();
+    return [];
+  }catch(e){ return []; }
+}
+async function outRestore(){
+  try{
+    var v=localStorage.getItem(OUT_KEY); if(!v||!S.sessKey) return;
+    if(v.charAt(0)==='['){ S.outbox=outLoad(); outSave(); return; }
+    var buf=unb64(v);
+    var pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:buf.slice(0,12)},S.sessKey,buf.slice(12));
+    var a=JSON.parse(new TextDecoder().decode(pt)); if(!Array.isArray(a)) return;
+    S.__outCache=a; S.outbox=a.slice();
+  }catch(e){}
+}
 function outSave(){
   try{
     var a=(S.outbox||[]).map(function(x){ return {text:x.text,at:x.at}; });
-    if(!a.length){ localStorage.removeItem(OUT_KEY); return; }
-    localStorage.setItem(OUT_KEY,JSON.stringify(a));
+    if(!a.length){ localStorage.removeItem(OUT_KEY); S.__outCache=null; return; }
+    S.__outCache=a;
+    if(!S.sessKey){ return; }
+    var iv=crypto.getRandomValues(new Uint8Array(12));
+    crypto.subtle.encrypt({name:'AES-GCM',iv:iv},S.sessKey,new TextEncoder().encode(JSON.stringify(a))).then(function(ct){
+      var all=new Uint8Array(12+ct.byteLength); all.set(iv,0); all.set(new Uint8Array(ct),12);
+      try{ if(S.outbox&&S.outbox.length) localStorage.setItem(OUT_KEY,b64(all)); }catch(e){}
+    }).catch(function(){});
   }catch(e){}
 }
 function queueChat(txt,at){
@@ -6797,7 +6845,7 @@ $('#btn-leave').addEventListener('click',function(){ unpairBoth(this); });
 /* v118: ペアを 両方の 端末から 解除する（再度 入るには あたらしく ペアが ひつよう） */
 function wipePairLocal(){
   try{ pairClear(); }catch(e){}
-  unreadClear(); try{ swClearNotifs(); }catch(e){}
+  unreadClear(); hwmClear(); try{ swClearNotifs(); }catch(e){}
   try{ localStorage.removeItem('mtp_since_v1'); localStorage.removeItem('mtp_cid_v1'); }catch(e){}
   try{ localStorage.removeItem(OUT_KEY); }catch(e){}
   try{ localStorage.removeItem('mtp_prof_v1'); PROF=profLoad(); }catch(e){}
@@ -7263,6 +7311,7 @@ case 'ack':
 
     case 'full':
       if(m.to&&m.to!==S.me.id) break;   /* ほかの 人の「満席」で 部屋を 出ない */
+      if(S.sealed||S.linked||S.paired) break;   /* v150: ペア成立後の「満席」は にせもの（切断いやがらせ よけ） */
       Net.close(); stopAnnounce(); setNet('off'); setLock(false,'未接続');
       show('lobby');
       $('#note').textContent='この部屋は もう 2人で プレイ中です（満席）。3人目は 入れません。';
@@ -7850,7 +7899,7 @@ function igHeartFly(x){
   };
 })();
 /* 送信待ちが のこって いれば 復元して 送る */
-setTimeout(function(){ try{ S.outbox=outLoad(); if(S.outbox.length){ flushOutbox(); } }catch(e){} },3000);
+setTimeout(async function(){ try{ await outRestore(); S.outbox=S.outbox||outLoad(); if(S.outbox.length){ flushOutbox(); } }catch(e){} },3000);
 /* 起動：ペアの きおくが あれば しずかに つなぐ（メッセージ・通知は とどく） */
 setTimeout(function(){ try{ if(pairHasKeys()&&!Net.topic) resumeConnect(true); }catch(e){} },1200);
 
