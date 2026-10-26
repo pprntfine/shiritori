@@ -791,7 +791,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v159</b>｜ビルド 2026-10-26（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v160</b>｜ビルド 2026-10-26（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -865,7 +865,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v159</b>｜ビルド 2026-10-26（アプリが 裏でも スマホに 直接とどく）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v160</b>｜ビルド 2026-10-26（アプリが 裏でも スマホに 直接とどく）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -8088,7 +8088,7 @@ show('lobby'); setTab('chat'); setNet('off'); setLock(false,'未接続');
 
 <script>
 /* ================================================================
-   v159: インスタ風ストーリー（トーク画面の うえ）・自己完結版
+   v160: インスタ風ストーリー（トーク画面の うえ）・自己完結版
    ・しゃしんで とうこう（カメラを かりて さつえい）
    ・24じかんで じどう さくじょ
    ・あいてが 見ると あしあとが つく（見るたび じこく こうしん）
@@ -8277,6 +8277,7 @@ function openView(kind){
   var im=q('#zgs-img img'); im.src=st.data;
   q('#zgs-nm').textContent=(kind==='mine')?'わたし':nameOf();
   var ag=q('#zgs-agt'); ag.setAttribute('data-zgs-ago',st.at); ag.textContent=ago(st.at);
+  try{ q('#zgs-view .zgs-top .zgs-ring').className='zgs-ring'+((kind==='peer'&&D.seenAt!==st.at)?'':' seen'); }catch(e){}
   var hb=q('#zgs-hb'); hb.hidden=(kind!=='peer');
   var db=q('#zgs-del'); db.hidden=(kind!=='mine');
   var fp=q('#zgs-fp'); fp.hidden=(kind!=='mine'); if(kind==='mine') fillFp();
@@ -8314,7 +8315,7 @@ function renderTray(){
   var mR=mine.querySelector('.zgs-ring'), mAv=mine.querySelector('.zgs-av'), mLab=mine.querySelector('.zgs-lab2');
   var pR=peer.querySelector('.zgs-ring'), pAv=peer.querySelector('.zgs-av'), pLab=peer.querySelector('.zgs-lab2');
   avInto(mAv,P.me,'🐷');
-  if(D.mine){ mR.className='zgs-ring'; mLab.textContent='わたし・'+ago(D.mine.at); }
+  if(D.mine){ mR.className='zgs-ring seen'; mLab.textContent='わたし・'+ago(D.mine.at); }
   else{ mR.className='zgs-ring none'; mLab.textContent='わたし'; }
   var vw=D.views[mySid()]||{n:0};
   var bd=mR.querySelector('.zgs-badge');
@@ -8373,7 +8374,8 @@ css.textContent='#zgs-tray{display:flex;align-items:center;gap:14px;background:#
 +'.zgs-nm{font-weight:900;font-size:14px}'
 +'.zgs-agt{font-size:11px;opacity:.75}'
 +'.zgs-x{margin-left:auto;font-size:22px;background:none;border:0;color:#fff;cursor:pointer;padding:6px;font-weight:700}'
-+'#zgs-del{position:absolute;left:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 24px);font-size:20px;z-index:3}'
++'#zgs-del{position:absolute;right:76px;bottom:calc(env(safe-area-inset-bottom,0px) + 24px);font-size:20px;z-index:3}'
++'.zgs-fp{margin-right:118px}'
 +'#zgs-img{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:18px}'
 +'#zgs-img img{max-width:100%;max-height:100%;border-radius:12px;box-shadow:0 18px 50px rgba(0,0,0,.5)}'
 +'.zgs-foot{padding:10px 14px calc(env(safe-area-inset-bottom,0px) + 16px);color:#fff;position:relative;z-index:2}'
