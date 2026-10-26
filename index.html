@@ -787,7 +787,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v151</b>｜ビルド 2026-10-24（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v154</b>｜ビルド 2026-10-24（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1090,7 +1090,7 @@ function tailKana(w){
 }
 var KANA_RE=/^[\u3041-\u309f\u30a1-\u30f6\u30fc]+$/;
 var MAX_WORD=30, MAX_CHAT=300;
-var CHAT_EXP_MS=15*60*1000; /* 既読から15分後にトークを完全削除 */
+var CHAT_EXP_MS=15*60*1000; /* v154: 自動削除は やめた（この 値は もう つかわない）。けすのは「🗑 けす」だけ */
 
 /* =================================================================
    2. 暗号（合言葉 → 鍵・部屋名）と 送受信の封筒
@@ -1770,6 +1770,17 @@ var Net={
     try{ var o=JSON.parse(localStorage.getItem('mtp_since_v1')||'null'); if(o&&o.topic===topic) return o; }catch(e){}
     return null;
   },
+  /* v152: 相手が おなじ メッセージを 送りなおして きた＝こちらの 受領証が とどいて いない。
+     中身は 2回 出さず、受領証だけ かえしなおす（相手の「送信中」が ずっと きえない のを ふせぐ） */
+  reAck:function(env,legacy){
+    try{
+      if(legacy||!env||env.t!=='chats'||env.from===S.me.id||!env.n) return;
+      this._reAckAt=this._reAckAt||{};
+      var now=Date.now(); if(now-(this._reAckAt[env.n]||0)<1500) return;
+      this._reAckAt[env.n]=now;
+      this.send({t:'ack',n1:env.n});
+    }catch(e){}
+  },
   process:async function(body,att){
     if(!this.key) return;
     var env=null, legacy=false;
@@ -1787,7 +1798,7 @@ var Net={
     if(typeof env.n==='number'){
       var nk=String(env.from)+':'+env.n;
       if(!this.seenN) this.seenN=new Set();
-      if(this.seenN.has(nk)) return;
+      if(this.seenN.has(nk)){ this.reAck(env,legacy); return; }
       /* v151: 録画された 古い 暗号文の 再送（リプレイ）を ことわる。
          番号は 送った 時刻（ミリ秒）から できているので、相手ごとに「ここまで うけとった」を 端末に おぼえる。
          とどく 順番の いれかわりは 10分まで ゆるす。開きなおしても わすれない */
@@ -1795,7 +1806,7 @@ var Net={
         var hw=hwmGet(env.from);
         if(hw&&env.n<hw-600000) return;              /* 10分より 古い → ことわる */
         if(env.n>Date.now()+600000) return;           /* 未来すぎる 番号も ことわる */
-        if(hwmSeen(env.from,env.n)) return;           /* 10分以内でも 一度 うけとった 番号は ことわる（開きなおしても おぼえている） */
+        if(hwmSeen(env.from,env.n)){ this.reAck(env,legacy); return; }   /* 10分以内でも 一度 うけとった 番号は ことわる（開きなおしても おぼえている） */
         hwmMark(env.from,env.n);
       }
       this.seenN.add(nk);
@@ -1853,6 +1864,13 @@ var Net={
        アプリを 切った ときの 通知（ベル）が とまる → 大事な ものだけ ntfy に のせる */
     var NTFY_KEEP={chats:1,unpair:1,prof:1,join:1,ok:1,eject:1,bye:1,full:1,hi2:1};
     if(!(env&&NTFY_KEEP[env.t])&&fastOk) return true;
+    /* v152: 受領証・ping は 即時路が きれて いる ときも 行列を 待たせない（うしろで 保存路へ）。
+       以前は 1通ごとに 最大7秒 待って いたので、うしろの トークが「送信中」の まま つまっていた */
+    if(env&&!NTFY_KEEP[env.t]){   /* 受領証・既読・ping・通話の 合図など：トークの 行列を 待たせない */
+      if(this.coolUntil&&Date.now()<this.coolUntil) return false;
+      if(!this.allow(typeof prio==='number'?prio:1)) return false;
+      this.postStore(body); return true;
+    }
     /* ntfy は 保存用(相手が いない ときの 受けとり用)。制限中は 2本目だけで 成功あつかい */
     if(this.coolUntil&&Date.now()<this.coolUntil) return fastOk;
     if(!this.allow(typeof prio==='number'?prio:1)) return fastOk;
@@ -1949,7 +1967,8 @@ var Net={
    ntfy と 同じ あんごう文を 同時に ながす。どちらか 早い ほうが とどけば OK（重複は 番号で すてる）
    ================================================================ */
 var Fast={
-  urls:['wss://broker.hivemq.com:8884/mqtt','wss://broker.emqx.io:8084/mqtt'],
+  /* v153: こちらは HiveMQ 専用。以前は 切れると EMQX に のりかえ、EMQX が 不調だと 9秒 まって メッセージが おくれた（EMQX は FastE が 担当） */
+  urls:['wss://broker.hivemq.com:8884/mqtt'],
   ws:null,open:false,topic:null,ui:0,pid:1,pingT:null,retryT:null,buf:[],
   enc:function(str){ var b=new TextEncoder().encode(str); var a=new Uint8Array(2+b.length); a[0]=b.length>>8; a[1]=b.length&255; a.set(b,2); return a; },
   len:function(n){ var o=[]; do{ var d=n%128; n=Math.floor(n/128); if(n>0) d|=128; o.push(d); }while(n>0); return o; },
@@ -1965,7 +1984,7 @@ var Fast={
     var url=this.urls[this.ui%this.urls.length];
     var w; try{ w=new WebSocket(url,['mqtt']); }catch(e){ this.retry(); return; }
     w.binaryType='arraybuffer'; this.ws=w; this.rb=new Uint8Array(0);
-    var guard=setTimeout(function(){ if(!self.open){ try{ w.close(); }catch(e){} } },9000);
+    var guard=setTimeout(function(){ if(!self.open){ try{ w.close(); }catch(e){} } },5000);
     w.onopen=function(){
       var persist=!!self.persist&&url.indexOf('emqx')>=0;
       var cidStr=persist?self.persistId():('zg'+Math.random().toString(36).slice(2,12));
@@ -1992,18 +2011,19 @@ var Fast={
     var self=this, t=type>>4;
     if(t===2){                                   /* CONNACK */
       if(body[1]!==0){ try{ this.ws.close(); }catch(e){} return; }
-      clearTimeout(guard); this.open=true; this.subOk=false; this.fails=0;
+      clearTimeout(guard); this.open=true; this.subOk=false; this.fails=0; this.openedAt=Date.now();
       var tp=this.enc('zgk/'+this.topic);
       this.ws.send(this.pkt(0x82,this.cat([new Uint8Array([0,this.pid++&255||1]),tp,new Uint8Array([this.persistNow?1:0])])));
       /* 購読の 返事(SUBACK)が 4秒 こなければ べつの 中継所へ */
       var wsNow=this.ws; setTimeout(function(){ if(self.ws===wsNow&&!self.subOk){ self.ui++; self.renew(); } },4000);
-      clearInterval(this.pingT); this.pingT=setInterval(function(){ try{ if(self.open) self.ws.send(new Uint8Array([0xC0,0])); }catch(e){} },8000);
+      clearInterval(this.pingT); this.pingT=setInterval(function(){ try{ if(self.open) self.ws.send(new Uint8Array([0xC0,0])); }catch(e){} },5000);
       this.lastRx=Date.now();
-      var q=this.buf; this.buf=[]; q.forEach(function(x){ self.pub(x); });
+      /* v153: ためた 分は 購読の 返事(SUBACK)の あとで 流す（つないだ 直後に 流すと 中継所が すてる ことが あった） */
+      var wsF=this.ws; setTimeout(function(){ if(self.ws===wsF&&self.open) self.flushBuf(); },1200);
       try{ if(Vid.rxTopic) this.sub(Vid.rxTopic); }catch(e){}
       try{ paintTopicTag(); }catch(e){}
     }else if(t===9){                             /* SUBACK */
-      if(body[2]!==0x80) this.subOk=true; else { this.ui++; this.renew(); }
+      if(body[2]!==0x80){ this.subOk=true; this.flushBuf(); } else { this.ui++; this.renew(); }
     }else if(t===3){                             /* PUBLISH */
       var tl=(body[0]<<8)|body[1], q=(type>>1)&3, off=2+tl+(q?2:0);
       if(q===1){ try{ this.ws.send(new Uint8Array([0x40,2,body[2+tl],body[3+tl]])); }catch(e){} }   /* PUBACK: うけとった ことを 中継所へ */
@@ -2028,9 +2048,10 @@ var Fast={
     if(this.ws.bufferedAmount>600000) return false;   /* 回線が つまって いる ときは 古い コマを すてる(おくれ防止) */
     try{ this.ws.send(this.pkt(0x30,this.cat([this.enc(name),bytes]))); return true; }catch(e){ return false; }
   },
+  flushBuf:function(){ var self=this, q=this.buf; this.buf=[]; q.forEach(function(x){ self.pub(x); }); },
   pub:function(str){
     if(!this.topic) return false;
-    if(!this.open||!this.ws){ this.buf.push(str); if(this.buf.length>30) this.buf.shift(); return false; }
+    if(!this.open||!this.ws||!this.subOk){ this.buf.push(str); if(this.buf.length>30) this.buf.shift(); return false; }
     try{
       if(this.persistNow){ var id=(this.pid++&0xFFFF)||1; this.ws.send(this.pkt(0x32,this.cat([this.enc('zgk/'+this.topic),new Uint8Array([id>>8,id&255]),new TextEncoder().encode(str)]))); }
       else this.ws.send(this.pkt(0x30,this.cat([this.enc('zgk/'+this.topic),new TextEncoder().encode(str)])));
@@ -2054,6 +2075,7 @@ var Fast={
     var self=this; if(!this.topic) return;
     if(this.probing&&Date.now()-this.probing<2500) return;
     if(!this.open||!this.ws){ this.kick(); return; }
+    if(Date.now()-(this.openedAt||0)<5000) return;   /* v153: つないだ ばかりの 回線は 切らない（つなぎなおしが 2重に なって おくれていた） */
     var t0=Date.now(); this.probing=t0;
     try{ this.ws.send(new Uint8Array([0xC0,0])); }catch(e){ this.renew(); return; }
     setTimeout(function(){ self.probing=0; if(!(self.lastRx>t0)){ self.ui++; self.renew(); } },1500);
@@ -2099,7 +2121,7 @@ Fast={
   pubBin:function(n,b){ return (FastH.open&&FastH.pubBin(n,b))||(FastE.open&&FastE.pubBin(n,b))||false; }
 };
 /* 40秒 なにも 受けとらなければ 切れたと みなす */
-setInterval(function(){ FASTS.forEach(function(f){ try{ if(f.topic&&f.open&&f.lastRx&&Date.now()-f.lastRx>18000){ f.ui++; f.renew(); } else if(f.topic&&!f.open&&!f.ws) f.kick(); }catch(e){} }); },3000);
+setInterval(function(){ FASTS.forEach(function(f){ try{ if(f.topic&&f.open&&f.lastRx&&Date.now()-f.lastRx>12000){ f.ui++; f.renew(); } else if(f.topic&&!f.open&&!f.ws) f.kick(); }catch(e){} }); },3000);
 setInterval(function(){ try{ if(Fast.topic&&!document.hidden) Fast.echo(); }catch(e){} },15000);
 
 /* ================================================================
@@ -5234,6 +5256,7 @@ async function savePairState(){
     try{ skb=b64(await crypto.subtle.exportKey('raw',S.sessKey)); }catch(e){ return false; }
     pairSave({peerId:(S.opp&&S.opp.id)||'',peerName:(S.opp&&S.opp.name)||'あいて',
       isHost:S.isHost,topic:Net.topic,rk:rkb,sk:skb});
+    S.chatLoaded=true; persistChat();   /* v154: あたらしい ペアの トークも のこす */
     return true;
   }catch(e){ return false; }
 }
@@ -5253,7 +5276,8 @@ function hwmMark(id,n){
   h[k]=a; hwmSet(id,top);
 }
 function hwmClear(){ HWM={}; try{ localStorage.removeItem(HWM_KEY); }catch(e){} }
-function unreadSave(){
+function unreadSave(){ persistChat(); }
+function unreadSaveOld(){
   if(unreadT) return;
   unreadT=setTimeout(async function(){
     unreadT=null;
@@ -5311,7 +5335,7 @@ function askDelChat(){
 function delChatAll(){
   S.chat=S.chat.filter(function(m){ return m&&m.sys; });
   S.chatRendered=-1; S.unread=0;
-  unreadClear();
+  unreadClear(); chatClearStore();
   try{ swClearNotifs(); }catch(e){}
   updateBadge(); updateTalkbackBadges(); updateTitleBadge();
   renderChat(true);
@@ -5331,16 +5355,67 @@ function pairLoad(){
 }
 function pairClear(){ try{ localStorage.removeItem(PAIR_KEY); }catch(e){} }
 var chatSaveT=null;
+/* v154: トークの きろくを この スマホに のこす（2人の 鍵で あんごう化・IndexedDB）。
+   アプリを とじても のこる。けすのは「🗑 けす」か ペア解除 だけ */
+function chatDbOpen(){ return new Promise(function(res,rej){ try{ var r=indexedDB.open('zg-chat',1); r.onupgradeneeded=function(){ r.result.createObjectStore('c'); }; r.onsuccess=function(){ res(r.result); }; r.onerror=function(){ rej(r.error); }; }catch(e){ rej(e); } }); }
+async function chatDbPut(v){ var db=await chatDbOpen(); await new Promise(function(res){ var tx=db.transaction('c','readwrite'); if(v===null) tx.objectStore('c').delete('h'); else tx.objectStore('c').put(v,'h'); tx.oncomplete=res; tx.onerror=res; tx.onabort=res; }); try{ db.close(); }catch(e){} }
+async function chatDbGet(){ var db=await chatDbOpen(); var v=await new Promise(function(res){ var tx=db.transaction('c','readonly'); var q=tx.objectStore('c').get('h'); q.onsuccess=function(){ res(q.result||null); }; q.onerror=function(){ res(null); }; }); try{ db.close(); }catch(e){} return v; }
+var chatSaving=false, chatAgain=false;
+async function chatSaveNow(){
+  if(chatSaving){ chatAgain=true; return; }
+  if(!S.sessKey||!S.linked||!S.chatLoaded) return;   /* よみこみ前に 上書き しない */
+  chatSaving=true;
+  try{
+    var list=S.chat.filter(function(m){ return m&&!m.sys&&(m.text||m.data); }).map(function(m){
+      return {f:m.from,t:m.text||'',p:m.photo?1:0,d:m.photo?(m.data||''):'',a:m.at||0,n:m.n||0,s:m.sent===false?0:1,k:m.acked?1:0,r:m.read?1:0,u:m.pid||''};
+    });
+    if(!list.length){ await chatDbPut(null); }
+    else{
+      var meta={list:list,unread:S.unread||0,readSent:S.readSent||0,lastPeerN:S.lastPeerN||0};
+      var iv=crypto.getRandomValues(new Uint8Array(12));
+      var ct=await crypto.subtle.encrypt({name:'AES-GCM',iv:iv},S.sessKey,new TextEncoder().encode(JSON.stringify(meta)));
+      await chatDbPut({iv:iv,ct:new Uint8Array(ct),at:Date.now()});
+    }
+    try{ localStorage.removeItem(UNREAD_KEY); }catch(e){}   /* 古い あずかり箱は もう いらない */
+  }catch(e){}
+  chatSaving=false;
+  if(chatAgain){ chatAgain=false; chatSaveNow(); }
+}
 function persistChat(){
   if(chatSaveT) return;
-  chatSaveT=setTimeout(function(){
-    chatSaveT=null;
-    try{
-      var p=pairLoad(); if(!p||!p.sid) return;
-      try{ delete p.chat; localStorage.setItem(PAIR_KEY,JSON.stringify(p)); }catch(e){}
-    }catch(e){}
-  },400);
+  chatSaveT=setTimeout(function(){ chatSaveT=null; chatSaveNow(); },400);
 }
+async function chatRestore(sk){
+  var k=0;
+  try{
+    var v=await chatDbGet(); if(!v||!v.ct) return 0;
+    var pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:v.iv},sk,v.ct);
+    var meta=JSON.parse(new TextDecoder().decode(pt)); var list=meta&&meta.list; if(!Array.isArray(list)) return 0;
+    if(!Net.seenN) Net.seenN=new Set();
+    var have={}; S.chat.forEach(function(m){ if(m&&!m.sys) have[m.from+':'+(m.n||0)+':'+(m.text||m.pid||'')]=1; });
+    list.forEach(function(it){
+      if(!it||!(it.t||it.d)) return;
+      var key=it.f+':'+(it.n||0)+':'+(it.t||it.u||'');
+      if(have[key]) return; have[key]=1;
+      var m={from:it.f,at:it.a||Date.now(),n:it.n||0,sent:!!it.s,acked:!!it.k,read:!!it.r,uid:String(++UID)};
+      if(it.p){ if(String(it.d).slice(0,15)!=='data:image/jpeg') return; m.photo=true; m.data=it.d; m.pid=it.u||''; }
+      else m.text=String(it.t).slice(0,MAX_CHAT);
+      if(m.from===S.me.id&&!m.acked&&!m.read&&m.sent) m.acked=true;   /* 前回 「送信済み」の ものは 送りなおさない */
+      S.chat.push(m);
+      if(m.n&&m.from!==S.me.id) Net.seenN.add(String(m.from)+':'+m.n);
+      k++;
+    });
+    S.chat.sort(function(a,b){ return (a.at||0)-(b.at||0); });
+    S.lastPeerN=Math.max(S.lastPeerN||0,meta.lastPeerN||0);
+    S.readSent=Math.max(S.readSent||0,meta.readSent||0);
+    S.unread=Math.max(S.unread||0,meta.unread||0);
+    updateBadge(); updateTalkbackBadges();
+  }catch(e){}
+  return k;
+}
+function chatClearStore(){ try{ chatDbPut(null); }catch(e){} try{ localStorage.removeItem(UNREAD_KEY); }catch(e){} }
+window.addEventListener('pagehide',function(){ try{ chatSaveNow(); }catch(e){} });
+document.addEventListener('visibilitychange',function(){ if(document.hidden){ try{ chatSaveNow(); }catch(e){} } });
 /* 保存した 鍵で そのまま つなぎなおす（ホストの 許可は そのまま 継続） */
 async function resumeConnect(silent){
   var p=pairLoad();
@@ -5358,8 +5433,19 @@ async function resumeConnect(silent){
     Net.switchTo(sk);
     S.phase='play';
     S.chatRendered=-1;
-    try{ await unreadRestore(sk); }catch(e){}   /* v147: あずけて いた 未読を もどす */
-    try{ await outRestore(); if(S.outbox&&S.outbox.length) setTimeout(flushOutbox,1500); }catch(e){}   /* v150: 送信待ちを もどす */
+    S.chatLoaded=false;
+    try{ var got=await chatRestore(sk); if(!got) await unreadRestore(sk); }catch(e){}   /* v154: トークの きろくを もどす（なければ 古い あずかり箱） */
+    try{ await outRestore(); }catch(e){}   /* v150: 送信待ちを もどす */
+    try{
+      /* v154: 送信待ちと 画面の ふきだしを むすびなおす（「送信中」の まま のこらない ように） */
+      (S.outbox||[]).forEach(function(it){
+        for(var q=S.chat.length-1;q>=0;q--){ var c=S.chat[q]; if(c&&!c.sys&&c.from===S.me.id&&c.text===it.text&&c.at===it.at){ it.msg=c; c.sent=false; return; } }
+        var mm={from:S.me.id,text:it.text,at:it.at,sent:false,acked:false,n:0,uid:String(++UID)}; S.chat.push(mm); it.msg=mm;
+      });
+      S.chat.sort(function(a,b){ return (a.at||0)-(b.at||0); });
+    }catch(e){}
+    S.chatLoaded=true; persistChat();
+    if(S.outbox&&S.outbox.length) setTimeout(flushOutbox,1500);
     if($('#p-me')) $('#p-me').textContent=meName();
     if($('#p-opp')) $('#p-opp').textContent=peerName();
     startPing(); startWatch(); if(S.isHost) startFullWatch();
@@ -5407,7 +5493,7 @@ function openChatUI(){
 if($('#btn-secret-back')) $('#btn-secret-back').addEventListener('click',function(){ show('lobby'); });
 if($('#btn-home')) $('#btn-home').addEventListener('click',function(){ show('lobby'); });
 if($('#btn-wipe')) $('#btn-wipe').addEventListener('click',function(){
-  pairClear(); unreadClear();
+  pairClear(); unreadClear(); chatClearStore();
   try{ S.chat=[]; }catch(e){}
   note('この端末の きろくを 消しました。','#note2');
 });
@@ -5696,7 +5782,7 @@ function metaText(m,mine,at,groupEnd){
   if(m.sent===false||!m.n) return '送信中…';
   if(m.read) return '既読 '+tm;
   if(m.acked) return '未読 '+tm;
-  return '送信中…';
+  return '送信済み '+tm;   /* v152: 中継所まで とどいた（相手の スマホが 受けとると「未読」に かわる） */
 }
 function scrollChatBottom(){
   var box=$('#chat-log'); if(!box) return;
@@ -5715,11 +5801,7 @@ function maybeSendRead(){
   if(!chatOnScreen()) return;   /* v146: トップ画面・クイズ中は 既読に しない */
   if(!S.lastPeerN||S.lastPeerN<=S.readSent) return;
   S.readSent=S.lastPeerN;
-  var exp=Date.now()+CHAT_EXP_MS, i;
-  for(i=0;i<S.chat.length;i++){
-    var mm=S.chat[i];
-    if(!mm.sys&&mm.from!==S.me.id&&mm.n&&mm.n<=S.lastPeerN&&!mm.exp) mm.exp=exp;
-  }
+  var exp=0;   /* v154: 読んでも けさない */
   unreadSave();   /* v147: 読んだ ものは あずかり箱から 外す */
   /* v115: 既読を あいてに つたえる（すこし まとめてから 1通） */
   if(S.readT) return;
@@ -5733,10 +5815,7 @@ function maybeSendRead(){
 /* 消去：期限の来たメッセージを端末内から完全に取り除く(復元不可) */
 function sweepChat(){
   var now=Date.now(), gone=false, i;
-  for(i=0;i<S.chat.length;i++){
-    var mm=S.chat[i];
-    if(!mm.sys&&mm.exp&&now>=mm.exp){ mm.text=''; mm.data=''; mm.exp=0; gone=true; }
-  }
+  for(i=0;i<S.chat.length;i++){ var mm=S.chat[i]; if(mm&&mm.exp) mm.exp=0; }   /* v154: 自動削除は しない */
   if(gone){
     S.chat=S.chat.filter(function(mm){ return mm.sys||!mm.exp; });
   }
@@ -5924,7 +6003,7 @@ async function recvPhotoChunk(m){
   delete photoBuf[id];
   Net.send({t:'ack',upTo:m.n||0});   /* そろった しるしを かえす */
   if(all.length>200000||all.slice(0,15)!=='data:image/jpeg') return;
-  S.chat.push({photo:true,from:m.from,at:Date.now(),data:all,pid:id,uid:String(++UID),exp:Date.now()+CHAT_EXP_MS});
+  S.chat.push({photo:true,from:m.from,at:Date.now(),data:all,pid:id,uid:String(++UID),n:m.n||0,sent:true});
   if(S.tab==='chat') renderChat();
   else{ S.unread++; updateBadge(); updateTitleBadge(); notifyIncoming(); }
 }
@@ -6729,8 +6808,10 @@ function queueChat(txt,at){
 function flushOutbox(){
   S.outbox=S.outbox||outLoad();
   if(!S.outbox.length) return;
+  try{ FASTS.forEach(function(f){ if(f.topic&&f.open&&Date.now()-(f.lastRx||0)>6000) f.probe(); else if(f.topic&&!f.open&&!f.ws) f.kick(); }); }catch(e){}
   if(!Net.topic||!Net.key) return;
-  if(Net.coolUntil&&Date.now()<Net.coolUntil&&!Fast.open){ setTimeout(flushOutbox,3000); return; }
+  /* v153: 即時路が つなぎなおし中なら 0.3秒ごとに 見る（以前は 3秒 まって いた → つながった 瞬間に 送る） */
+  if(Net.coolUntil&&Date.now()<Net.coolUntil&&!(Fast.open&&(FastH.subOk||FastE.subOk))){ if(!S.flushWaitT) S.flushWaitT=setTimeout(function(){ S.flushWaitT=null; flushOutbox(); },300); return; }
   if(S.flushing) return;
   /* 1通の 封筒に 入る ぶんだけ まとめる（入りきらないと 送れなかった） */
   var items=[], bytes=0;
@@ -6784,7 +6865,7 @@ function resendUnacked(all){
     var m=S.chat[i];
     if(!m||m.sys||m.from!==S.me.id||m.acked||m.read||!m.env) continue;
 
-    var gap=Math.min(15000,2500*Math.pow(1.5,Math.min(m.tries||0,6)));
+    var gap=Math.min(15000,1500*Math.pow(1.5,Math.min(m.tries||0,6)));
     if(all||Date.now()-(m.lastTry||m.at||0)>gap){ m.tries=(m.tries||0)+1; m.lastTry=Date.now(); try{ Fast.probe(); }catch(e){} Net.resendEnv(m.env); any=true; }
   }
   if(any&&S.tab==='chat') renderChat(true);
@@ -6845,7 +6926,7 @@ $('#btn-leave').addEventListener('click',function(){ unpairBoth(this); });
 /* v118: ペアを 両方の 端末から 解除する（再度 入るには あたらしく ペアが ひつよう） */
 function wipePairLocal(){
   try{ pairClear(); }catch(e){}
-  unreadClear(); hwmClear(); try{ swClearNotifs(); }catch(e){}
+  unreadClear(); chatClearStore(); hwmClear(); try{ swClearNotifs(); }catch(e){}
   try{ localStorage.removeItem('mtp_since_v1'); localStorage.removeItem('mtp_cid_v1'); }catch(e){}
   try{ localStorage.removeItem(OUT_KEY); }catch(e){}
   try{ localStorage.removeItem('mtp_prof_v1'); PROF=profLoad(); }catch(e){}
@@ -7150,12 +7231,8 @@ Net.onMsg=function(m){
         var set={}; ns.forEach(function(n){ set[n]=1; });
         for(var i=0;i<S.chat.length;i++){ var x=S.chat[i]; if(x&&!x.sys&&x.from===S.me.id&&x.n&&set[x.n]){ x.read=true; x.acked=true; } }
       })(m.ns);
-      (function(upTo,expAt){
-        for(var i=0;i<S.chat.length;i++){
-          var mm=S.chat[i];
-          if(!mm.sys&&mm.from===S.me.id&&mm.n&&mm.n<=upTo&&!mm.exp) mm.exp=expAt;
-        }
-      })(m.upTo||0,(typeof m.exp==='number'&&m.exp>Date.now())?m.exp:Date.now()+CHAT_EXP_MS);
+      /* v154: 既読に なっても けさない（けすのは「🗑 けす」だけ） */
+      persistChat();
       if(S.tab==='chat') renderChat();
       break;
 
