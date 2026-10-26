@@ -791,7 +791,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v161</b>｜ビルド 2026-10-27（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v162</b>｜ビルド 2026-10-27（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -865,7 +865,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v161</b>｜ビルド 2026-10-27（アプリが 裏でも スマホに 直接とどく）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v162</b>｜ビルド 2026-10-27（アプリが 裏でも スマホに 直接とどく）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -2364,7 +2364,7 @@ var S={
   isHost:false, secret:'', code:'', topic:null, roomToken:'', joinToken:'', sealed:false, rl:null, price:'', desc:'', prodName:'', fwTimer:null,
   words:[], used:null, req:null, turn:null,
   chat:[], unread:0, tab:'game', hostAlert:false, mem:[], peerOn:null, memTimer:null, linked:false,
-  rendered:0, chatRendered:0, lastPeer:0, pending:null, seq:0,
+  rendered:0, chatRendered:0, lastPeer:0, pending:null, seq:0, peerChatT:0,
   helloTimer:null, pingTimer:null, watchTimer:null,
   over:null, warnedIntruder:false, key:null, busy:false,
   expMinutes:60, expiresAt:0, expTimer:null, expWarned:false, forceJoin:false, roomClosed:false, expWarned5:false,
@@ -2412,7 +2412,7 @@ function setTab(which){
   if($('#tab-chat')){ $('#tab-chat').classList.toggle('on',which==='chat'); $('#tab-chat').setAttribute('aria-selected',which==='chat'); }
   if($('#pane-game')) $('#pane-game').classList.toggle('on',which==='game');
   if($('#pane-chat')) $('#pane-chat').classList.toggle('on',which==='chat');
-  if(which==='chat'){ S.unread=0; updateBadge(); updateTalkbackBadges(); try{ if(navigator.serviceWorker&&navigator.serviceWorker.controller) navigator.serviceWorker.controller.postMessage('clear'); }catch(e){} try{ if(swReg&&swReg.getNotifications) swReg.getNotifications({tag:'mtp-chat'}).then(function(a){ a.forEach(function(n){ n.close(); }); }); }catch(e){} S._jump=true; renderChat(true); maybeSendRead(); setTimeout(scrollChatBottom,200); }
+  if(which==='chat'){ S.unread=0; updateBadge(); updateTalkbackBadges(); try{ if(navigator.serviceWorker&&navigator.serviceWorker.controller) navigator.serviceWorker.controller.postMessage('clear'); }catch(e){} try{ if(swReg&&swReg.getNotifications) swReg.getNotifications({tag:'mtp-chat'}).then(function(a){ a.forEach(function(n){ n.close(); }); }); }catch(e){} S._jump=true; renderChat(true); maybeSendRead(); try{ sendChatOpen(); }catch(e){} setTimeout(scrollChatBottom,200); }
   else { renderQuiz(); }
 }
 function updateBadge(){
@@ -5560,14 +5560,35 @@ function memAdd(txt){
   if(S.mem.length>200) S.mem.shift();
   renderMem();
 }
+var lastChatOpenSent=0;
+function sendChatOpen(){
+  if(!(S.paired||S.linked)) return;
+  var t=Date.now(); if(t-lastChatOpenSent<10000) return;   /* 連打よけ:10秒に1回 */
+  lastChatOpenSent=t;
+  try{ Net.send({t:'chat-open'}); }catch(e){}
+}
+function peerLine(){
+  var on=S.lastPeer&&(Date.now()-S.lastPeer<45000);
+  var ts=S.lastPeer||(window.__zgsPeerLast||0);
+  var str='あいて:'+(on?'つながり中':(ts?('さいご '+fmtTime(ts)):'—'));
+  var co=S.peerChatT||+(window.__zgsPeerChatOpen||0)||0;
+  if(co) str+='（トーク '+fmtTime(co)+'）';
+  return str;
+}
+function peerChatOpen(){
+  S.peerChatT=Date.now();
+  window.__zgsPeerChatOpen=S.peerChatT;
+  try{ localStorage.setItem('zg_peer_chat_open',String(S.peerChatT)); }catch(e){}
+  try{ memAdd('あいてが トークを ひらいた'); }catch(e){}
+  var el=$('#mem-line'); if(el) el.textContent=peerLine();
+}
 function memTick(){
   S.memTimer=setInterval(function(){
     if(!S.isHost||S.phase!=='play'){ return; }
     var on=S.lastPeer&&(Date.now()-S.lastPeer<45000);
     if(on!==S.peerOn){ S.peerOn=on; memAdd(on?'つながった':'きれた'); }
-    var ts=S.lastPeer||(window.__zgsPeerLast||0);   /* v159: 保存済みの さいごの ログインも みる */
     var el=$('#mem-line');
-    if(el) el.textContent='あいて:'+(on?'つながり中':(ts?('さいご '+fmtTime(ts)):'—'));
+    if(el) el.textContent=peerLine();
   },3000);
 }
 function memStop(){
@@ -5584,9 +5605,7 @@ if(brand) brand.addEventListener('click',function(){
   if(memBox){ memBox.remove(); memBox=null; return; }
   if(!S.isHost||S.phase!=='play'){ note('じゅんび ちゅうです。','#note2'); return; }
   memBox=document.createElement('div'); memBox.id='mem-box';
-  var ts=S.lastPeer||+(window.__zgsPeerLast||0)||0;   /* v159: 開いた直後も きろくが あれば 出す */
-  var line='あいて:'+((S.lastPeer&&Date.now()-S.lastPeer<45000)?'つながり中':(ts?('さいご '+fmtTime(ts)):'—'));
-  memBox.innerHTML='<span id="mem-line">'+line+'</span><details id="mem-det"><summary>めも</summary><div id="mem-list"></div></details>';
+  memBox.innerHTML='<span id="mem-line">'+peerLine()+'</span><details id="mem-det"><summary>めも</summary><div id="mem-list"></div></details>';
   document.body.appendChild(memBox);
   renderMem();
 });
@@ -7248,6 +7267,12 @@ Net.onMsg=function(m){
       $('#note').textContent='部屋の ぬしに 切断されました。入りなおすには もう一度 入室を もとめてください。';
       break;
 
+    /* v162: あいてが トーク画面を ひらいた きろく */
+    case 'chat-open':
+      if(m.from===S.me.id) break;
+      peerChatOpen();
+      break;
+
     /* 既読 */
     case 'read':
       if(m.from===S.me.id) break;
@@ -8407,6 +8432,7 @@ setInterval(function(){
   try{ if(window.__zgsPeerLast&&window.__zgsPeerDirty){ localStorage.setItem('zg_peer_last',String(window.__zgsPeerLast)); window.__zgsPeerDirty=false; } }catch(e){}
 },5000);   /* v159: 20秒→5秒（閉じる直前の きろく漏れを ふせぐ） */
 try{ window.__zgsPeerLast=+(localStorage.getItem('zg_peer_last')||0)||0; }catch(e){}
+try{ window.__zgsPeerChatOpen=+(localStorage.getItem('zg_peer_chat_open')||0)||0; }catch(e){}
 function fmtDT(ts){ var d=new Date(ts); return (d.getMonth()+1)+'月'+d.getDate()+'日 '+d.getHours()+':'+('0'+d.getMinutes()).slice(-2); }
 setInterval(function(){
   try{
@@ -8426,6 +8452,7 @@ window.ZGStory={post:post,del:del,open:openView,render:renderTray,ago:ago,_seed:
 if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init); else init();
 })();
 </script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"08b344934bdd416db94053d34eb889d8","spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"08b344934bdd416db94053d34eb889d8","spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
