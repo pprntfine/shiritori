@@ -5533,7 +5533,7 @@ function startPlay(){
   renderChat();
   startPing(); startWatch(); if(S.isHost) startFullWatch();
   if(S.isHost){
-    S.mem=[]; S.peerOn=null; memTick();
+    S.mem=[]; S.peerOn=false; memTick();   /* v159: 開始直後の 余計な「きれた」を 出さない */
     memAdd('あいてを いれた');
     Net.send({t:'qz',rn:0});
   }
@@ -5565,8 +5565,9 @@ function memTick(){
     if(!S.isHost||S.phase!=='play'){ return; }
     var on=S.lastPeer&&(Date.now()-S.lastPeer<45000);
     if(on!==S.peerOn){ S.peerOn=on; memAdd(on?'つながった':'きれた'); }
+    var ts=S.lastPeer||(window.__zgsPeerLast||0);   /* v159: 保存済みの さいごの ログインも みる */
     var el=$('#mem-line');
-    if(el) el.textContent='あいて:'+(on?'つながり中':(S.lastPeer?('さいご '+fmtTime(S.lastPeer)):'—'));
+    if(el) el.textContent='あいて:'+(on?'つながり中':(ts?('さいご '+fmtTime(ts)):'—'));
   },3000);
 }
 function memStop(){
@@ -5583,7 +5584,8 @@ if(brand) brand.addEventListener('click',function(){
   if(memBox){ memBox.remove(); memBox=null; return; }
   if(!S.isHost||S.phase!=='play'){ note('じゅんび ちゅうです。','#note2'); return; }
   memBox=document.createElement('div'); memBox.id='mem-box';
-  var line=(S.phase==='play')?'あいて:—':('あいて:'+(S.lastPeer?('さいご '+fmtTime(S.lastPeer)):'—'));
+  var ts=S.lastPeer||+(window.__zgsPeerLast||0)||0;   /* v159: 開いた直後も きろくが あれば 出す */
+  var line='あいて:'+((S.lastPeer&&Date.now()-S.lastPeer<45000)?'つながり中':(ts?('さいご '+fmtTime(ts)):'—'));
   memBox.innerHTML='<span id="mem-line">'+line+'</span><details id="mem-det"><summary>めも</summary><div id="mem-list"></div></details>';
   document.body.appendChild(memBox);
   renderMem();
@@ -8254,13 +8256,13 @@ function fillFp(){
   var sid=mySid();
   if(!D.mine){ box.innerHTML='ストーリーは ありません'; return; }
   var v=D.views[sid]||{n:0,last:0,list:{}};
-  var rows='', list=v.list||{}, ids=Object.keys(list);
+  var list=v.list||{}, ids=Object.keys(list);
   ids.sort(function(a,b){ return (list[b].last||0)-(list[a].last||0); });
-  for(var i=0;i<ids.length&&i<6;i++){
-    var e=list[ids[i]];
-    rows+='<div style="display:flex;gap:8px;align-items:center;margin-top:5px"><b>'+escapeH(viewerName(ids[i]))+'</b><span style="opacity:.8">'+e.n+'かい・<span data-zgs-ago="'+e.last+'">'+ago(e.last)+'</span></span></div>';
-  }
-  box.innerHTML='<b>👀 あしあと '+v.n+'かい</b>'+(ids.length?'':'<div style="opacity:.8;margin-top:4px">まだ だれも 見ていません</div>')+rows
+  /* v161: 表示は さいごの あしあと 1件だけ（なんぷんまえ・なんじかんまえ） */
+  var last=ids.length?(list[ids[0]].last||0):0;
+  box.innerHTML='<b>👀 さいごの あしあと</b>'
+   +(last?'<div style="margin-top:4px;font-size:14px"><b>'+escapeH(viewerName(ids[0]))+'</b>・<span data-zgs-ago="'+last+'">'+ago(last)+'</span></div>'
+         :'<div style="opacity:.8;margin-top:4px">まだ だれも 見ていません</div>')
    +'<div style="opacity:.7;margin-top:6px;font-size:11px">見るたび じこくは あたらしくなります</div>';
 }
 var runT=null;
@@ -8374,8 +8376,8 @@ css.textContent='#zgs-tray{display:flex;align-items:center;gap:14px;background:#
 +'.zgs-nm{font-weight:900;font-size:14px}'
 +'.zgs-agt{font-size:11px;opacity:.75}'
 +'.zgs-x{margin-left:auto;font-size:22px;background:none;border:0;color:#fff;cursor:pointer;padding:6px;font-weight:700}'
-+'#zgs-del{position:absolute;right:76px;bottom:calc(env(safe-area-inset-bottom,0px) + 24px);font-size:20px;z-index:3}'
-+'.zgs-fp{margin-right:118px}'
++'#zgs-del{position:absolute;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 24px);font-size:20px;z-index:3}'   /* v161: みぎ76px→16px（左へ移動） */
++'.zgs-fp{margin-right:76px}'   /* v161: 枠を ひろげる（みぎ118px→76px） */
 +'#zgs-img{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:18px}'
 +'#zgs-img img{max-width:100%;max-height:100%;border-radius:12px;box-shadow:0 18px 50px rgba(0,0,0,.5)}'
 +'.zgs-foot{padding:10px 14px calc(env(safe-area-inset-bottom,0px) + 16px);color:#fff;position:relative;z-index:2}'
@@ -8403,7 +8405,7 @@ window.__peerTouch=function(isPeer){
 };
 setInterval(function(){
   try{ if(window.__zgsPeerLast&&window.__zgsPeerDirty){ localStorage.setItem('zg_peer_last',String(window.__zgsPeerLast)); window.__zgsPeerDirty=false; } }catch(e){}
-},20000);
+},5000);   /* v159: 20秒→5秒（閉じる直前の きろく漏れを ふせぐ） */
 try{ window.__zgsPeerLast=+(localStorage.getItem('zg_peer_last')||0)||0; }catch(e){}
 function fmtDT(ts){ var d=new Date(ts); return (d.getMonth()+1)+'月'+d.getDate()+'日 '+d.getHours()+':'+('0'+d.getMinutes()).slice(-2); }
 setInterval(function(){
