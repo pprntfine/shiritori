@@ -791,7 +791,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v158</b>｜ビルド 2026-10-26（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v159</b>｜ビルド 2026-10-26（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -865,7 +865,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v158</b>｜ビルド 2026-10-26（アプリが 裏でも スマホに 直接とどく）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v159</b>｜ビルド 2026-10-26（アプリが 裏でも スマホに 直接とどく）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -8088,7 +8088,7 @@ show('lobby'); setTab('chat'); setNet('off'); setLock(false,'未接続');
 
 <script>
 /* ================================================================
-   v158: インスタ風ストーリー（トーク画面の うえ）・自己完結版
+   v159: インスタ風ストーリー（トーク画面の うえ）・自己完結版
    ・しゃしんで とうこう（カメラを かりて さつえい）
    ・24じかんで じどう さくじょ
    ・あいてが 見ると あしあとが つく（見るたび じこく こうしん）
@@ -8176,7 +8176,6 @@ function del(){
   try{ if(netOK()) Net.send({t:'story-del',sid:pid}); }catch(e){}
 }
 window.__zgsShoot=function(){
-  window.__zgsMode=false;
   try{
     var v=q('#cam-video');
     if(!v||!v.videoWidth){ toast2('カメラが まだ じゅんびできて いません'); return; }
@@ -8184,7 +8183,8 @@ window.__zgsShoot=function(){
     var c=document.createElement('canvas'); c.width=Math.round(w*sc); c.height=Math.round(h*sc);
     c.getContext('2d').drawImage(v,0,0,c.width,c.height);
     post(c.toDataURL('image/jpeg',0.8));
-  }catch(e){ toast2('さつえい できませんでした'); }
+    window.__zgsMode=false;
+  }catch(e){ toast2('さつえい できませんでした'); return; }
   closeCamSafe();
 };
 function closeCamSafe(){
@@ -8194,7 +8194,14 @@ function closeCamSafe(){
     var cs=window.camStream; if(cs){ try{ cs.getTracks().forEach(function(t){ t.stop(); }); }catch(e){} window.camStream=null; }
   }catch(e){}
 }
-setInterval(function(){ try{ var m=q('#cam-modal'); if(m&&!m.classList.contains('on')) window.__zgsMode=false; }catch(e){} },900);
+/* やめた とき・ふつうの カメラを ひらいた ときは トークモードにもどす（自動タイマーは つかわない） */
+document.addEventListener('click',function(e){
+  try{
+    var t=e.target;
+    if(t&&t.id==='cam-cancel') window.__zgsMode=false;
+    if(t&&t.id==='btn-photo') window.__zgsMode=false;
+  }catch(err){}
+},true);
 function shootMode(){
   try{
     window.__zgsMode=true;
