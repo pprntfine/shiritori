@@ -791,7 +791,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v157</b>｜ビルド 2026-10-24（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v158</b>｜ビルド 2026-10-26（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -865,7 +865,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v114</b>｜ビルド 2026-10-24（アプリが 裏でも スマホに 直接とどく）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v158</b>｜ビルド 2026-10-26（アプリが 裏でも スマホに 直接とどく）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -1044,6 +1044,7 @@ body.in-play .leave-row{display:none!important}
   <input type="file" id="pf-file" accept="image/*" hidden>
   <div class="sec">あいて（この端末での よびかた。空なら あいてが きめた 名前）</div>
   <div class="row"><span class="big" id="pf-op-av">🐱</span><input type="text" id="pf-op-nm" maxlength="12" placeholder="あいての 名前"></div>
+  <p id="pf-op-last" style="margin:8px 0 0;font-size:.78rem;font-weight:700;color:#4B36E0">ログインの きろくは まだ ありません</p>
   <div class="sec">つうち</div>
   <button type="button" class="ph" id="pf-ntest">通知を テストする（10秒後に とどきます。その間に ホーム画面へ）</button>
   <p id="pf-nres" style="font-size:.78rem;color:#556;margin:6px 0 0"></p>
@@ -5223,15 +5224,7 @@ function renderMush(){
   });
 })();
 
-/* トーク画面の 下に 「部屋を でる」を おく（上に ありすぎて とどかない ため） */
-(function(){
-  var play=document.getElementById('s-play'); if(!play) return;
-  var row=document.createElement('div'); row.className='leave-row';
-  var b=document.createElement('button');
-  b.type='button'; b.className='ghost wide'; b.textContent='部屋を でる（ペア解除）';
-  b.addEventListener('click',function(){ unpairBoth(b); });
-  row.appendChild(b); play.appendChild(row);
-})();
+/* v158: トークの したの「部屋を でる」ボタンは なくなりました。へっだの「でる」を つかってください */
 
 document.querySelectorAll('.hero h1,.hero .mascots,.verline,.brand').forEach(function(el){
   el.addEventListener('click',tapSecret);
@@ -5925,6 +5918,8 @@ $('#btn-photo').addEventListener('click',async function(){
 });
 $('#cam-cancel').addEventListener('click',closeCam);
 $('#cam-shoot').addEventListener('click',function(){
+  /* v158: ストーリー モードのときは こちらで うつして トークには のこさない */
+  if(window.__zgsMode){ try{ window.__zgsShoot(); }catch(e){} return; }
   var v=$('#cam-video');
   try{
     var w=v.videoWidth||480,h=v.videoHeight||640;
@@ -7099,6 +7094,8 @@ Net.onMsg=function(m){
   var nowMs=Date.now();
   if(!S.rl||nowMs-S.rl.t>1000) S.rl={t:nowMs,n:0};
   S.rl.n++; if(S.rl.n>60) return;
+    /* v158: あいての そんざいを きろく（さいごの ログイン用） */
+  try{ if(window.__peerTouch) window.__peerTouch(!!(m&&m.from&&S.opp&&m.from===S.opp.id)); }catch(_e){}
   switch(m.t){
     case 'ping':
       if(S.isHost===null){ probeDecide(m.from,false); break; }
@@ -7272,6 +7269,19 @@ Net.onMsg=function(m){
     case 'photo':
       if(m.from===S.me.id) break;
       recvPhoto(m);
+      break;
+    /* v158: ストーリー（24じかんで きえる しゃしん） */
+    case 'story':
+      if(m.from===S.me.id) break;
+      if(window.__storyRecv) window.__storyRecv(m);
+      break;
+    case 'story-see':
+      if(m.from===S.me.id) break;
+      if(window.__storySeenMsg) window.__storySeenMsg(m);
+      break;
+    case 'story-del':
+      if(m.from===S.me.id) break;
+      if(window.__storyDelMsg) window.__storyDelMsg(m);
       break;
     case 'live-on':
       if(m.from===S.me.id) break;
@@ -8072,6 +8082,337 @@ window.addEventListener('pagehide',function(){ Net.close(); });
   setTimeout(iosHint,600);
 })();
 show('lobby'); setTab('chat'); setNet('off'); setLock(false,'未接続');
+})();
+</script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"08b344934bdd416db94053d34eb889d8","spa":2}' crossorigin="anonymous"></script>
+
+<script>
+/* ================================================================
+   v158: インスタ風ストーリー（トーク画面の うえ）・自己完結版
+   ・しゃしんで とうこう（カメラを かりて さつえい）
+   ・24じかんで じどう さくじょ
+   ・あいてが 見ると あしあとが つく（見るたび じこく こうしん）
+   ================================================================ */
+(function(){
+'use strict';
+var KEY='zg_story_v1', DAY=24*3600*1000;
+function q(s){ return document.querySelector(s); }
+function GV(n,d){ try{ var v=window[n]; return (v===undefined||v===null)?d:v; }catch(e){ return d; } }
+function load(){ try{ var o=JSON.parse(localStorage.getItem(KEY)||'null'); if(o&&typeof o==='object'){ if(!o.views) o.views={}; return o; } }catch(e){} return {mine:null,peer:null,seenAt:0,views:{}}; }
+function save(o){ try{ localStorage.setItem(KEY,JSON.stringify(o)); }catch(e){} }
+var D=load();
+function now(){ return Date.now(); }
+function mySid(){ return (D.mine&&D.mine.at)||0; }
+function profs(){ var p=GV('PROF',null); if(p&&p.me&&p.peer) return p; return {me:{name:'ぶー',emo:'🐷',img:''},peer:{name:'にゃん',emo:'🐱',img:''}}; }
+function nameOf(){ try{ if(window.PROF&&PROF.alias) return PROF.alias; }catch(e){} var p=profs(); return (p.peer&&p.peer.name)||'にゃん'; }
+function toast2(m){
+  try{ if(typeof window.toast==='function'){ window.toast(m); return; } }catch(e){}
+  try{ var t=q('#zgs-toast'); if(!t){ t=document.createElement('div'); t.id='zgs-toast'; document.body.appendChild(t); }
+    t.textContent=m;
+    t.style.cssText='position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:rgba(20,16,40,.92);color:#fff;font-size:13px;font-weight:700;padding:10px 16px;border-radius:999px;z-index:99999;transition:opacity .4s';
+    t.style.opacity='1'; setTimeout(function(){ try{ t.style.opacity='0'; }catch(e){} },2400);
+  }catch(e){}
+}
+function purge(){
+  var t=now(), ch=false;
+  if(D.mine&&t-D.mine.at>DAY){ D.mine=null; ch=true; }
+  if(!D.mine&&D.views&&Object.keys(D.views).length){ D.views={}; ch=true; }
+  if(D.peer&&t-D.peer.at>DAY){ D.peer=null; D.seenAt=0; ch=true; }
+  if(ch) save(D);
+}
+function ago(ts){
+  var d=now()-ts;
+  if(d<45*1000) return 'たった今';
+  if(d<60*60*1000) return Math.max(1,Math.floor(d/60000))+'分前';
+  if(d<DAY) return Math.floor(d/3600000)+'時間前';
+  return Math.floor(d/DAY)+'日前';
+}
+function refreshAgo(){
+  var els=document.querySelectorAll('[data-zgs-ago]');
+  for(var i=0;i<els.length;i++){ var ts=+els[i].getAttribute('data-zgs-ago'); if(ts>0) els[i].textContent=ago(ts); }
+}
+setInterval(function(){ try{ purge(); refreshAgo(); renderTray(); }catch(e){} },30000);
+setInterval(function(){ try{ purge(); }catch(e){} },600000);
+function dBytes(u){ var b=atob(String(u).split(',')[1]||''), a=new Uint8Array(b.length); for(var i=0;i<b.length;i++) a[i]=b.charCodeAt(i); return a; }
+function bBytes(a,mime){ var s='',CH=0x8000; for(var i=0;i<a.length;i+=CH) s+=String.fromCharCode.apply(null,a.subarray(i,i+CH)); return 'data:'+(mime||'image/jpeg')+';base64,'+btoa(s); }
+function compress(url,cb){
+  try{
+    var im=new Image();
+    im.onload=function(){
+      try{
+        var w=im.width,h=im.height,sc=Math.min(1,720/Math.max(w,h));
+        var c=document.createElement('canvas'); c.width=Math.round(w*sc); c.height=Math.round(h*sc);
+        c.getContext('2d').drawImage(im,0,0,c.width,c.height);
+        var out=c.toDataURL('image/jpeg',0.8);
+        if(out.length>190000) out=c.toDataURL('image/jpeg',0.55);
+        cb(out);
+      }catch(e){ cb(url); }
+    };
+    im.onerror=function(){ cb(url); };
+    im.src=url;
+  }catch(e){ cb(url); }
+}
+function netOK(){ return !!(window.Net&&Net.topic&&Net.key); }
+function publish(st){
+  try{
+    if(!netOK()) return;
+    Net.sendFile({t:'story',id:st.pid,at:st.at},dBytes(st.data),function(ok){
+      if(!ok) setTimeout(function(){ try{ if(netOK()) Net.sendFile({t:'story',id:st.pid,at:st.at},dBytes(st.data),null); }catch(e){} },4000);
+    });
+  }catch(e){}
+}
+function post(url){
+  compress(url,function(u){
+    D.mine={data:u,at:now(),pid:now().toString(36)+Math.floor(Math.random()*1e4).toString(36)};
+    D.views={};
+    save(D); try{ renderTray(); }catch(e){}
+    publish(D.mine);
+    toast2('ストーリーに とうこうしました（24じかんで きえます）');
+  });
+}
+function del(){
+  var pid=D.mine?D.mine.pid:0;
+  D.mine=null; D.views={}; save(D); try{ renderTray(); }catch(e){} closeView();
+  try{ if(netOK()) Net.send({t:'story-del',sid:pid}); }catch(e){}
+}
+window.__zgsShoot=function(){
+  window.__zgsMode=false;
+  try{
+    var v=q('#cam-video');
+    if(!v||!v.videoWidth){ toast2('カメラが まだ じゅんびできて いません'); return; }
+    var w=v.videoWidth,h=v.videoHeight,sc=Math.min(1,720/Math.max(w,h));
+    var c=document.createElement('canvas'); c.width=Math.round(w*sc); c.height=Math.round(h*sc);
+    c.getContext('2d').drawImage(v,0,0,c.width,c.height);
+    post(c.toDataURL('image/jpeg',0.8));
+  }catch(e){ toast2('さつえい できませんでした'); }
+  closeCamSafe();
+};
+function closeCamSafe(){
+  try{ if(typeof window.closeCam==='function'){ window.closeCam(); return; } }catch(e){}
+  try{ var m=q('#cam-modal'); if(m) m.classList.remove('on');
+    var v=q('#cam-video'); if(v) v.srcObject=null;
+    var cs=window.camStream; if(cs){ try{ cs.getTracks().forEach(function(t){ t.stop(); }); }catch(e){} window.camStream=null; }
+  }catch(e){}
+}
+setInterval(function(){ try{ var m=q('#cam-modal'); if(m&&!m.classList.contains('on')) window.__zgsMode=false; }catch(e){} },900);
+function shootMode(){
+  try{
+    window.__zgsMode=true;
+    navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:720},height:{ideal:960}},audio:false}).then(function(st){
+      try{ window.camStream=st; }catch(e){}
+      var v=q('#cam-video'); if(v) v.srcObject=st;
+      var m=q('#cam-modal'); if(m) m.classList.add('on');
+    }).catch(function(){ window.__zgsMode=false; toast2('カメラが つかえません(きょかが ひつようです)'); });
+  }catch(e){ window.__zgsMode=false; toast2('カメラが つかえません'); }
+}
+window.__storyRecv=async function(m){
+  try{
+    if(!((window.S||{}).paired)) return;
+    var opp=(window.S&&S.opp&&S.opp.id)||null;
+    if(opp&&m.from!==opp) return;
+    if(!m.__att||!(window.Net&&typeof Net.fetchFile==='function')) return;
+    var bytes=await Net.fetchFile(m.__att);
+    if(!bytes||bytes.length<4||bytes[0]!==0xFF||bytes[1]!==0xD8) return;
+    var url=bBytes(bytes,'image/jpeg');
+    if(url.length>240000) return;
+    D.peer={data:url,at:(typeof m.at==='number'&&m.at>0)?m.at:now(),pid:String(m.id||'').slice(0,24)};
+    D.seenAt=0; save(D); try{ renderTray(); }catch(e){}
+    toast2(nameOf()+' が ストーリーに とうこうしました');
+  }catch(e){}
+};
+window.__storySeenMsg=function(m){
+  try{
+    var sid=mySid(); if(!sid) return;
+    var v=D.views[sid]||(D.views[sid]={n:0,last:0,list:{}});
+    var id=String(m.from||'?');
+    var e=v.list[id]||(v.list[id]={n:0,last:0});
+    e.n++; e.last=now(); v.n++; v.last=now();
+    save(D); try{ renderTray(); }catch(e){}
+    var vv=q('#zgs-view'); if(vv&&vv.classList.contains('on')) fillFp();
+  }catch(e){}
+};
+window.__storyDelMsg=function(m){
+  try{
+    if(D.peer&&String(m.sid||'')===String(D.peer.pid||D.peer.at)){ D.peer=null; D.seenAt=0; save(D); try{ renderTray(); }catch(e){} }
+  }catch(e){}
+};
+function viewerName(id){
+  try{ if(window.S&&S.opp&&id===S.opp.id) return nameOf(); }catch(e){}
+  if(id==='?') return '知らない端末';
+  return 'ほかの端末';
+}
+function escapeH(t){ return String(t).replace(/[<>&"]/g,function(c){ return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]; }); }
+function fillFp(){
+  var box=q('#zgs-fp'); if(!box) return;
+  var sid=mySid();
+  if(!D.mine){ box.innerHTML='ストーリーは ありません'; return; }
+  var v=D.views[sid]||{n:0,last:0,list:{}};
+  var rows='', list=v.list||{}, ids=Object.keys(list);
+  ids.sort(function(a,b){ return (list[b].last||0)-(list[a].last||0); });
+  for(var i=0;i<ids.length&&i<6;i++){
+    var e=list[ids[i]];
+    rows+='<div style="display:flex;gap:8px;align-items:center;margin-top:5px"><b>'+escapeH(viewerName(ids[i]))+'</b><span style="opacity:.8">'+e.n+'かい・<span data-zgs-ago="'+e.last+'">'+ago(e.last)+'</span></span></div>';
+  }
+  box.innerHTML='<b>👀 あしあと '+v.n+'かい</b>'+(ids.length?'':'<div style="opacity:.8;margin-top:4px">まだ だれも 見ていません</div>')+rows
+   +'<div style="opacity:.7;margin-top:6px;font-size:11px">見るたび じこくは あたらしくなります</div>';
+}
+var runT=null;
+function closeView(){
+  var vv=q('#zgs-view'); if(vv) vv.classList.remove('on');
+  if(runT){ clearTimeout(runT); runT=null; }
+  var im=q('#zgs-img img'); if(im) im.removeAttribute('src');
+}
+function openView(kind){
+  purge();
+  var vv=q('#zgs-view'); if(!vv) return;
+  var st=(kind==='mine')?D.mine:D.peer;
+  if(!st){ toast2((kind==='mine'?'わたし':nameOf())+'の ストーリーは まだ ありません'); return; }
+  var im=q('#zgs-img img'); im.src=st.data;
+  q('#zgs-nm').textContent=(kind==='mine')?'わたし':nameOf();
+  var ag=q('#zgs-agt'); ag.setAttribute('data-zgs-ago',st.at); ag.textContent=ago(st.at);
+  var hb=q('#zgs-hb'); hb.hidden=(kind!=='peer');
+  var db=q('#zgs-del'); db.hidden=(kind!=='mine');
+  var fp=q('#zgs-fp'); fp.hidden=(kind!=='mine'); if(kind==='mine') fillFp();
+  vv.classList.add('on');
+  if(runT){ clearTimeout(runT); runT=null; }
+  if(kind==='peer'){   /* あいての ストーリーは 7秒で じどう ていし。じぶんのは てで とじる */
+    vv.classList.remove('run'); void vv.offsetWidth; vv.classList.add('run');
+    runT=setTimeout(closeView,7000);
+  }else{
+    vv.classList.remove('run');
+  }
+  if(kind==='peer'&&D.seenAt!==st.at){
+    D.seenAt=st.at; save(D); try{ renderTray(); }catch(e){}
+    try{ if(netOK()) Net.send({t:'story-see',sid:st.at}); }catch(e){}
+  }
+}
+function heart(x){
+  var L=q('#zgs-hearts'); if(!L) return;
+  var sp=document.createElement('span'); sp.textContent='❤';
+  sp.style.left=(x!=null?x:(20+Math.random()*60))+'%';
+  sp.style.color=['#FF3B5C','#FF7A9C','#FFD166'][(Math.random()*3)|0];
+  L.appendChild(sp); setTimeout(function(){ try{ L.removeChild(sp); }catch(e){} },2400);
+  try{ if(netOK()) Net.send({t:'igh',k:1}); }catch(e){}
+}
+function avInto(av,p,fb){
+  if(p&&p.img){ av.innerHTML='<img alt="" src="'+p.img+'">'; return; }
+  av.textContent=(p&&p.emo)||fb;
+}
+function renderTray(){
+  var tray=q('#zgs-tray'); if(!tray) return;
+  purge();
+  var P=profs();
+  var mine=tray.querySelector('.zgs-i-mine'), peer=tray.querySelector('.zgs-i-peer');
+  if(!mine||!peer) return;
+  var mR=mine.querySelector('.zgs-ring'), mAv=mine.querySelector('.zgs-av'), mLab=mine.querySelector('.zgs-lab2');
+  var pR=peer.querySelector('.zgs-ring'), pAv=peer.querySelector('.zgs-av'), pLab=peer.querySelector('.zgs-lab2');
+  avInto(mAv,P.me,'🐷');
+  if(D.mine){ mR.className='zgs-ring'; mLab.textContent='わたし・'+ago(D.mine.at); }
+  else{ mR.className='zgs-ring none'; mLab.textContent='わたし'; }
+  var vw=D.views[mySid()]||{n:0};
+  var bd=mR.querySelector('.zgs-badge');
+  if(!bd){ bd=document.createElement('i'); bd.className='zgs-badge'; mR.appendChild(bd); }
+  bd.style.display=vw.n>0?'flex':'none'; bd.textContent=vw.n>9?'9+':String(vw.n);
+  avInto(pAv,P.peer,'🐱');
+  if(!D.peer){ pR.className='zgs-ring none'; pLab.textContent=nameOf(); }
+  else if(D.seenAt===D.peer.at){ pR.className='zgs-ring seen'; pLab.textContent=nameOf()+'・'+ago(D.peer.at); }
+  else{ pR.className='zgs-ring'; pLab.textContent=nameOf(); }
+}
+function buildTray(){
+  var head=q('#pane-chat .lhead'); if(!head||q('#zgs-tray')) return;
+  var t=document.createElement('div'); t.id='zgs-tray';
+  t.innerHTML='<button type="button" class="zgs-item zgs-i-mine"><span class="zgs-ring none"><span class="zgs-av">🐷</span></span><span class="zgs-lab2">わたし</span></button>'
+   +'<button type="button" class="zgs-item zgs-i-peer"><span class="zgs-ring none"><span class="zgs-av">🐱</span></span><span class="zgs-lab2">にゃん</span></button>'
+   +'<span class="zgs-hint">ストーリーは<br>24じかんで きえる</span>';
+  head.after(t);
+  t.querySelector('.zgs-i-mine').addEventListener('click',function(){ if(D.mine) openView('mine'); else shootMode(); });
+  t.querySelector('.zgs-i-peer').addEventListener('click',function(){ if(D.peer) openView('peer'); else toast2(nameOf()+'の ストーリーは まだ ありません'); });
+}
+function buildView(){
+  if(q('#zgs-view')) return;
+  var v=document.createElement('div'); v.id='zgs-view';
+  v.innerHTML='<div class="zgs-bar"><i></i></div>'
+   +'<div class="zgs-top"><span class="zgs-ring" style="width:40px;height:40px;padding:2px"><span class="zgs-av">🐱</span></span>'
+   +'<span style="line-height:1.3"><span class="zgs-nm" id="zgs-nm">—</span><br><span class="zgs-agt" id="zgs-agt" data-zgs-ago="0"></span></span>'
+   +'<button type="button" class="zgs-x" id="zgs-x" aria-label="とじる">×</button></div>'
+   +'<div id="zgs-img"><img alt="ストーリー"></div>'
+   +'<div class="zgs-foot"><div class="zgs-fp" id="zgs-fp" hidden></div></div>'
+   +'<button type="button" class="zgs-hb" id="zgs-hb" aria-label="いいね">❤</button>'
+   +'<button type="button" class="zgs-x" id="zgs-del" hidden>🗑</button>'
+   +'<div id="zgs-hearts"></div>';
+  document.body.appendChild(v);
+  q('#zgs-x').addEventListener('click',closeView);
+  q('#zgs-hb').addEventListener('click',function(e){ e.stopPropagation(); heart(); });
+  q('#zgs-del').addEventListener('click',function(){ if(confirm('この ストーリーを けしますか？')) del(); });
+}
+var css=document.createElement('style'); css.id='zgs-css';
+css.textContent='#zgs-tray{display:flex;align-items:center;gap:14px;background:#fff;border:1px solid #E7E4F2;border-radius:18px;margin:8px 8px 4px;padding:10px 12px;flex:none;overflow-x:auto;box-shadow:0 2px 8px rgba(70,50,150,.06)}'
++'.zgs-item{display:flex;flex-direction:column;align-items:center;gap:4px;flex:none;background:none;border:0;padding:0;font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}'
++'.zgs-ring{width:52px;height:52px;border-radius:50%;padding:3px;background:linear-gradient(40deg,#FF6A00,#E5323B 45%,#634CF7);display:flex;align-items:center;justify-content:center;position:relative;box-sizing:border-box;flex:none}'
++'.zgs-ring.none{background:none;border:2px dashed #C9C4E4}'
++'.zgs-ring.seen{background:#CBC7DC}'
++'.zgs-av{width:100%;height:100%;border-radius:50%;border:2.5px solid #fff;background:#06C755;color:#fff;font-weight:900;display:flex;align-items:center;justify-content:center;font-size:20px;overflow:hidden;box-sizing:border-box;font-style:normal}'
++'.zgs-av img{width:100%;height:100%;object-fit:cover;border-radius:50%}'
++'.zgs-badge{position:absolute;top:-4px;right:-6px;min-width:16px;height:16px;border-radius:9px;background:#E5323B;color:#fff;font-size:9.5px;font-weight:900;display:flex;align-items:center;justify-content:center;padding:0 4px;border:2px solid #fff;box-sizing:content-box}'
++'.zgs-lab2{font-size:10.5px;font-weight:700;color:#6B7280;max-width:76px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'
++'.zgs-hint{margin-left:auto;flex:none;align-self:flex-start;background:#FFF1E8;color:#C2560E;border:1px solid #FFD9BF;border-radius:10px;font-size:10px;font-weight:700;padding:5px 8px;line-height:1.5;text-align:center}'
++'#zgs-view{position:fixed;inset:0;z-index:99990;background:rgba(12,9,34,.97);display:none;flex-direction:column}'
++'#zgs-view.on{display:flex}'
++'.zgs-bar{position:absolute;top:0;left:0;right:0;height:3px;background:rgba(255,255,255,.25);z-index:3}'
++'.zgs-bar i{display:block;height:100%;width:0;background:#fff}'
++'#zgs-view.run .zgs-bar i{animation:zgsProg 7s linear forwards}'
++'@keyframes zgsProg{to{width:100%}}'
++'.zgs-top{display:flex;align-items:center;gap:10px;padding:calc(env(safe-area-inset-top,0px) + 12px) 14px 8px;color:#fff;position:relative;z-index:2}'
++'.zgs-nm{font-weight:900;font-size:14px}'
++'.zgs-agt{font-size:11px;opacity:.75}'
++'.zgs-x{margin-left:auto;font-size:22px;background:none;border:0;color:#fff;cursor:pointer;padding:6px;font-weight:700}'
++'#zgs-del{position:absolute;left:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 24px);font-size:20px;z-index:3}'
++'#zgs-img{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:18px}'
++'#zgs-img img{max-width:100%;max-height:100%;border-radius:12px;box-shadow:0 18px 50px rgba(0,0,0,.5)}'
++'.zgs-foot{padding:10px 14px calc(env(safe-area-inset-bottom,0px) + 16px);color:#fff;position:relative;z-index:2}'
++'.zgs-fp{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);border-radius:14px;padding:10px 14px;font-size:12.5px;line-height:1.7}'
++'.zgs-hb{position:absolute;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 24px);width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.4);color:#fff;font-size:22px;z-index:3;cursor:pointer}'
++'#zgs-hearts{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:2}'
++'#zgs-hearts span{position:absolute;bottom:70px;font-size:24px;animation:zgsFly 2.4s ease-out forwards}'
++'@keyframes zgsFly{to{transform:translateY(-46vh) rotate(18deg);opacity:0}}'
++'#pane-chat,#pane-chat *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}'
++'#pane-chat .msg,#pane-chat .msg *{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}'
++'#pane-chat textarea,#pane-chat input{-webkit-user-select:text;user-select:text}';
+document.head.appendChild(css);
+(function(){
+  var pc=document.getElementById('pane-chat'); if(!pc||pc.__zgsCp) return; pc.__zgsCp=1;
+  ['contextmenu','selectstart'].forEach(function(ev){
+    pc.addEventListener(ev,function(e){
+      var t=e.target;
+      if(t&&t.closest&&(t.closest('.msg')||t.closest('textarea')||t.closest('input'))) return;
+      e.preventDefault();
+    });
+  });
+})();
+window.__peerTouch=function(isPeer){
+  try{ if(!isPeer) return; window.__zgsPeerLast=now(); window.__zgsPeerDirty=true; }catch(e){}
+};
+setInterval(function(){
+  try{ if(window.__zgsPeerLast&&window.__zgsPeerDirty){ localStorage.setItem('zg_peer_last',String(window.__zgsPeerLast)); window.__zgsPeerDirty=false; } }catch(e){}
+},20000);
+try{ window.__zgsPeerLast=+(localStorage.getItem('zg_peer_last')||0)||0; }catch(e){}
+function fmtDT(ts){ var d=new Date(ts); return (d.getMonth()+1)+'月'+d.getDate()+'日 '+d.getHours()+':'+('0'+d.getMinutes()).slice(-2); }
+setInterval(function(){
+  try{
+    var el=document.getElementById('pf-op-last'); if(!el) return;
+    var ts=window.__zgsPeerLast||0;
+    if(window.S&&S.paired&&ts&&now()-ts<70000){ el.textContent='いま オンライン🟢'; el.style.color='#0A8754'; }
+    else if(ts){ el.textContent='さいごの ログイン: '+fmtDT(ts)+'（'+ago(ts)+'）'; el.style.color='#4B36E0'; }
+    else{ el.textContent='ログインの きろくは まだ ありません'; el.style.color='#8A87A0'; }
+  }catch(e){}
+},2000);
+function init(){ try{ buildView(); }catch(e){} try{ buildTray(); }catch(e){} try{ purge(); }catch(e){} try{ renderTray(); }catch(e){} }
+window.ZGStory={post:post,del:del,open:openView,render:renderTray,ago:ago,_seed:function(url){
+  D.mine={data:url,at:now()-3600*1000,pid:'test-mine'};
+  D.peer={data:url,at:now()-3600*1000,pid:'test-peer'};
+  D.seenAt=0; D.views={}; save(D); try{ renderTray(); }catch(e){}
+}};
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init); else init();
 })();
 </script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"08b344934bdd416db94053d34eb889d8","spa":2}' crossorigin="anonymous"></script>
