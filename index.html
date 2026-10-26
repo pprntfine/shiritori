@@ -669,6 +669,10 @@ label,.lead,.hint{color:#6B7280!important}
   background:#06C755!important;color:#fff!important;font-size:0!important;
   display:grid!important;place-items:center!important;box-shadow:0 2px 6px rgba(6,199,85,.35)!important}
 .line-composer .line-send:after{content:'➤';font-size:1rem;line-height:1;transform:rotate(-8deg)}
+/* v156: 改行できる 入力欄 */
+.line-composer textarea#in-chat{display:block;resize:none!important;overflow-y:hidden;line-height:1.4!important;min-height:44px;max-height:124px;
+  border-radius:20px!important;font-family:inherit;box-sizing:border-box;white-space:pre-wrap;word-break:break-word}
+.line-composer .line-send{align-self:end!important}
 /* 上部の つうしん帯：ふだんは 小さく 1行。タップで くわしく */
 .link-tag{
   margin:4px 0 4px!important;font-size:.6rem!important;font-weight:700!important;
@@ -787,7 +791,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v154</b>｜ビルド 2026-10-24（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v157</b>｜ビルド 2026-10-24（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -952,7 +956,7 @@ body.in-play .leave-row{display:none!important}
         <button id="btn-notify" type="button" class="notify-btn" title="メッセージ通知(内容は表示しません)">通知:オフ</button>
         <button id="btn-delchat" type="button" class="notify-btn" title="この スマホの トークを ぜんぶ けす">🗑 けす</button>
       </div>
-      <input id="in-chat" maxlength="300" placeholder="メッセージを入力" enterkeyhint="send" autocomplete="off" spellcheck="false" inputmode="text">
+      <textarea id="in-chat" rows="1" maxlength="300" placeholder="メッセージを入力" enterkeyhint="enter" autocomplete="off" spellcheck="false" inputmode="text"></textarea>
       <button class="line-send cute-send" type="submit" id="btn-chat-send" aria-label="送信"><span class="cs-ico">🐾</span></button>
     </form>
     <button id="btn-home" class="ghost" type="button" style="margin:10px auto 0;display:block">トップへ</button>
@@ -1829,6 +1833,15 @@ var Net={
       .catch(function(){ if(onDone){ try{ onDone(false); }catch(e){} } return false; });
     return env;
   },
+  /* v157: 同じ 封筒（同じ 番号）の まま 送りなおす（相手に 2通 とどかない） */
+  sendEnv:function(env,onDone){
+    var self=this;
+    if(!this.topic||!this.key||!env){ if(onDone) try{ onDone(false); }catch(e){} return 0; }
+    this.sendQueue=this.sendQueue.then(function(){ return self.post(env,false,0); })
+      .then(function(ok){ if(onDone){ try{ onDone(ok); }catch(e){} } return ok; })
+      .catch(function(){ if(onDone){ try{ onDone(false); }catch(e){} } return false; });
+    return env;
+  },
   /* 招待リンクの鍵で返す（入室をおことわりする時だけ） */
   sendLegacy:function(obj){
     var self=this;
@@ -1857,9 +1870,12 @@ var Net={
     var body;
     try{ body=await seal(env,key); }catch(e){ return false; }
     /* v117: まず 2本目(即時)で おくる → 相手に すぐ とどく */
-    var fastOk=false; try{ fastOk=Fast.pub(body); }catch(e){}
-    /* v124: 相手の スマホへ 直接（アプリが 裏でも とどく）。毎回 かならず */
-    if(env&&env.t==='chats'&&!env.__pushed){ env.__pushed=1; try{ pushToPeer(body); }catch(e){} }
+    var fastOk=false; try{ fastOk=Fast.pub(body)&&Fast.open&&(FastH.subOk||FastE.subOk); }catch(e){}
+    /* v124: 相手の スマホへ 直接（アプリが 裏でも とどく）。
+       v157: 同じ 番号の 送りなおしでも、まだ わたせて いなければ もう一度（相手は 番号で 重複を すてる） */
+    var pushP=null;
+    if(env&&env.t==='chats'&&!env.__pushOk){ try{ pushP=pushToPeer(body).then(function(ok){ if(ok) env.__pushOk=1; return ok; }); }catch(e){} }
+    var viaPush=function(){ if(!pushP) return Promise.resolve(false); return Promise.race([pushP,new Promise(function(r){ setTimeout(function(){ r(false); },8000); })]); };
     /* v131: ntfy は 1日250回（同じ Wi-Fi の 2台で 合計）まで。既読・受領・ping などで つかいきると
        アプリを 切った ときの 通知（ベル）が とまる → 大事な ものだけ ntfy に のせる */
     var NTFY_KEEP={chats:1,unpair:1,prof:1,join:1,ok:1,eject:1,bye:1,full:1,hi2:1};
@@ -1872,8 +1888,8 @@ var Net={
       this.postStore(body); return true;
     }
     /* ntfy は 保存用(相手が いない ときの 受けとり用)。制限中は 2本目だけで 成功あつかい */
-    if(this.coolUntil&&Date.now()<this.coolUntil) return fastOk;
-    if(!this.allow(typeof prio==='number'?prio:1)) return fastOk;
+    if(this.coolUntil&&Date.now()<this.coolUntil) return fastOk||await viaPush();
+    if(!this.allow(typeof prio==='number'?prio:1)) return fastOk||await viaPush();
     /* v122: 即時路で おくれたら 保存路は 待たずに うしろで（つぎの メッセージが つまらない） */
     if(fastOk){ this.postStore(body); return true; }
     try{
@@ -1889,14 +1905,14 @@ var Net={
         var ra=0;
         try{ ra=parseInt(r.headers&&r.headers.get&&r.headers.get('retry-after')||'0',10); }catch(e){}
         this.hit429(ra>0?ra*1000:45000);
-        return fastOk;
+        return fastOk||await viaPush();
       }
       if(!r.ok){
         if(r.status===413){ try{ note('メッセージが 大きすぎます。みじかくして ください。','#note2'); }catch(e){} }
-        return fastOk;
+        return fastOk||await viaPush();
       }
       return true;
-    }catch(e){ return fastOk; }
+    }catch(e){ return fastOk||await viaPush(); }
   },
   postStore:function(body){
     var self=this;
@@ -6719,9 +6735,17 @@ function flashHint(msg){
   var h=$('#hint'); h.textContent=msg; h.classList.add('bad');
   setTimeout(function(){ h.classList.remove('bad'); },2600);
 }
-$('#form-chat').addEventListener('submit',function(e){ e.preventDefault(); submitChat();
+/* v155: 送信は「🐾」を おした ときだけ。キーボードの エンター（変換の 確定も ふくむ）では 送らない */
+var chatBtnAt=0;
+if($('#btn-chat-send')) $('#btn-chat-send').addEventListener('click',function(){ chatBtnAt=Date.now(); });
+$('#form-chat').addEventListener('submit',function(e){ e.preventDefault();
+  if(Date.now()-chatBtnAt>1500) return;   /* 🐾 いがい（エンターなど）からの 送信は しない */
+  chatBtnAt=0;
+  submitChat();
   var bs=$('#btn-chat-send'); if(bs){ bs.classList.remove('pop'); void bs.offsetWidth; bs.classList.add('pop'); } });
-$('#in-chat').addEventListener('keydown',function(e){ if(e.key==='Enter'&&e.isComposing) e.preventDefault(); });
+/* v156: エンターは 改行（送信は 🐾 だけ）。入力に あわせて 高さを のばす（最大 5行ぶん） */
+function chatGrow(){ var i=$('#in-chat'); if(!i) return; i.style.height='auto'; i.style.height=Math.min(i.scrollHeight+2,124)+'px'; i.style.overflowY=(i.scrollHeight>122)?'auto':'hidden'; }
+$('#in-chat').addEventListener('input',chatGrow);
 /* ===== 入力まわり(Line風) ===== */
 (function(){
   var inp=$('#in-chat'); if(!inp) return;
@@ -6811,7 +6835,8 @@ function flushOutbox(){
   try{ FASTS.forEach(function(f){ if(f.topic&&f.open&&Date.now()-(f.lastRx||0)>6000) f.probe(); else if(f.topic&&!f.open&&!f.ws) f.kick(); }); }catch(e){}
   if(!Net.topic||!Net.key) return;
   /* v153: 即時路が つなぎなおし中なら 0.3秒ごとに 見る（以前は 3秒 まって いた → つながった 瞬間に 送る） */
-  if(Net.coolUntil&&Date.now()<Net.coolUntil&&!(Fast.open&&(FastH.subOk||FastE.subOk))){ if(!S.flushWaitT) S.flushWaitT=setTimeout(function(){ S.flushWaitT=null; flushOutbox(); },300); return; }
+  /* v157: 自分の 通知サーバーが あれば 待たずに そちらで 送る（ふつうの https なので 回線に ふさがれにくい） */
+  if(Net.coolUntil&&Date.now()<Net.coolUntil&&!(Fast.open&&(FastH.subOk||FastE.subOk))&&!psrvGet()){ if(!S.flushWaitT) S.flushWaitT=setTimeout(function(){ S.flushWaitT=null; flushOutbox(); },300); return; }
   if(S.flushing) return;
   /* 1通の 封筒に 入る ぶんだけ まとめる（入りきらないと 送れなかった） */
   var items=[], bytes=0;
@@ -6823,7 +6848,8 @@ function flushOutbox(){
   var payload=items.map(function(x){ return {text:x.text,at:x.at}; });
   var msgs=items.map(function(x){ return x.msg; }).filter(Boolean);
   S.flushing=true;
-  var envSent=Net.send({t:'chats',items:payload},function(ok){
+  var same=S.flushEnv&&S.flushEnv.items.length===items.length&&items.every(function(x,i){ return x===S.flushEnv.items[i]; });
+  var onDoneF=function(ok){
     S.flushing=false;
     if(ok){
       S.outbox=S.outbox.filter(function(x){ return items.indexOf(x)<0; });
@@ -6834,9 +6860,11 @@ function flushOutbox(){
       msgs.forEach(function(m){ if(m){ m.tries=(m.tries||0)+1; } });
       setTimeout(flushOutbox,1500);
     }
+    if(ok) S.flushEnv=null;
     if(S.tab==='chat') renderChat(true);
-  });
-  if(envSent&&envSent.n) msgs.forEach(function(m){ m.n=envSent.n; m.env=envSent; });
+  };
+  var envSent=same?Net.sendEnv(S.flushEnv.env,onDoneF):Net.send({t:'chats',items:payload},onDoneF);
+  if(envSent&&envSent.n){ if(!same) S.flushEnv={items:items.slice(),env:envSent}; msgs.forEach(function(m){ m.n=envSent.n; m.env=envSent; }); }
   if(!envSent) S.flushing=false;
 }
 function submitChat(){
@@ -6847,7 +6875,7 @@ function submitChat(){
   var inp=$('#in-chat');
   var txt=(inp.value||'').replace(/\s+$/,'').slice(0,MAX_CHAT);
   if(!txt.trim()) return;
-  inp.value='';
+  inp.value=''; try{ chatGrow(); }catch(e){}
   queueChat(txt,Date.now());
 }
 function sendAgain(msg){
@@ -7747,20 +7775,23 @@ function bellReset(){ bellCount=0; }
 /* v124: あんごう文(2人の 鍵で しか 読めない)を 相手の スマホへ 直接 とどける。
    相手の アプリが 裏・画面オフ でも スマホが 受けとって 中に しまって おく */
 async function pushToPeer(body){
+  /* v157: 1回目が 相手の スマホへ わたせたか（true/false）を かえす。失敗したら うしろで やりなおしも つづける */
   try{
-    var t=await bellTopic(); if(!t) return;
+    var t=await bellTopic(); if(!t) return false;
     var payload='zgm:'+bellCount+':'+body;
-    if(payload.length>3900) return;   /* 大きすぎる ものは 通常の とおりみちだけ */
+    if(payload.length>3900) return false;   /* 大きすぎる ものは 通常の とおりみちだけ */
+    var first=null, firstP=new Promise(function(r){ first=r; });
     /* v131: 回数制限などで 失敗したら 20秒・60秒・3分後に やりなおす（通知を とりこぼさない） */
     var tryPush=function(k){
-      if(psrvGet()){ psrvPush(t,payload).then(function(ok){ if(!ok&&k<3) setTimeout(function(){ tryPush(k+1); },[20000,60000,180000][k]); }); return; }
+      var done=function(ok){ if(k===0) first(!!ok); if(!ok&&k<3) setTimeout(function(){ tryPush(k+1); },[20000,60000,180000][k]); };
+      if(psrvGet()){ psrvPush(t,payload).then(function(j){ done(!!(j&&j.ok&&(j.sent>0))); }); return; }
       fetch('https://ntfy.sh/'+t,{method:'POST',headers:{'Content-Type':'text/plain'},body:payload})
-        .then(function(r){ if(!r.ok&&k<3) setTimeout(function(){ tryPush(k+1); },[20000,60000,180000][k]); })
-        .catch(function(){ if(k<3) setTimeout(function(){ tryPush(k+1); },[20000,60000,180000][k]); });
+        .then(function(r){ done(r.ok); }).catch(function(){ done(false); });
     };
     tryPush(0);
     bellPushed=Date.now();
-  }catch(e){}
+    return await firstP;
+  }catch(e){ return false; }
 }
 var bellPushed=0;
 /* スマホが あずかって いた あんごう文を とりだして 読む */
