@@ -791,7 +791,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v171</b>｜ビルド 2026-10-27（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v173</b>｜ビルド 2026-10-27（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -865,7 +865,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v171</b>｜ビルド 2026-10-27（アプリが 裏でも スマホに 直接とどく）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v173</b>｜ビルド 2026-10-27（アプリが 裏でも スマホに 直接とどく）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -6001,23 +6001,38 @@ function camPreview(on){
     }catch(e){ closeCam(); }
   });
 })();
+var camShotWait=0;
 $('#cam-shoot').addEventListener('click',function(){
   /* v169: うつしたら まず しかく。「そうしん」でおくる（いままでは うつすと そのまま のった） */
+  /* v172: ストーリーで しゃッターが きれない ぶんぐうを なおす。
+     (1) カメラの じゅんびまちを ついか（さいだい4秒・まっている あいだも カメラは みえたまま）
+     (2) v169 から ここに あった toast2 は このブロックに ない関数で ぬきみそだった のを note() に なおす */
   var v=$('#cam-video');
-  try{
-    if(!v.videoWidth){ toast2('カメラが まだ じゅんびできて いません'); return; }
-    var w=v.videoWidth,h=v.videoHeight;
-    var mir=(window.__camFace==='user');   /* v169: インカメラは さゆう ぎゃく（かがみ）で うつす */
-    var sc=Math.min(1,(window.__zgsMode?720:PHOTO_MAXSIDE)/Math.max(w,h));
-    var c=document.createElement('canvas');
-    c.width=Math.max(1,Math.round(w*sc)); c.height=Math.max(1,Math.round(h*sc));
-    var ctx=c.getContext('2d');
-    if(mir){ ctx.translate(c.width,0); ctx.scale(-1,1); }
-    ctx.drawImage(v,0,0,c.width,c.height);
-    camShotURL=c.toDataURL('image/jpeg',window.__zgsMode?0.8:0.72);
-    $('#cam-shot').src=camShotURL;
-    camPreview(true);
-  }catch(e){ closeCam(); note('さつえいに しっぱいしました。','#note2'); }
+  if(camShotWait) return;   /* v172: じゅんびまちの じゅうふく押しを さける */
+  function grab(n){
+    camShotWait=1;
+    try{
+      var mmv=document.getElementById('cam-modal');
+      if(!mmv||!mmv.classList.contains('on')){ camShotWait=0; return; }   /* v172: あいている あいだに とじられた */
+      if(!v.videoWidth){
+        if(n<16){ note('カメラを じゅんびしています…','#note2'); setTimeout(function(){ grab(n+1); },250); return; }
+        camShotWait=0; note('カメラが まだ じゅんびできて いません。もういちど おしてください。','#note2'); return;
+      }
+      var w=v.videoWidth,h=v.videoHeight;
+      var mir=(window.__camFace==='user');   /* v169: インカメラは さゆう ぎゃく（かがみ）で うつす */
+      var sc=Math.min(1,(window.__zgsMode?720:PHOTO_MAXSIDE)/Math.max(w,h));
+      var c=document.createElement('canvas');
+      c.width=Math.max(1,Math.round(w*sc)); c.height=Math.max(1,Math.round(h*sc));
+      var ctx=c.getContext('2d');
+      if(mir){ ctx.translate(c.width,0); ctx.scale(-1,1); }
+      ctx.drawImage(v,0,0,c.width,c.height);
+      camShotURL=c.toDataURL('image/jpeg',window.__zgsMode?0.8:0.72);
+      $('#cam-shot').src=camShotURL;
+      camShotWait=0;
+      camPreview(true);
+    }catch(e){ camShotWait=0; closeCam(); note('さつえいに しっぱいしました。','#note2'); }
+  }
+  grab(0);
 });
 var UID=0;
 /* そうしんとりけし：じぶんの ふきだしを タップ → たしかめて → 両側から けす */
@@ -8191,7 +8206,7 @@ var KEY='zg_story_v1', DAY=24*3600*1000;
 function q(s){ return document.querySelector(s); }
 function GV(n,d){ try{ var v=window[n]; return (v===undefined||v===null)?d:v; }catch(e){ return d; } }
 function load(){ try{ var o=JSON.parse(localStorage.getItem(KEY)||'null'); if(o&&typeof o==='object'){ if(!o.views) o.views={}; return o; } }catch(e){} return {mine:null,peer:null,seenAt:0,views:{}}; }
-function save(o){ try{ localStorage.setItem(KEY,JSON.stringify(o)); }catch(e){} }
+function save(o){ try{ localStorage.setItem(KEY,JSON.stringify(o)); return true; }catch(e){ return false; } }   /* v173: ほぞんの せいかいを 返す */
 var D=load();
 function now(){ return Date.now(); }
 function mySid(){ return (D.mine&&D.mine.at)||0; }
@@ -8278,7 +8293,8 @@ function post(url){
   compress(url,function(u){
     D.mine={data:u,at:now(),pid:now().toString(36)+Math.floor(Math.random()*1e4).toString(36)};
     D.views={};
-    save(D); try{ renderTray(); }catch(e){}
+    if(!save(D)) toast2('ほぞん できませんでした（きおくの あきが たりません）');   /* v173: ほぞん しっぱいを みえるように */
+    try{ renderTray(); }catch(e){}
     publish(D.mine);
     toast2('ストーリーに とうこうしました（24じかんで きえます）');
   });
@@ -8320,6 +8336,12 @@ function shootMode(){
   try{
     window.__zgsMode=true;
     window.camOpen(window.__camFace||'user');   /* v171: とおしを みえるように */
+    setTimeout(function(){   /* v173: カメラが ひらけなかったら ことばで しらせる（#note2 は トークの なかで みえない） */
+      try{
+        var m=q('#cam-modal');
+        if(window.__zgsMode&&(!m||!m.classList.contains('on'))){ window.__zgsMode=false; toast2('カメラが ひらけません でした。もういちど おします'); }
+      }catch(e){}
+    },3500);
   }catch(e){ window.__zgsMode=false; toast2('カメラが つかえません'); }
 }
 window.__storyRecv=async function(m){
@@ -8466,8 +8488,7 @@ function buildView(){
   q('#zgs-x').addEventListener('click',closeView);
   q('#zgs-hb').addEventListener('click',function(e){ e.stopPropagation(); heart(); });
   q('#zgs-del').addEventListener('click',function(){ if(confirm('この ストーリーを けしますか？')) del(); });
-  var rs=q('#zgs-reshoot'); if(rs) rs.addEventListener('click',function(){   /* v169: こわして うつしなおす＝なんどでも とうこう */
-    try{ D.mine=null; D.views={}; save(D); renderTray(); }catch(e){}
+  var rs=q('#zgs-reshoot'); if(rs) rs.addEventListener('click',function(){   /* v173: うつしなおす。もう けさない（あたらしいのを とうこうした しゅんかんで いれかわる。やめたら いまの ストーリーは そのまま） */
     closeView();
     try{ shootMode(); }catch(e){}
   });
@@ -8503,18 +8524,17 @@ css.textContent='#zgs-tray{display:flex;align-items:center;gap:14px;background:#
 +'#zgs-hearts{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:2}'
 +'#zgs-hearts span{position:absolute;bottom:70px;font-size:24px;animation:zgsFly 2.4s ease-out forwards}'
 +'@keyframes zgsFly{to{transform:translateY(-46vh) rotate(18deg);opacity:0}}'
-+'#pane-chat,#pane-chat *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}'
-+'#pane-chat .msg,#pane-chat .msg *{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}'
-+'#pane-chat textarea,#pane-chat input{-webkit-user-select:text;user-select:text}';
++'body,body *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}'   /* v172: アプリじょうの ことばは ぜんぶ コピーふか（ながおしメニューも でない） */
++'input,textarea{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}';   /* v172: にゅうりょくらんだけは かきこみできる */
 document.head.appendChild(css);
 (function(){
-  var pc=document.getElementById('pane-chat'); if(!pc||pc.__zgsCp) return; pc.__zgsCp=1;
+  if(window.__zgNoCopy) return; window.__zgNoCopy=1;   /* v172: 画面ぜんたいを あいてい（にゅうりょくらんは のぞく） */
+  function inEdit(t){ try{ return !!(t&&t.closest&&t.closest('input,textarea')); }catch(e){ return false; } }
   ['contextmenu','selectstart'].forEach(function(ev){
-    pc.addEventListener(ev,function(e){
-      var t=e.target;
-      if(t&&t.closest&&(t.closest('.msg')||t.closest('textarea')||t.closest('input'))) return;
-      e.preventDefault();
-    });
+    document.addEventListener(ev,function(e){ if(inEdit(e.target)) return; e.preventDefault(); });
+  });
+  ['copy','cut'].forEach(function(ev){
+    document.addEventListener(ev,function(e){ if(inEdit(e.target)) return; e.preventDefault(); });
   });
 })();
 window.__peerTouch=function(isPeer){
@@ -8544,6 +8564,7 @@ window.ZGStory={post:post,del:del,open:openView,render:renderTray,ago:ago,_seed:
 if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init); else init();
 })();
 </script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"08b344934bdd416db94053d34eb889d8","spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"08b344934bdd416db94053d34eb889d8","spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"08b344934bdd416db94053d34eb889d8","spa":2}' crossorigin="anonymous"></script>
 </body>
