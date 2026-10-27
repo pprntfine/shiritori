@@ -791,7 +791,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v162</b>｜ビルド 2026-10-27（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v163</b>｜ビルド 2026-10-27（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -865,7 +865,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v162</b>｜ビルド 2026-10-27（アプリが 裏でも スマホに 直接とどく）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v163</b>｜ビルド 2026-10-27（アプリが 裏でも スマホに 直接とどく）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -5568,9 +5568,8 @@ function sendChatOpen(){
   try{ Net.send({t:'chat-open'}); }catch(e){}
 }
 function peerLine(){
-  var on=S.lastPeer&&(Date.now()-S.lastPeer<45000);
   var ts=S.lastPeer||(window.__zgsPeerLast||0);
-  var str='あいて:'+(on?'つながり中':(ts?('さいご '+fmtTime(ts)):'—'));
+  var str='あいて:'+(ts?('さいご '+fmtTime(ts)):'—');
   var co=S.peerChatT||+(window.__zgsPeerChatOpen||0)||0;
   if(co) str+='（トーク '+fmtTime(co)+'）';
   return str;
@@ -5589,6 +5588,8 @@ function memTick(){
     if(on!==S.peerOn){ S.peerOn=on; memAdd(on?'つながった':'きれた'); }
     var el=$('#mem-line');
     if(el) el.textContent=peerLine();
+    /* さいごの記録を localStorage にも保存(次に開いたときも出す) */
+    if(S.lastPeer){ try{ localStorage.setItem('zg_peer_last',String(S.lastPeer)); window.__zgsPeerLast=S.lastPeer; }catch(e){} }
   },3000);
 }
 function memStop(){
