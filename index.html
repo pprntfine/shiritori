@@ -791,7 +791,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v169</b>｜ビルド 2026-10-27（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v170</b>｜ビルド 2026-10-27（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -865,7 +865,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v169</b>｜ビルド 2026-10-27（アプリが 裏でも スマホに 直接とどく）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v170</b>｜ビルド 2026-10-27（アプリが 裏でも スマホに 直接とどく）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -5956,11 +5956,13 @@ function camOpen(face){
 }
 function camPreview(on){
   var v=$('#cam-video'),sp=$('#cam-shot'),ok=$('#cam-ok'),ret=$('#cam-retake'),sh=$('#cam-shoot'),fl=$('#cam-flip');
+  var mm=document.getElementById('cam-modal');
+  var open=!!(mm&&mm.classList.contains('on'));   /* v170: カメラを つかって いる ときだけ 🔄 を だす */
   if(sp) sp.style.display=on?'block':'none';
   if(ok) ok.style.display=on?'block':'none';
   if(ret) ret.style.display=on?'block':'none';
   if(sh) sh.style.display=on?'none':'';
-  if(fl) fl.style.display=on?'none':'';
+  if(fl) fl.style.display=(open&&!on)?'':'none';
   if(v) v.style.visibility=on?'hidden':'visible';
   if(!on&&sp) sp.removeAttribute('src');
 }
@@ -5971,7 +5973,7 @@ function camPreview(on){
   ok.textContent='そうしん';
   var ret=mk('cam-retake','display:none;position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 38px);transform:translateX(-50%);padding:11px 28px;font-size:14px;font-weight:700;border:0;border-radius:999px;background:rgba(255,255,255,.28);color:#fff;z-index:100002;cursor:pointer');
   ret.textContent='とりなおす';
-  var flip=mk('cam-flip','position:fixed;right:18px;bottom:calc(env(safe-area-inset-bottom,0px) + 120px);width:48px;height:48px;border-radius:50%;border:1px solid rgba(255,255,255,.5);background:rgba(0,0,0,.45);color:#fff;font-size:20px;z-index:100002;cursor:pointer');
+  var flip=mk('cam-flip','display:none;position:fixed;right:18px;bottom:calc(env(safe-area-inset-bottom,0px) + 120px);width:48px;height:48px;border-radius:50%;border:1px solid rgba(255,255,255,.5);background:rgba(0,0,0,.45);color:#fff;font-size:20px;z-index:100002;cursor:pointer');
   flip.textContent='🔄'; flip.title='カメラを きりかえ';
   document.body.appendChild(shot); document.body.appendChild(ok); document.body.appendChild(ret); document.body.appendChild(flip);
   var st=document.createElement('style');
