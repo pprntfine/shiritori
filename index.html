@@ -791,7 +791,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v184</b>｜ビルド 2026-10-28（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v185</b>｜ビルド 2026-10-28（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -865,7 +865,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v184</b>｜ビルド 2026-10-28（アプリが 裏でも スマホに 直接とどく）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v185</b>｜ビルド 2026-10-28（アプリが 裏でも スマホに 直接とどく）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -1045,6 +1045,7 @@ body.in-play .leave-row{display:none!important}
   <div class="sec">あいて（この端末での よびかた。空なら あいてが きめた 名前）</div>
   <div class="row"><span class="big" id="pf-op-av">🐱</span><input type="text" id="pf-op-nm" maxlength="12" placeholder="あいての 名前"></div>
   <p id="pf-op-last" style="margin:8px 0 0;font-size:.78rem;font-weight:700;color:#4B36E0">ログインの きろくは まだ ありません</p>
+  <details id="pf-op-log" style="margin:6px 0 0"><summary style="font-size:.74rem;font-weight:700;color:#4B36E0;cursor:pointer">あいての アクセス履歴を みる（この端末が 観測した 分だけ）</summary><div id="pf-op-log-list" style="font-size:.72rem;color:#333;line-height:1.5;max-height:170px;overflow:auto;margin-top:4px"></div></details>
   <div class="sec">つうち</div>
   <button type="button" class="ph" id="pf-ntest">通知を テストする（10秒後に とどきます。その間に ホーム画面へ）</button>
   <p id="pf-nres" style="font-size:.78rem;color:#556;margin:6px 0 0"></p>
@@ -5608,6 +5609,7 @@ function peerChatOpen(){
   try{ localStorage.setItem('zg_peer_chat_open',String(S.peerChatT)); }catch(e){}
   try{ sessionStorage.setItem('zg_peer_live',String(window.__zgsPeerLive)); }catch(e){}
   try{ memAdd('あいてが アプリを ひらいた'); }catch(e){}
+  try{ plogAdd('open'); }catch(e){}   /* v185: アクセス履歴にも 残す */
   var el=$('#mem-line'); if(el) el.textContent=peerLine();
 }
 function memTick(){
@@ -5624,6 +5626,27 @@ function memStop(){
   if(S.memTimer){ clearInterval(S.memTimer); S.memTimer=null; }
   if(memBox){ memBox.remove(); memBox=null; }
 }
+/* v185: あいてだけの アクセス履歴（この端末が 観測した ことだけを この端末に 残す・100件まで） */
+function plogLoad(){ try{ return JSON.parse(localStorage.getItem('zg_peer_log')||'[]')||[]; }catch(e){ return []; } }
+function plogSave(l){ try{ localStorage.setItem('zg_peer_log',JSON.stringify(l.slice(-100))); }catch(e){} }
+function plogAdd(kind){
+  try{
+    var l=plogLoad(),t=Date.now(),last=l[l.length-1];
+    if(last&&last.k===kind&&t-(last.t||0)<((kind==='open')?30000:90000)) return;
+    l.push({t:t,k:kind}); if(l.length>100) l=l.slice(-100);
+    plogSave(l); plogRender();
+  }catch(e){}
+}
+function plogDT(ts){ var d=new Date(ts); return (d.getMonth()+1)+'月'+d.getDate()+'日 '+d.getHours()+':'+('0'+d.getMinutes()).slice(-2); }
+function plogRender(){
+  try{
+    var b=$('#pf-op-log-list'); if(!b) return;
+    var l=plogLoad(),h='';
+    for(var i=l.length-1;i>=0&&i>=l.length-20;i--){ h+='<div style="padding:2px 0">'+plogDT(l[i].t)+'・'+(l[i].k==='open'?'あいてが アプリを ひらいた':'あいての つながりが きれた')+'</div>'; }
+    b.innerHTML=h||'<div style="opacity:.7">まだ きろくは ありません</div>';
+  }catch(e){}
+}
+setInterval(function(){ try{ var m=$('#prof-modal'); if(m&&m.classList.contains('on')) plogRender(); }catch(e){} },3000);   /* v185: プロフを 開いていたら 履歴を 新しくする */
 var lastLiveSent=0;
 function sendLive(){   /* v183: あいてに「いきてる」しるしを はなす（25秒に 1かい） */
   if(!(S.paired||S.linked)) return;
@@ -5639,6 +5662,7 @@ function peerPresenceTick(){   /* v183: 「つながり中」ランプを あい
     if(!(Fast.open||Net.open)) return;
     var live=Math.max(+(window.__zgsPeerLast||0)||0,+(window.__zgsPeerLive||0)||0);
     var on=!live||(Date.now()-live<70000);
+    try{ if(S.__pWasOn&&!on&&live) plogAdd('off'); S.__pWasOn=!!on; }catch(e){}   /* v185: きえた も 履歴に */
     if(n.classList.contains('on')&&!on){ n.classList.remove('on'); n.classList.add('lost'); $('#net-txt').textContent='あいて きれた'; }
     else if(!n.classList.contains('on')&&on&&Net.open){ n.classList.remove('lost'); n.classList.add('on'); $('#net-txt').textContent='つながり中'; }
   }catch(e){}
@@ -7417,8 +7441,10 @@ Net.onMsg=function(m){
       if(m.from===S.me.id) break;
       if(S.paired&&S.opp&&S.opp.id&&m.from!==S.opp.id) break;
       if(!m.at||Date.now()-m.at>600000) break;
+      var wasLive=+(window.__zgsPeerLive||0)||0;   /* v185 */
       window.__zgsPeerLive=Date.now();
       try{ sessionStorage.setItem('zg_peer_live',String(window.__zgsPeerLive)); }catch(e){}
+      try{ if(Date.now()-wasLive>90000) peerChatOpen(); }catch(e){}   /* v185: しばらく とだえていた あとの あたらしい いきの しるしは「ひらいた」としても かぞえる */
       break;
 
     /* 既読 */
