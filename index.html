@@ -791,7 +791,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v177</b>｜ビルド 2026-10-27（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v180</b>｜ビルド 2026-10-27（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -865,7 +865,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v177</b>｜ビルド 2026-10-27（アプリが 裏でも スマホに 直接とどく）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v180</b>｜ビルド 2026-10-27（アプリが 裏でも スマホに 直接とどく）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -1642,7 +1642,7 @@ var Net={
       try{ es.addEventListener('open',function(){ self.lastAlive=Date.now(); }); }catch(e){}
       this.es=es;
       es.onopen=function(){
-        self.open=true; self.retry=0; self.transport='sse';
+        self.open=true; self.retry=0; self.transport='sse'; self.sseFails=0;   /* v178 */
         self.stopPoll();
         if(!self.lastRecv||Date.now()-self.lastRecv>60000){ self.poll(); }
         if(self.onState) self.onState('open');
@@ -1655,7 +1655,7 @@ var Net={
       };
       es.onerror=function(){
         try{ es.close(); }catch(e){}
-        self.es=null; self.open=false;
+        self.es=null; self.open=false; self.sseFails=(self.sseFails||0)+1;   /* v178: れんぞく しっぱいを おぼえる */
         if(self.onState) self.onState('lost');
         self.startPoll();                 /* つなぎ直す あいだは ポーリングで つなぐ */
         self.scheduleReconnect();
@@ -1677,7 +1677,7 @@ var Net={
     var guard=setTimeout(function(){ if(!self.open){ try{w.close();}catch(e){} } },8000);
     w.onopen=function(){
       clearTimeout(guard);
-      self.open=true; self.retry=0;
+      self.open=true; self.retry=0; self.sseFails=0;   /* v178 */
       if(self.onState) self.onState('open');
       try{ paintTopicTag(); }catch(e){}
     };
@@ -1701,8 +1701,8 @@ var Net={
     this.retryTimer=setTimeout(function(){
       self.retryTimer=null;
       if(!self.topic) return;
-      /* 3回に 1回は WebSocket も ためす（SSEが とおらない 回線むけ） */
-      if(self.retry%3===0) self.openWs(); else self.openStream();
+      /* v178: SSEが 2かい れんぞくで だめなら つぎは WebSocket（とおらない 回線で むだな まわしを なくす） */
+      if(self.retry%3===0||(self.sseFails||0)>=2) self.openWs(); else self.openStream();
     },d);
   },
   startPoll:function(){
@@ -2436,6 +2436,21 @@ function setAppBadgeCount(n){
 function appBadgeSync(){ try{ setAppBadgeCount(S.unread||0); }catch(e){} }
 [300,1500,5000].forEach(function(ms){ setTimeout(appBadgeSync,ms); });
 document.addEventListener('visibilitychange',function(){ if(!document.hidden){ setTimeout(appBadgeSync,150); if(S.tab==='chat') swClearNotifs(); try{ sendAppOpen(); }catch(e){} } });   /* v142: もどった ときも 消す */
+/* v178: 画面を もどした ときは ためた 分を すぐ とりにいく（さいだい 20秒 の まちを なくす） */
+document.addEventListener('visibilitychange',function(){
+  if(document.hidden) return;
+  try{ Net.poll(); }catch(e){}
+  try{ if(!Net.open){ Net.retry=0; Net.closeStream(); Net.openStream(); } }catch(e){}
+  try{ Fast.kick(); }catch(e){}
+  try{ drainInbox(); }catch(e){}   /* v179: 通知の おくに しまわれて いた 分も すぐ 出す */
+});
+/* v179: 回線が もどった・画面を もう いちど 出した ときも 同じ（休み の あいだに ためた 分を 秒で 出す） */
+window.addEventListener('online',function(){ try{ Net.poll(); }catch(e){} try{ if(!Net.open){ Net.retry=0; Net.closeStream(); Net.openStream(); } }catch(e){} try{ Fast.kick(); }catch(e){} try{ drainInbox(); }catch(e){} });
+window.addEventListener('pageshow',function(){ try{ Net.poll(); }catch(e){} try{ Fast.kick(); }catch(e){} try{ drainInbox(); }catch(e){} });
+/* v178: つながったまま 90秒 うごきの ない 中継（ゾンビ）は みはりして つなぎなおす */
+setInterval(function(){
+  try{ if(Net.open&&Date.now()-(Net.lastAlive||0)>90000){ Net.open=false; Net.closeStream(); Net.startPoll(); Net.openStream(); } }catch(e){}
+},30000);
 function note(msg,el){ var t=$(el||'#note'); if(t) t.textContent=msg||''; }
 function setNet(state){
   try{ var dt=$('#lh-dot'); if(dt) dt.classList.toggle('on',state==='open'&&(Fast.open||Net.open)); }catch(e){}
@@ -7861,6 +7876,7 @@ async function psrvPush(topic,payload){
   var u=psrvGet(); if(!u) return false;
   try{ var r=await fetch(u+'/push',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topic:topic,msg:payload})}); return await r.json(); }catch(e){ return null; }
 }
+var bgPushDone=false, bgPushFail=0;
 async function bgPushSetup(){
   /* v132: つうちサーバーが あれば そちらを つかう（ntfy の 回数せいげんが ない） */
   if(psrvGet()){ var ok=await psrvSetup(); if(ok) return; }
@@ -7868,14 +7884,21 @@ async function bgPushSetup(){
   try{
     if(!swReg||!swReg.pushManager||Notification.permission!=='granted') return;
     var mine=await myBellTopic(); if(!mine) return;
+    /* v180: とどけ せってい ずみなら なにも しない。画面を もどす たびに だんろを つくりなおすと、
+       つかわなくなった だんろが 中継に つみあがって 通知が おそく・とどかなく なっていた。
+       しっぱいした ときだけ さいど やりなおす（3かい まで） */
+    if(bgPushDone&&bgPushFail<3) return;
     var sub=await swReg.pushManager.getSubscription();
-    /* v129: 古い 購読が こわれて いると とどかないので、つかいまわしを しない（するたびに つくりなおす） */
-    try{ if(sub){ await sub.unsubscribe(); sub=null; } }catch(e){}
-    try{ sub=await swReg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:unb64(NTFY_VAPID)}); }catch(e){ return; }
+    /* 鍵が ちがう 購読（つうちサーバー用 など）は つかえないので つくりなおす */
+    var want=NTFY_VAPID, have='';
+    try{ if(sub&&sub.options&&sub.options.applicationServerKey){ var a=new Uint8Array(sub.options.applicationServerKey); var bs=''; for(var i=0;i<a.length;i++) bs+=String.fromCharCode(a[i]); have=btoa(bs).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); } }catch(e){}
+    if(sub&&have&&have!==want){ try{ await sub.unsubscribe(); }catch(e){} sub=null; }
+    if(!sub){ try{ sub=await swReg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:unb64(want)}); }catch(e){ return; } }
     var j=sub.toJSON();
-    await fetch('https://ntfy.sh/v1/webpush',{method:'POST',headers:{'Content-Type':'application/json'},
+    var r=await fetch('https://ntfy.sh/v1/webpush',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({endpoint:j.endpoint,auth:j.keys.auth,p256dh:j.keys.p256dh,topics:[mine]})});
-  }catch(e){}
+    if(r&&r.ok){ bgPushDone=true; bgPushFail=0; } else { bgPushFail++; }
+  }catch(e){ bgPushFail++; }
 }
 var bellLast=0, bellCount=0, bellT=null;
 async function ringBell(){
@@ -7906,7 +7929,7 @@ async function pushToPeer(body){
     var tryPush=function(k){
       var done=function(ok){ if(k===0) first(!!ok); if(!ok&&k<3) setTimeout(function(){ tryPush(k+1); },[20000,60000,180000][k]); };
       if(psrvGet()){ psrvPush(t,payload).then(function(j){ done(!!(j&&j.ok&&(j.sent>0))); }); return; }
-      fetch('https://ntfy.sh/'+t,{method:'POST',headers:{'Content-Type':'text/plain'},body:payload})
+      fetch('https://ntfy.sh/'+t,{method:'POST',headers:{'Content-Type':'text/plain','Priority':'high'},body:payload})
         .then(function(r){ done(r.ok); }).catch(function(){ done(false); });
     };
     tryPush(0);
