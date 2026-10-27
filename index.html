@@ -791,7 +791,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v163</b>｜ビルド 2026-10-27（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v165</b>｜ビルド 2026-10-27（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -865,7 +865,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v163</b>｜ビルド 2026-10-27（アプリが 裏でも スマホに 直接とどく）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v165</b>｜ビルド 2026-10-27（アプリが 裏でも スマホに 直接とどく）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -2403,8 +2403,8 @@ document.querySelectorAll('.talk-back').forEach(function(b){
   });
 });
 function updateTitleBadge(){ document.title=((S.hostAlert?'⚠ ':'')+(S.unread>0?'('+S.unread+') ':''))+'雑学王'; }
-if($('#tab-to-chat')) $('#tab-to-chat').addEventListener('click',function(){ setTab('chat'); });
-function setTab(which){
+if($('#tab-to-chat')) $('#tab-to-chat').addEventListener('click',function(){ setTab('chat',1); });
+function setTab(which,byUser){
   S.tab=which;
   if(which==='chat') swClearNotifs();   /* v142: トークを 見たら 通知を 消す */
   updateTitleBadge();
@@ -2412,7 +2412,7 @@ function setTab(which){
   if($('#tab-chat')){ $('#tab-chat').classList.toggle('on',which==='chat'); $('#tab-chat').setAttribute('aria-selected',which==='chat'); }
   if($('#pane-game')) $('#pane-game').classList.toggle('on',which==='game');
   if($('#pane-chat')) $('#pane-chat').classList.toggle('on',which==='chat');
-  if(which==='chat'){ S.unread=0; updateBadge(); updateTalkbackBadges(); try{ if(navigator.serviceWorker&&navigator.serviceWorker.controller) navigator.serviceWorker.controller.postMessage('clear'); }catch(e){} try{ if(swReg&&swReg.getNotifications) swReg.getNotifications({tag:'mtp-chat'}).then(function(a){ a.forEach(function(n){ n.close(); }); }); }catch(e){} S._jump=true; renderChat(true); maybeSendRead(); try{ sendChatOpen(); }catch(e){} setTimeout(scrollChatBottom,200); }
+  if(which==='chat'){ S.unread=0; updateBadge(); updateTalkbackBadges(); try{ if(navigator.serviceWorker&&navigator.serviceWorker.controller) navigator.serviceWorker.controller.postMessage('clear'); }catch(e){} try{ if(swReg&&swReg.getNotifications) swReg.getNotifications({tag:'mtp-chat'}).then(function(a){ a.forEach(function(n){ n.close(); }); }); }catch(e){} S._jump=true; renderChat(true); maybeSendRead(); setTimeout(scrollChatBottom,200); }
   else { renderQuiz(); }
 }
 function updateBadge(){
@@ -2435,13 +2435,13 @@ function setAppBadgeCount(n){
 /* v128: アプリを ひらいた ときに まちがった バッジを かならず けす（けす 仕事を 誰も していなかった ため） */
 function appBadgeSync(){ try{ setAppBadgeCount(S.unread||0); }catch(e){} }
 [300,1500,5000].forEach(function(ms){ setTimeout(appBadgeSync,ms); });
-document.addEventListener('visibilitychange',function(){ if(!document.hidden){ setTimeout(appBadgeSync,150); if(S.tab==='chat') swClearNotifs(); } });   /* v142: もどった ときも 消す */
+document.addEventListener('visibilitychange',function(){ if(!document.hidden){ setTimeout(appBadgeSync,150); if(S.tab==='chat') swClearNotifs(); try{ sendAppOpen(); }catch(e){} } });   /* v142: もどった ときも 消す */
 function note(msg,el){ var t=$(el||'#note'); if(t) t.textContent=msg||''; }
 function setNet(state){
   try{ var dt=$('#lh-dot'); if(dt) dt.classList.toggle('on',state==='open'&&(Fast.open||Net.open)); }catch(e){}
   if(state==='open'&&(S.paired||S.linked)&&!S._profSent){ S._profSent=true; setTimeout(sendProf,1500); }
   var n=$('#net'); n.classList.remove('on','lost');
-  if(state==='open'){ n.classList.add('on'); $('#net-txt').textContent='つながり中'; setTimeout(resendUndelivered,1200); }
+  if(state==='open'){ n.classList.add('on'); $('#net-txt').textContent='つながり中'; setTimeout(resendUndelivered,1200); try{ sendAppOpen(); }catch(e){} }
   else if(state==='lost'){ n.classList.add('lost'); $('#net-txt').textContent='再接続中…'; }
   else { $('#net-txt').textContent='オフライン'; }
 }
@@ -2451,9 +2451,9 @@ function setLock(on,txt){
   $('#lock-txt').textContent=txt||(on?'暗号化':'未接続');
 }
 if($('#tab-game')) $('#tab-game').addEventListener('click',function(){ setTab('game'); });
-$('#tab-chat').addEventListener('click',function(){ setTab('chat'); });
-$('#peek').addEventListener('click',function(){ setTab('chat'); });
-$('#peek').addEventListener('keydown',function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); setTab('chat'); } });
+$('#tab-chat').addEventListener('click',function(){ setTab('chat',1); });
+$('#peek').addEventListener('click',function(){ setTab('chat',1); });
+$('#peek').addEventListener('keydown',function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); setTab('chat',1); } });
 
 /* =================================================================
    6. ロビー
@@ -5511,6 +5511,7 @@ if($('#btn-wipe')) $('#btn-wipe').addEventListener('click',function(){
 (function(){ try{ if(pairLoad()) window.__hasPair=true; }catch(e){} })();
 function startPlay(){
   stopAnnounce();
+  setTimeout(function(){ try{ sendAppOpen(); }catch(e){} },800);
   S.words=[]; usedMap(); S.req=null; S.rendered=0; S.over=null; S.pending=null;
   S.turn = S.isHost ? S.me.id : S.opp.id;
   $('#log').innerHTML='';
@@ -5561,9 +5562,9 @@ function memAdd(txt){
   renderMem();
 }
 var lastChatOpenSent=0;
-function sendChatOpen(){
+function sendAppOpen(){
   if(!(S.paired||S.linked)) return;
-  var t=Date.now(); if(t-lastChatOpenSent<10000) return;   /* 連打よけ:10秒に1回 */
+  var t=Date.now(); if(t-lastChatOpenSent<30000) return;   /* 連発よけ:30秒に1回 */
   lastChatOpenSent=t;
   try{ Net.send({t:'chat-open'}); }catch(e){}
 }
@@ -5571,14 +5572,14 @@ function peerLine(){
   var ts=S.lastPeer||(window.__zgsPeerLast||0);
   var str='あいて:'+(ts?('さいご '+fmtTime(ts)):'—');
   var co=S.peerChatT||+(window.__zgsPeerChatOpen||0)||0;
-  if(co) str+='（トーク '+fmtTime(co)+'）';
+  if(co) str+='（アプリ '+fmtTime(co)+'）';
   return str;
 }
 function peerChatOpen(){
   S.peerChatT=Date.now();
   window.__zgsPeerChatOpen=S.peerChatT;
   try{ localStorage.setItem('zg_peer_chat_open',String(S.peerChatT)); }catch(e){}
-  try{ memAdd('あいてが トークを ひらいた'); }catch(e){}
+  try{ memAdd('あいてが アプリを ひらいた'); }catch(e){}
   var el=$('#mem-line'); if(el) el.textContent=peerLine();
 }
 function memTick(){
@@ -6964,7 +6965,7 @@ function restartRound(){
   Net.send({t:'restart'});
 }
 $('#btn-to-chat').addEventListener('click',function(){
-  show('play'); setTab('chat');
+  show('play'); setTab('chat',1);
 });
 $('#btn-leave').addEventListener('click',function(){ unpairBoth(this); });
 
