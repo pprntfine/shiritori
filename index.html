@@ -791,7 +791,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v176</b>｜ビルド 2026-10-27（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v177</b>｜ビルド 2026-10-27（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -865,7 +865,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v176</b>｜ビルド 2026-10-27（アプリが 裏でも スマホに 直接とどく）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v177</b>｜ビルド 2026-10-27（アプリが 裏でも スマホに 直接とどく）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -5930,6 +5930,10 @@ function closeCam(){
   var mm2=$('#cam-modal'); if(mm2) mm2.classList.remove('on');
   try{ camPreview(false); }catch(e){}   /* v169: しかくがいを けす */
 }
+function zgsCamFail(){   /* v177: ストーリーから あけた ときも 見える つうちを だす（#note2 は うしろに かくれるため） */
+  try{ if(window.__zgsMode&&window.__zgsToast) window.__zgsToast('カメラが ひらけません。もういちど 📷 を おします'); }catch(e){}
+  try{ note('カメラが つかえません(きょかが ひつようです)。','#note2'); }catch(e){}
+}
 $('#btn-photo').addEventListener('click',function(){
   /* v168: ペア接続中なら つかえる。v169: カメラきりかえ・さつえいまえの しかく に対応 */
   if(!(S.paired||S.linked)){ note('ぺアが つながって いるときだけ つかえます。','#note2'); return; }
@@ -5951,8 +5955,8 @@ function camOpen(face){
       var v=$('#cam-video'); if(v){ v.srcObject=st; v.style.visibility='visible'; try{ v.muted=true; v.setAttribute('playsinline',''); }catch(e2){} try{ var pp=v.play(); if(pp&&pp.catch) pp.catch(function(){}); }catch(e2){} }   /* v175: 2かいめ おープンでも えいぞうが うごきだすように */
       var mm=$('#cam-modal'); if(mm) mm.classList.add('on');
       camApplyFace(); camPreview(false);   /* v171: ひらいてから つなぎこむ（🔄が でる） */
-    }).catch(function(){ note('カメラが つかえません(きょかが ひつようです)。','#note2'); });
-  }catch(e){ note('カメラが つかえません(きょかが ひつようです)。','#note2'); }
+    }).catch(function(){ zgsCamFail(); });   /* v177: 見える つうちに */
+  }catch(e){ zgsCamFail(); }   /* v177: 見える つうちに */
 }
 window.camOpen=camOpen; window.camPreview=camPreview; window.camApplyFace=camApplyFace;   /* v171: ストーリー側からも つかえるように */
 function camPreview(on){
@@ -5978,7 +5982,7 @@ function camPreview(on){
   flip.textContent='🔄'; flip.title='カメラを きりかえ';
   document.body.appendChild(shot); document.body.appendChild(ok); document.body.appendChild(ret); document.body.appendChild(flip);
   var st=document.createElement('style');
-  st.textContent='#cam-video.mirror{transform:scaleX(-1)}#zgs-reshoot{position:absolute;right:70px;bottom:calc(env(safe-area-inset-bottom,0px) + 24px);font-size:20px;z-index:3}';
+  st.textContent='#cam-video.mirror{transform:scaleX(-1)}#zgs-reshoot{position:absolute;right:76px;bottom:calc(env(safe-area-inset-bottom,0px) + 24px);width:48px;height:48px;padding:0;line-height:44px;text-align:center;font-size:20px;border-radius:50%;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.4);z-index:4}';   /* v177: 📷を 🗑 と おなじ 丸ガラスボタンに（あたりを ひろく・足跡カードと はなす） */
   document.head.appendChild(st);
   flip.addEventListener('click',function(){
     window.__camFace=(window.__camFace==='environment')?'user':'environment';
@@ -8352,12 +8356,14 @@ document.addEventListener('click',function(e){
   }catch(err){}
 },true);
 function shootMode(){
+  try{ closeCamSafe(); }catch(e){}   /* v177: まえの カメラを きちんと とめて から あける（3かいめ以降の れんぞく オープンで カメラが つかめない ふせい） */
   try{
     window.__zgsMode=true;
     window.camOpen(window.__camFace||'user');   /* v171: とおしを みえるように */
-    setTimeout(function(){   /* v175: 1.2秒 たっても えいぞうが うごいて いなかったら もう1かいだけ つなぎなおす */
+    setTimeout(function(){   /* v175: 1.2秒 たっても えいぞうが うごいて いなかったら もう1かいだけ つなぎなおす / v177: そもそも ひらかなかった ときも もう1かいだけ ためす */
       try{
         var m2=q('#cam-modal'),v2=q('#cam-video');
+        if(window.__zgsMode&&m2&&!m2.classList.contains('on')&&!window.camShotWait){ window.camOpen(window.__camFace||'user'); return; }
         if(window.__zgsMode&&m2&&m2.classList.contains('on')&&v2&&!v2.videoWidth&&!window.camShotWait) window.camOpen(window.__camFace||'user');
       }catch(e){}
     },1200);
@@ -8541,8 +8547,8 @@ function buildView(){
   q('#zgs-prev').addEventListener('click',function(e){ e.stopPropagation(); step(-1); });   /* v176 */
   q('#zgs-next').addEventListener('click',function(e){ e.stopPropagation(); step(1); });   /* v176 */
   q('#zgs-hb').addEventListener('click',function(e){ e.stopPropagation(); heart(); });
-  q('#zgs-del').addEventListener('click',function(){ if(confirm('この ストーリーを けしますか？')) del(); });
-  var rs=q('#zgs-reshoot'); if(rs) rs.addEventListener('click',function(){   /* v176: つぎの ストーリーを ついかする（5こまで） */
+  q('#zgs-del').addEventListener('click',function(e){ e.stopPropagation(); if(confirm('この ストーリーを けしますか？')) del(); });   /* v177 */
+  var rs=q('#zgs-reshoot'); if(rs) rs.addEventListener('click',function(e){ e.stopPropagation();   /* v176: つぎの ストーリーを ついかする（5こまで）/ v177: タップをもれなく */
     if(D.mineList.length>=MAX){ toast2('ストーリーは '+MAX+'こ までです'); return; }
     closeView();
     try{ shootMode(); }catch(e){}
@@ -8578,8 +8584,8 @@ css.textContent='#zgs-tray{display:flex;align-items:center;gap:14px;background:#
 +'.zgs-nm{font-weight:900;font-size:14px}'
 +'.zgs-agt{font-size:11px;opacity:.75}'
 +'.zgs-x{margin-left:auto;font-size:22px;background:none;border:0;color:#fff;cursor:pointer;padding:6px;font-weight:700}'
-+'#zgs-del{position:absolute;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 24px);font-size:20px;z-index:3}'   /* v161: みぎ76px→16px（左へ移動） */
-+'.zgs-fp{margin-right:76px}'   /* v161: 枠を ひろげる（みぎ118px→76px） */
++'#zgs-del{position:absolute;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 24px);width:48px;height:48px;padding:0;line-height:44px;text-align:center;font-size:20px;border-radius:50%;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.4);z-index:4}'   /* v177: 🗑も 📷 と おなじ 丸ガラスボタンに（押しやすく・❤と そろい） */
++'.zgs-fp{margin-right:144px}'   /* v177: みぎの ボタン2こ分（📷🗑）を あける（76px→144px） */
 +'#zgs-img{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:18px}'
 +'#zgs-img img{max-width:100%;max-height:100%;border-radius:12px;box-shadow:0 18px 50px rgba(0,0,0,.5)}'
 +'.zgs-foot{padding:10px 14px calc(env(safe-area-inset-bottom,0px) + 16px);color:#fff;position:relative;z-index:2}'
