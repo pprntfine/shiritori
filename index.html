@@ -791,7 +791,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v168</b>｜ビルド 2026-10-27（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v169</b>｜ビルド 2026-10-27（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -865,7 +865,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v168</b>｜ビルド 2026-10-27（アプリが 裏でも スマホに 直接とどく）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v169</b>｜ビルド 2026-10-27（アプリが 裏でも スマホに 直接とどく）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -5923,41 +5923,97 @@ function notifyIncoming(){
 }
 /* しゃしん：カメラでとって あんごうチャンクで そうしんする(きろくには のこらない) */
 var PHOTO_PIECE=1300, PHOTO_MAXSIDE=1024, photoBuf={};
-var camStream=null;
+var camStream=null, camShotURL='';
 function closeCam(){
   if(camStream){ try{ camStream.getTracks().forEach(function(t){ t.stop(); }); }catch(e){} camStream=null; }
   var v=$('#cam-video'); if(v) v.srcObject=null;
   var mm2=$('#cam-modal'); if(mm2) mm2.classList.remove('on');
+  try{ camPreview(false); }catch(e){}   /* v169: しかくがいを けす */
 }
-$('#btn-photo').addEventListener('click',async function(){
-  /* v168: ペアが つながって いれば カメラを だす（ゲームちゅう でなくても） */
+$('#btn-photo').addEventListener('click',function(){
+  /* v168: ペア接続中なら つかえる。v169: カメラきりかえ・さつえいまえの しかく に対応 */
   if(!(S.paired||S.linked)){ note('ぺアが つながって いるときだけ つかえます。','#note2'); return; }
-  try{
-    if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia) throw new Error('no cam');
-    camStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:720},height:{ideal:960}},audio:false});
-  }catch(e){ note('カメラが つかえません(きょかが ひつようです)。','#note2'); return; }
-  $('#cam-video').srcObject=camStream;
-  $('#cam-modal').classList.add('on');
+  camOpen(window.__camFace||'user');
 });
 $('#cam-cancel').addEventListener('click',closeCam);
+
+/* v169: カメラの きりかえ（イン/アウト）と さつえいまえの しかく */
+function camApplyFace(){
+  var v=$('#cam-video'); if(v) v.classList.toggle('mirror',window.__camFace==='user');
+}
+function camOpen(face){
+  window.__camFace=face||window.__camFace||'user';
+  try{
+    if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia) throw new Error('no cam');
+    navigator.mediaDevices.getUserMedia({video:{facingMode:window.__camFace,width:{ideal:720},height:{ideal:960}},audio:false}).then(function(st){
+      if(camStream){ try{ camStream.getTracks().forEach(function(t){ t.stop(); }); }catch(e){} }
+      camStream=st;
+      var v=$('#cam-video'); if(v){ v.srcObject=st; v.style.visibility='visible'; }
+      camApplyFace(); camPreview(false);
+      var mm=$('#cam-modal'); if(mm) mm.classList.add('on');
+    }).catch(function(){ note('カメラが つかえません(きょかが ひつようです)。','#note2'); });
+  }catch(e){ note('カメラが つかえません(きょかが ひつようです)。','#note2'); }
+}
+function camPreview(on){
+  var v=$('#cam-video'),sp=$('#cam-shot'),ok=$('#cam-ok'),ret=$('#cam-retake'),sh=$('#cam-shoot'),fl=$('#cam-flip');
+  if(sp) sp.style.display=on?'block':'none';
+  if(ok) ok.style.display=on?'block':'none';
+  if(ret) ret.style.display=on?'block':'none';
+  if(sh) sh.style.display=on?'none':'';
+  if(fl) fl.style.display=on?'none':'';
+  if(v) v.style.visibility=on?'hidden':'visible';
+  if(!on&&sp) sp.removeAttribute('src');
+}
+(function(){
+  function mk(id,css){ var e=document.getElementById(id); if(e) return e; e=document.createElement(id==='cam-shot'?'img':'button'); e.id=id; e.style.cssText=css; return e; }
+  var shot=mk('cam-shot','display:none;position:fixed;left:50%;top:46%;transform:translate(-50%,-50%);max-width:86vw;max-height:60vh;border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.5);z-index:100001;background:#000');
+  var ok=mk('cam-ok','display:none;position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 92px);transform:translateX(-50%);padding:13px 40px;font-size:16px;font-weight:800;border:0;border-radius:999px;background:#06C755;color:#fff;z-index:100002;cursor:pointer');
+  ok.textContent='そうしん';
+  var ret=mk('cam-retake','display:none;position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 38px);transform:translateX(-50%);padding:11px 28px;font-size:14px;font-weight:700;border:0;border-radius:999px;background:rgba(255,255,255,.28);color:#fff;z-index:100002;cursor:pointer');
+  ret.textContent='とりなおす';
+  var flip=mk('cam-flip','position:fixed;right:18px;bottom:calc(env(safe-area-inset-bottom,0px) + 120px);width:48px;height:48px;border-radius:50%;border:1px solid rgba(255,255,255,.5);background:rgba(0,0,0,.45);color:#fff;font-size:20px;z-index:100002;cursor:pointer');
+  flip.textContent='🔄'; flip.title='カメラを きりかえ';
+  document.body.appendChild(shot); document.body.appendChild(ok); document.body.appendChild(ret); document.body.appendChild(flip);
+  var st=document.createElement('style');
+  st.textContent='#cam-video.mirror{transform:scaleX(-1)}#zgs-reshoot{position:absolute;right:70px;bottom:calc(env(safe-area-inset-bottom,0px) + 24px);font-size:20px;z-index:3}';
+  document.head.appendChild(st);
+  flip.addEventListener('click',function(){
+    window.__camFace=(window.__camFace==='environment')?'user':'environment';
+    if(document.getElementById('cam-modal').classList.contains('on')) camOpen(window.__camFace);
+  });
+  ret.addEventListener('click',function(){ camPreview(false); camOpen(window.__camFace); });
+  ok.addEventListener('click',function(){
+    var url=camShotURL; if(!url) return;
+    camPreview(false);
+    try{
+      if(window.__zgsMode){ closeCam(); if(window.__zgsFinishShot) window.__zgsFinishShot(url); }
+      else{
+        closeCam();
+        var pid='P'+Date.now().toString(36)+((Math.random()*1e6)|0).toString(36);
+        var msg={photo:true,from:S.me.id,at:Date.now(),data:url,pid:pid,uid:String(++UID),sent:false,n:0};
+        S.chat.push(msg);
+        renderChat(true);
+        sendPhoto(msg);
+      }
+    }catch(e){ closeCam(); }
+  });
+})();
 $('#cam-shoot').addEventListener('click',function(){
-  /* v158: ストーリー モードのときは こちらで うつして トークには のこさない */
-  if(window.__zgsMode){ try{ window.__zgsShoot(); }catch(e){} return; }
+  /* v169: うつしたら まず しかく。「そうしん」でおくる（いままでは うつすと そのまま のった） */
   var v=$('#cam-video');
   try{
-    var w=v.videoWidth||480,h=v.videoHeight||640;
-    var sc=Math.min(1,PHOTO_MAXSIDE/Math.max(w,h));
+    if(!v.videoWidth){ toast2('カメラが まだ じゅんびできて いません'); return; }
+    var w=v.videoWidth,h=v.videoHeight;
+    var mir=(window.__camFace==='user');   /* v169: インカメラは さゆう ぎゃく（かがみ）で うつす */
+    var sc=Math.min(1,(window.__zgsMode?720:PHOTO_MAXSIDE)/Math.max(w,h));
     var c=document.createElement('canvas');
     c.width=Math.max(1,Math.round(w*sc)); c.height=Math.max(1,Math.round(h*sc));
-    c.getContext('2d').drawImage(v,0,0,c.width,c.height);
-    var url=c.toDataURL('image/jpeg',0.72);
-    closeCam();
-    /* v115: 以前は「pid」が 未定義で ここで 止まり、写真が つかなかった */
-    var pid='P'+Date.now().toString(36)+((Math.random()*1e6)|0).toString(36);
-    var msg={photo:true,from:S.me.id,at:Date.now(),data:url,pid:pid,uid:String(++UID),sent:false,n:0};
-    S.chat.push(msg);
-    renderChat(true);
-    sendPhoto(msg);
+    var ctx=c.getContext('2d');
+    if(mir){ ctx.translate(c.width,0); ctx.scale(-1,1); }
+    ctx.drawImage(v,0,0,c.width,c.height);
+    camShotURL=c.toDataURL('image/jpeg',window.__zgsMode?0.8:0.72);
+    $('#cam-shot').src=camShotURL;
+    camPreview(true);
   }catch(e){ closeCam(); note('さつえいに しっぱいしました。','#note2'); }
 });
 var UID=0;
@@ -8229,6 +8285,7 @@ function del(){
   D.mine=null; D.views={}; save(D); try{ renderTray(); }catch(e){} closeView();
   try{ if(netOK()) Net.send({t:'story-del',sid:pid}); }catch(e){}
 }
+window.__zgsFinishShot=function(url){ try{ post(url); }catch(e){} try{ window.__zgsMode=false; }catch(e){} };   /* v169: しかく「そうしん」から とうこう */
 window.__zgsShoot=function(){
   try{
     var v=q('#cam-video');
@@ -8259,11 +8316,7 @@ document.addEventListener('click',function(e){
 function shootMode(){
   try{
     window.__zgsMode=true;
-    navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:720},height:{ideal:960}},audio:false}).then(function(st){
-      try{ window.camStream=st; }catch(e){}
-      var v=q('#cam-video'); if(v) v.srcObject=st;
-      var m=q('#cam-modal'); if(m) m.classList.add('on');
-    }).catch(function(){ window.__zgsMode=false; toast2('カメラが つかえません(きょかが ひつようです)'); });
+    camOpen(window.__camFace||'user');   /* v169: 共通の カメラ処理（きりかえ・しかくつき） */
   }catch(e){ window.__zgsMode=false; toast2('カメラが つかえません'); }
 }
 window.__storyRecv=async function(m){
@@ -8336,6 +8389,7 @@ function openView(kind){
   try{ q('#zgs-view .zgs-top .zgs-ring').className='zgs-ring'+((kind==='peer'&&D.seenAt!==st.at)?'':' seen'); }catch(e){}
   var hb=q('#zgs-hb'); hb.hidden=(kind!=='peer');
   var db=q('#zgs-del'); db.hidden=(kind!=='mine');
+  var rb=q('#zgs-reshoot'); if(rb) rb.hidden=(kind!=='mine');   /* v169 */
   var fp=q('#zgs-fp'); fp.hidden=(kind!=='mine'); if(kind==='mine') fillFp();
   vv.classList.add('on');
   if(runT){ clearTimeout(runT); runT=null; }
@@ -8403,11 +8457,17 @@ function buildView(){
    +'<div class="zgs-foot"><div class="zgs-fp" id="zgs-fp" hidden></div></div>'
    +'<button type="button" class="zgs-hb" id="zgs-hb" aria-label="いいね">❤</button>'
    +'<button type="button" class="zgs-x" id="zgs-del" hidden>🗑</button>'
+   +'<button type="button" class="zgs-x" id="zgs-reshoot" hidden>📷</button>'
    +'<div id="zgs-hearts"></div>';
   document.body.appendChild(v);
   q('#zgs-x').addEventListener('click',closeView);
   q('#zgs-hb').addEventListener('click',function(e){ e.stopPropagation(); heart(); });
   q('#zgs-del').addEventListener('click',function(){ if(confirm('この ストーリーを けしますか？')) del(); });
+  var rs=q('#zgs-reshoot'); if(rs) rs.addEventListener('click',function(){   /* v169: こわして うつしなおす＝なんどでも とうこう */
+    try{ D.mine=null; D.views={}; save(D); renderTray(); }catch(e){}
+    closeView();
+    try{ shootMode(); }catch(e){}
+  });
 }
 var css=document.createElement('style'); css.id='zgs-css';
 css.textContent='#zgs-tray{display:flex;align-items:center;gap:14px;background:#fff;border:1px solid #E7E4F2;border-radius:18px;margin:8px 8px 4px;padding:10px 12px;flex:none;overflow-x:auto;box-shadow:0 2px 8px rgba(70,50,150,.06)}'
