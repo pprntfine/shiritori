@@ -791,7 +791,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v172</b>｜ビルド 2026-10-27（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v173</b>｜ビルド 2026-10-27（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -865,7 +865,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v172</b>｜ビルド 2026-10-27（アプリが 裏でも スマホに 直接とどく）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v173</b>｜ビルド 2026-10-27（アプリが 裏でも スマホに 直接とどく）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -8206,7 +8206,7 @@ var KEY='zg_story_v1', DAY=24*3600*1000;
 function q(s){ return document.querySelector(s); }
 function GV(n,d){ try{ var v=window[n]; return (v===undefined||v===null)?d:v; }catch(e){ return d; } }
 function load(){ try{ var o=JSON.parse(localStorage.getItem(KEY)||'null'); if(o&&typeof o==='object'){ if(!o.views) o.views={}; return o; } }catch(e){} return {mine:null,peer:null,seenAt:0,views:{}}; }
-function save(o){ try{ localStorage.setItem(KEY,JSON.stringify(o)); }catch(e){} }
+function save(o){ try{ localStorage.setItem(KEY,JSON.stringify(o)); return true; }catch(e){ return false; } }   /* v173: ほぞんの せいかいを 返す */
 var D=load();
 function now(){ return Date.now(); }
 function mySid(){ return (D.mine&&D.mine.at)||0; }
@@ -8293,7 +8293,8 @@ function post(url){
   compress(url,function(u){
     D.mine={data:u,at:now(),pid:now().toString(36)+Math.floor(Math.random()*1e4).toString(36)};
     D.views={};
-    save(D); try{ renderTray(); }catch(e){}
+    if(!save(D)) toast2('ほぞん できませんでした（きおくの あきが たりません）');   /* v173: ほぞん しっぱいを みえるように */
+    try{ renderTray(); }catch(e){}
     publish(D.mine);
     toast2('ストーリーに とうこうしました（24じかんで きえます）');
   });
@@ -8335,6 +8336,12 @@ function shootMode(){
   try{
     window.__zgsMode=true;
     window.camOpen(window.__camFace||'user');   /* v171: とおしを みえるように */
+    setTimeout(function(){   /* v173: カメラが ひらけなかったら ことばで しらせる（#note2 は トークの なかで みえない） */
+      try{
+        var m=q('#cam-modal');
+        if(window.__zgsMode&&(!m||!m.classList.contains('on'))){ window.__zgsMode=false; toast2('カメラが ひらけません でした。もういちど おします'); }
+      }catch(e){}
+    },3500);
   }catch(e){ window.__zgsMode=false; toast2('カメラが つかえません'); }
 }
 window.__storyRecv=async function(m){
@@ -8481,8 +8488,7 @@ function buildView(){
   q('#zgs-x').addEventListener('click',closeView);
   q('#zgs-hb').addEventListener('click',function(e){ e.stopPropagation(); heart(); });
   q('#zgs-del').addEventListener('click',function(){ if(confirm('この ストーリーを けしますか？')) del(); });
-  var rs=q('#zgs-reshoot'); if(rs) rs.addEventListener('click',function(){   /* v169: こわして うつしなおす＝なんどでも とうこう */
-    try{ D.mine=null; D.views={}; save(D); renderTray(); }catch(e){}
+  var rs=q('#zgs-reshoot'); if(rs) rs.addEventListener('click',function(){   /* v173: うつしなおす。もう けさない（あたらしいのを とうこうした しゅんかんで いれかわる。やめたら いまの ストーリーは そのまま） */
     closeView();
     try{ shootMode(); }catch(e){}
   });
