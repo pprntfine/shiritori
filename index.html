@@ -771,7 +771,7 @@ body.in-play .leave-row{display:none!important}
       <div class="brand">雑学王</div>
       <div class="bar-right">
         <span id="lock" class="lock off" title="この部屋の通信は暗号化されています">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg><span id="lock-txt">未接続</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg><span id="lock-txt">鍵なし</span>
         </span>
         <span id="net" class="net"><i></i><span id="net-txt">オフライン</span></span>
         <button id="btn-eject" class="ghost" type="button" hidden>退室</button>
@@ -791,7 +791,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v180</b>｜ビルド 2026-10-27（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v184</b>｜ビルド 2026-10-28（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -865,7 +865,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v180</b>｜ビルド 2026-10-27（アプリが 裏でも スマホに 直接とどく）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v184</b>｜ビルド 2026-10-28（アプリが 裏でも スマホに 直接とどく）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -1875,11 +1875,13 @@ var Net={
     /* v124: 相手の スマホへ 直接（アプリが 裏でも とどく）。
        v157: 同じ 番号の 送りなおしでも、まだ わたせて いなければ もう一度（相手は 番号で 重複を すてる） */
     var pushP=null;
-    if(env&&env.t==='chats'&&!env.__pushOk){ try{ pushP=pushToPeer(body).then(function(ok){ if(ok) env.__pushOk=1; return ok; }); }catch(e){} }
+    /* v181: recall も ベル（あいての スマホへ 直接）に のせる。本文（chats）が 通った ときは 未読 まで 進める */
+    if(env&&(env.t==='chats'||env.t==='recall')&&!env.__pushOk){ try{ pushP=pushToPeer(body).then(function(ok){ if(ok){ env.__pushOk=1; if(env.t==='chats') markPushAcked(env); } return ok; }); }catch(e){} }
     var viaPush=function(){ if(!pushP) return Promise.resolve(false); return Promise.race([pushP,new Promise(function(r){ setTimeout(function(){ r(false); },8000); })]); };
     /* v131: ntfy は 1日250回（同じ Wi-Fi の 2台で 合計）まで。既読・受領・ping などで つかいきると
        アプリを 切った ときの 通知（ベル）が とまる → 大事な ものだけ ntfy に のせる */
-    var NTFY_KEEP={chats:1,unpair:1,prof:1,join:1,ok:1,eject:1,bye:1,full:1,hi2:1};
+    /* v181: recall（とりけし）を 追加 — 相手が 閉じて いても とりけしが とどくように */
+    var NTFY_KEEP={chats:1,recall:1,unpair:1,prof:1,join:1,ok:1,eject:1,bye:1,full:1,hi2:1};
     if(!(env&&NTFY_KEEP[env.t])&&fastOk) return true;
     /* v152: 受領証・ping は 即時路が きれて いる ときも 行列を 待たせない（うしろで 保存路へ）。
        以前は 1通ごとに 最大7秒 待って いたので、うしろの トークが「送信中」の まま つまっていた */
@@ -1893,6 +1895,13 @@ var Net={
     if(!this.allow(typeof prio==='number'?prio:1)) return fastOk||await viaPush();
     /* v122: 即時路で おくれたら 保存路は 待たずに うしろで（つぎの メッセージが つまらない） */
     if(fastOk){ this.postStore(body); return true; }
+    /* v182: つうちサーバー(psrv)が あれば トーク・とりけしは その直接路を 先に 待つ。
+       即時路(MQTT)が きれている とき、従来は 中継所(ntfy)の 返事を 最大7秒 待つため「送信中」が 長く なっていた。
+       psrv なら 相手の スマホへ 直接 とどくのですぐ「送信済み・未読」に なる。4秒 だめなら 従来どおり 中継所へ（悪くは ならない） */
+    if(pushP&&psrvGet()&&(env.t==='chats'||env.t==='recall')){
+      var pOk=await Promise.race([pushP.catch(function(){ return false; }),new Promise(function(r){ setTimeout(function(){ r(false); },4000); })]);
+      if(pOk){ this.postStore(body); return true; }
+    }
     try{
       /* トーク・既読・受領証は中継サーバーに保存させない（接続中の相手へ直接届くのみ） */
       var noCache='';   /* v105: 中継所に のこす（暗号文のみ・最長12時間）。ポーリングで 取りもどせる ようにする */   /* 中継サーバーに 一切 保存させない(記録を のこさない) */  /* メッセージ・写真・ライブは中継に保存させない */
@@ -2463,7 +2472,7 @@ function setNet(state){
 function setLock(on,txt){
   var l=$('#lock');
   l.classList.toggle('off',!on);
-  $('#lock-txt').textContent=txt||(on?'暗号化':'未接続');
+  $('#lock-txt').textContent=txt||(on?'暗号化':'鍵なし');
 }
 if($('#tab-game')) $('#tab-game').addEventListener('click',function(){ setTab('game'); });
 $('#tab-chat').addEventListener('click',function(){ setTab('chat',1); });
@@ -2700,7 +2709,7 @@ function tickExpiry(){
     S.expWarned=true;
     if(S.phase==='wait'){
       note('招待の 期限が きれました。入り口も しずめました(新しい人は 入れません)。','#note2');
-      if(S.isHost!==false){ stopMigrate(); try{ Net.close(); }catch(e){} setNet('off'); setLock(false,'未接続'); }
+      if(S.isHost!==false){ stopMigrate(); try{ Net.close(); }catch(e){} setNet('off'); setLock(false,'鍵なし'); }
     }
     else if(S.phase==='play'||S.linked){
       sysChat('ルームの じかんが きれました。まもなく 閉じます。');
@@ -2823,7 +2832,7 @@ function probeDecide(peerId,forcedHost){
     startPing(); $('#wait-lead').textContent='あいてを まっています';
     if(inviteExpired(S.expiresAt)&&S.phase==='wait'){      /* 期限ぎれなら 入り口を しずめる */
       note('招待の 期限が きれています。入り口を しずめました。','#note2');
-      try{ Net.close(); }catch(e){} setNet('off'); setLock(false,'未接続');
+      try{ Net.close(); }catch(e){} setNet('off'); setLock(false,'鍵なし');
     }
   }
   else { $('#wait-lead').textContent='ホストの かくにんを まっています（あいず '+deviceTag(S.me.id)+'）'; startAnnounce(); }
@@ -5475,7 +5484,7 @@ async function resumeConnect(silent){
     startPing(); startWatch(); if(S.isHost) startFullWatch();
     /* v111: hi2 は 送らない */
     try{ renderChat(true); }catch(e){}
-    if(!silent){ show('play'); document.querySelector('.bar').classList.add('compact'); setTab('chat'); }
+    if(!silent){ show('play'); document.querySelector('.bar').classList.add('compact'); setTab('chat'); try{ if(S.sealed&&Net.key) setLock(true,'暗号化'); }catch(e){} }   /* v184: もどした ときも かぎランプを つける（あんごうは 有効・ランプだけ 消えていた） */
     setTimeout(function(){ try{ bgPushSetup(); }catch(e){} },2000);
     setTimeout(drainInbox,600);
     try{ paintTopicTag(); }catch(e){}
@@ -5507,6 +5516,7 @@ function openChatUI(){
   $('#p-me').textContent=meName();
   $('#p-opp').textContent=peerName();
   show('play');
+  try{ if(S.sealed&&Net.key) setLock(true,'暗号化'); }catch(e){}   /* v184: リンク再接続でも かぎランプを つける */
   document.querySelector('.bar').classList.add('compact');
   $('#btn-eject').hidden = !(S.isHost && S.guest);
   setTab('chat');
@@ -5581,27 +5591,30 @@ function sendAppOpen(){
   if(!(S.paired||S.linked)) return;
   var t=Date.now(); if(t-lastChatOpenSent<30000) return;   /* 連発よけ:30秒に1回 */
   lastChatOpenSent=t;
-  try{ Net.send({t:'chat-open'}); }catch(e){}
+  try{ Net.send({t:'chat-open',at:Date.now()}); }catch(e){}   /* v183: とき刻印つき（ふるいためこみを はじくため） */
 }
 function peerLine(){
-  var ts=+(window.__zgsPeerLast||0)||0;   /* v166: 相手からの 受信だけを 見る（自分の つうしんは かぞえない） */
+  var ts=+(window.__zgsPeerLast||0)||0;   /* v166: 相手からの 受信だけ。v183: あいてが アプリを ひらいた 記録だけに */
   var str='あいて:'+(ts?('さいご '+fmtTime(ts)):'—');
-  var co=S.peerChatT||+(window.__zgsPeerChatOpen||0)||0;
-  if(co) str+='（アプリ '+fmtTime(co)+'）';
+  var live=Math.max(ts,+(window.__zgsPeerLive||0)||0);
+  if(live&&Date.now()-live<70000) str+='（いま つながり中）';   /* v183: アプリを だしている あいだ */
   return str;
 }
 function peerChatOpen(){
   S.peerChatT=Date.now();
   window.__zgsPeerChatOpen=S.peerChatT;
+  window.__zgsPeerLast=S.peerChatT; window.__zgsPeerDirty=true;   /* v183: さいごは「アプリを ひらいた」記録だけ（じどうの つうしんでは かぞえない） */
+  window.__zgsPeerLive=S.peerChatT;
   try{ localStorage.setItem('zg_peer_chat_open',String(S.peerChatT)); }catch(e){}
+  try{ sessionStorage.setItem('zg_peer_live',String(window.__zgsPeerLive)); }catch(e){}
   try{ memAdd('あいてが アプリを ひらいた'); }catch(e){}
   var el=$('#mem-line'); if(el) el.textContent=peerLine();
 }
 function memTick(){
   S.memTimer=setInterval(function(){
     if(!S.isHost||S.phase!=='play'){ return; }
-    var ts=+(window.__zgsPeerLast||0)||0;   /* v166: あしがためは 相手の 受信だけ */
-    var on=ts&&(Date.now()-ts<45000);
+    var ts=Math.max(+(window.__zgsPeerLast||0)||0,+(window.__zgsPeerLive||0)||0);   /* v183: いきてる しるしも みる */
+    var on=ts&&(Date.now()-ts<70000);
     if(on!==S.peerOn){ S.peerOn=on; memAdd(on?'つながった':'きれた'); }
     var el=$('#mem-line');
     if(el) el.textContent=peerLine();
@@ -5611,6 +5624,26 @@ function memStop(){
   if(S.memTimer){ clearInterval(S.memTimer); S.memTimer=null; }
   if(memBox){ memBox.remove(); memBox=null; }
 }
+var lastLiveSent=0;
+function sendLive(){   /* v183: あいてに「いきてる」しるしを はなす（25秒に 1かい） */
+  if(!(S.paired||S.linked)) return;
+  var t=Date.now(); if(t-lastLiveSent<25000) return;
+  lastLiveSent=t;
+  try{ Net.send({t:'app-live',at:t}); }catch(e){}
+}
+function peerPresenceTick(){   /* v183: 「つながり中」ランプを あいての そんざいも みて だす */
+  try{
+    if(!(S.paired||S.linked)) return;
+    sendLive();
+    var n=$('#net'); if(!n) return;
+    if(!(Fast.open||Net.open)) return;
+    var live=Math.max(+(window.__zgsPeerLast||0)||0,+(window.__zgsPeerLive||0)||0);
+    var on=!live||(Date.now()-live<70000);
+    if(n.classList.contains('on')&&!on){ n.classList.remove('on'); n.classList.add('lost'); $('#net-txt').textContent='あいて きれた'; }
+    else if(!n.classList.contains('on')&&on&&Net.open){ n.classList.remove('lost'); n.classList.add('on'); $('#net-txt').textContent='つながり中'; }
+  }catch(e){}
+}
+setInterval(peerPresenceTick,5000);
 var brand=document.querySelector('.brand');
 var brandTaps=0,brandLast=0;
 if(brand) brand.addEventListener('click',function(){
@@ -5945,6 +5978,7 @@ function closeCam(){
   var mm2=$('#cam-modal'); if(mm2) mm2.classList.remove('on');
   try{ camPreview(false); }catch(e){}   /* v169: しかくがいを けす */
 }
+document.addEventListener('visibilitychange',function(){ if(document.hidden&&camStream){ try{ closeCam(); }catch(e){} } });   /* v183: 画面を はなれたら カメラを すぐ とめる（カメラ ランプを けす） */
 function zgsCamFail(){   /* v177: ストーリーから あけた ときも 見える つうちを だす（#note2 は うしろに かくれるため） */
   try{ if(window.__zgsMode&&window.__zgsToast) window.__zgsToast('カメラが ひらけません。もういちど 📷 を おします'); }catch(e){}
   try{ note('カメラが つかえません(きょかが ひつようです)。','#note2'); }catch(e){}
@@ -6800,7 +6834,7 @@ function endRoomByTimeout(){
   try{ closeCam(); }catch(e){}
   try{ closeLive(); }catch(e){}
   try{ Net.close(); }catch(e){}
-  setNet('off'); setLock(false,'未接続');
+  setNet('off'); setLock(false,'鍵なし');
   S.paired=false; S.guest=null;
   S.chat=[]; S.unread=0; S.peerRead=0; S.lastPeerN=0; S.readSent=0; S.peerAck=0; updateBadge(); updateTitleBadge();
   S.linked=false;
@@ -6939,6 +6973,18 @@ function queueChat(txt,at){
   renderChat(true);
   if(!S.flushT) S.flushT=setTimeout(function(){ S.flushT=null; flushOutbox(); },60);
   return msg;
+}
+/* v181: 通知pushを 中継が 受けとった なら「未読」まで 進める（相手の スマホが 受けとる じゅんびが できた から） */
+function markPushAcked(env){
+  try{
+    if(!env||!env.n) return;
+    var hit=false;
+    for(var i=0;i<S.chat.length;i++){
+      var x=S.chat[i];
+      if(x&&!x.sys&&x.from===S.me.id&&x.n===env.n&&!x.read&&!x.acked){ x.acked=true; hit=true; }
+    }
+    if(hit&&S.tab==='chat') renderChat(true);
+  }catch(e){}
 }
 function flushOutbox(){
   S.outbox=S.outbox||outLoad();
@@ -7080,7 +7126,7 @@ function wipePairLocal(){
   S.words=[]; S.req=null; S.turn=null; S.over=null; S.pending=null;
   S.secret=''; S.room=''; S.code=''; S.key=null; S.topic=null; S.expiresAt=0;
   try{ $('#chat-log').innerHTML=''; $('#log').innerHTML=''; }catch(e){}
-  try{ updateBadge(); updateTalkbackBadges(); setNet('off'); setLock(false,'未接続'); }catch(e){}
+  try{ updateBadge(); updateTalkbackBadges(); setNet('off'); setLock(false,'鍵なし'); }catch(e){}
   try{ if(swReg&&swReg.pushManager) swReg.pushManager.getSubscription().then(function(sb){ if(sb) sb.unsubscribe(); }); }catch(e){}
   try{ setAppBadgeCount(0); }catch(e){}
 }
@@ -7134,7 +7180,7 @@ function leaveRoom(){
   var _ex=$('#btn-extend'); if(_ex) _ex.hidden=true;
   var _fw=document.querySelector('.qr-wrap'); if(_fw) _fw.classList.remove('expired');
   var _fo=$('#btn-force'); if(_fo) _fo.hidden=true;
-  setNet('off'); setLock(false,'未接続');
+  setNet('off'); setLock(false,'鍵なし');
   $('#in-invite').value=''; $('#in-secret').value=''; $('#in-jroom').value='';
   note(''); note('','#note2');
   show('lobby');
@@ -7210,8 +7256,6 @@ Net.onMsg=function(m){
   var nowMs=Date.now();
   if(!S.rl||nowMs-S.rl.t>1000) S.rl={t:nowMs,n:0};
   S.rl.n++; if(S.rl.n>60) return;
-    /* v158: あいての そんざいを きろく（さいごの ログイン用） */
-  try{ if(window.__peerTouch) window.__peerTouch(!!(m&&m.from&&S.opp&&m.from===S.opp.id)); }catch(_e){}
   switch(m.t){
     case 'ping':
       if(S.isHost===null){ probeDecide(m.from,false); break; }
@@ -7346,7 +7390,7 @@ Net.onMsg=function(m){
     case 'deny':
       if(m.to&&m.to!==S.me.id) break;
       if(S.paired) break;
-      Net.close(); stopAnnounce(); stopExpiryTick(); setNet('off'); setLock(false,'未接続');
+      Net.close(); stopAnnounce(); stopExpiryTick(); setNet('off'); setLock(false,'鍵なし');
       show('lobby');
       $('#note').textContent='部屋の ぬしが 入室を ことわりました。';
       break;
@@ -7354,7 +7398,7 @@ Net.onMsg=function(m){
     case 'eject':
       if(!m.to||m.to!==S.me.id) break;
       Net.close(); stopAnnounce(); stopPing(); stopWatch(); stopExpiryTick();
-      setNet('off'); setLock(false,'未接続');
+      setNet('off'); setLock(false,'鍵なし');
       S.paired=false; S.guest=null;
       S.chat=[]; S.unread=0; S.peerRead=0; S.lastPeerN=0; S.peerAck=0; updateBadge();
       $('#chat-log').innerHTML='';
@@ -7362,10 +7406,19 @@ Net.onMsg=function(m){
       $('#note').textContent='部屋の ぬしに 切断されました。入りなおすには もう一度 入室を もとめてください。';
       break;
 
-    /* v162: あいてが トーク画面を ひらいた きろく */
+    /* v162: あいてが トーク画面を ひらいた きろく（v183: あいての 分だけ・ふるいためこみは かぞえない） */
     case 'chat-open':
       if(m.from===S.me.id) break;
+      if(S.paired&&S.opp&&S.opp.id&&m.from!==S.opp.id) break;   /* v183: ペアの あいてだけ */
+      if(!m.at||Date.now()-m.at>600000) break;   /* v183: 10ぷんより ふるい ためこみは かぞえない */
       peerChatOpen();
+      break;
+    case 'app-live':   /* v183: あいての「いきてる」しるし（さいごの ログインには かぞえない） */
+      if(m.from===S.me.id) break;
+      if(S.paired&&S.opp&&S.opp.id&&m.from!==S.opp.id) break;
+      if(!m.at||Date.now()-m.at>600000) break;
+      window.__zgsPeerLive=Date.now();
+      try{ sessionStorage.setItem('zg_peer_live',String(window.__zgsPeerLive)); }catch(e){}
       break;
 
     /* 既読 */
@@ -7553,13 +7606,13 @@ case 'ack':
     case 'full':
       if(m.to&&m.to!==S.me.id) break;   /* ほかの 人の「満席」で 部屋を 出ない */
       if(S.sealed||S.linked||S.paired) break;   /* v150: ペア成立後の「満席」は にせもの（切断いやがらせ よけ） */
-      Net.close(); stopAnnounce(); setNet('off'); setLock(false,'未接続');
+      Net.close(); stopAnnounce(); setNet('off'); setLock(false,'鍵なし');
       show('lobby');
       $('#note').textContent='この部屋は もう 2人で プレイ中です（満席）。3人目は 入れません。';
       break;
 
     case 'expired':
-      Net.close(); stopAnnounce(); stopExpiryTick(); setNet('off'); setLock(false,'未接続');
+      Net.close(); stopAnnounce(); stopExpiryTick(); setNet('off'); setLock(false,'鍵なし');
       show('lobby');
       $('#note').textContent='この招待リンクは 期限切れです。あいてに 新しいリンクを もらってください。';
       break;
@@ -7690,7 +7743,7 @@ case 'ack':
       if(S.phase==='play'||S.phase==='over'){ finish(S.me.id,'left'); }
       else if(S.phase==='wait'){
         if(S.isHost){ S.opp={id:null,name:''}; note('あいてが でました。','#note2'); }
-        else { Net.close(); stopAnnounce(); setNet('off'); setLock(false,'未接続'); show('lobby');
+        else { Net.close(); stopAnnounce(); setNet('off'); setLock(false,'鍵なし'); show('lobby');
                $('#note').textContent='あいてが 部屋を とじました。'; }
       }
       break;
@@ -8215,7 +8268,7 @@ window.addEventListener('pagehide',function(){ Net.close(); });
   window.addEventListener('appinstalled',function(){ if(bi) bi.hidden=true; if(hi) hi.hidden=true; });
   setTimeout(iosHint,600);
 })();
-show('lobby'); setTab('chat'); setNet('off'); setLock(false,'未接続');
+show('lobby'); setTab('chat'); setNet('off'); setLock(false,'鍵なし');
 })();
 </script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"08b344934bdd416db94053d34eb889d8","spa":2}' crossorigin="anonymous"></script>
@@ -8630,20 +8683,19 @@ document.head.appendChild(css);
     document.addEventListener(ev,function(e){ if(inEdit(e.target)) return; e.preventDefault(); });
   });
 })();
-window.__peerTouch=function(isPeer){
-  try{ if(!isPeer) return; window.__zgsPeerLast=now(); window.__zgsPeerDirty=true; }catch(e){}
-};
 setInterval(function(){
   try{ if(window.__zgsPeerLast&&window.__zgsPeerDirty){ localStorage.setItem('zg_peer_last',String(window.__zgsPeerLast)); window.__zgsPeerDirty=false; } }catch(e){}
 },5000);   /* v159: 20秒→5秒（閉じる直前の きろく漏れを ふせぐ） */
 try{ window.__zgsPeerLast=+(localStorage.getItem('zg_peer_last')||0)||0; }catch(e){}
 try{ window.__zgsPeerChatOpen=+(localStorage.getItem('zg_peer_chat_open')||0)||0; }catch(e){}
+try{ window.__zgsPeerLive=+(sessionStorage.getItem('zg_peer_live')||0)||0; }catch(e){}   /* v183: いきてる しるし（その せッションだけ） */
 function fmtDT(ts){ var d=new Date(ts); return (d.getMonth()+1)+'月'+d.getDate()+'日 '+d.getHours()+':'+('0'+d.getMinutes()).slice(-2); }
 setInterval(function(){
   try{
     var el=document.getElementById('pf-op-last'); if(!el) return;
     var ts=window.__zgsPeerLast||0;
-    if(window.S&&S.paired&&ts&&now()-ts<70000){ el.textContent='いま オンライン🟢'; el.style.color='#0A8754'; }
+    var live=Math.max(ts,+(window.__zgsPeerLive||0)||0);   /* v183: オンラインは「いきてる」しるしで みる */
+    if(window.S&&S.paired&&live&&now()-live<70000){ el.textContent='いま オンライン🟢'; el.style.color='#0A8754'; }
     else if(ts){ el.textContent='さいごの ログイン: '+fmtDT(ts)+'（'+ago(ts)+'）'; el.style.color='#4B36E0'; }
     else{ el.textContent='ログインの きろくは まだ ありません'; el.style.color='#8A87A0'; }
   }catch(e){}
