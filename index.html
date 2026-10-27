@@ -791,7 +791,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v165</b>｜ビルド 2026-10-27（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v168</b>｜ビルド 2026-10-27（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -865,7 +865,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v165</b>｜ビルド 2026-10-27（アプリが 裏でも スマホに 直接とどく）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v168</b>｜ビルド 2026-10-27（アプリが 裏でも スマホに 直接とどく）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -5569,7 +5569,7 @@ function sendAppOpen(){
   try{ Net.send({t:'chat-open'}); }catch(e){}
 }
 function peerLine(){
-  var ts=S.lastPeer||(window.__zgsPeerLast||0);
+  var ts=+(window.__zgsPeerLast||0)||0;   /* v166: 相手からの 受信だけを 見る（自分の つうしんは かぞえない） */
   var str='あいて:'+(ts?('さいご '+fmtTime(ts)):'—');
   var co=S.peerChatT||+(window.__zgsPeerChatOpen||0)||0;
   if(co) str+='（アプリ '+fmtTime(co)+'）';
@@ -5585,12 +5585,11 @@ function peerChatOpen(){
 function memTick(){
   S.memTimer=setInterval(function(){
     if(!S.isHost||S.phase!=='play'){ return; }
-    var on=S.lastPeer&&(Date.now()-S.lastPeer<45000);
+    var ts=+(window.__zgsPeerLast||0)||0;   /* v166: あしがためは 相手の 受信だけ */
+    var on=ts&&(Date.now()-ts<45000);
     if(on!==S.peerOn){ S.peerOn=on; memAdd(on?'つながった':'きれた'); }
     var el=$('#mem-line');
     if(el) el.textContent=peerLine();
-    /* さいごの記録を localStorage にも保存(次に開いたときも出す) */
-    if(S.lastPeer){ try{ localStorage.setItem('zg_peer_last',String(S.lastPeer)); window.__zgsPeerLast=S.lastPeer; }catch(e){} }
   },3000);
 }
 function memStop(){
@@ -5931,7 +5930,8 @@ function closeCam(){
   var mm2=$('#cam-modal'); if(mm2) mm2.classList.remove('on');
 }
 $('#btn-photo').addEventListener('click',async function(){
-  if(S.phase!=='play') return;
+  /* v168: ペアが つながって いれば カメラを だす（ゲームちゅう でなくても） */
+  if(!(S.paired||S.linked)){ note('ぺアが つながって いるときだけ つかえます。','#note2'); return; }
   try{
     if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia) throw new Error('no cam');
     camStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:720},height:{ideal:960}},audio:false});
@@ -7312,6 +7312,10 @@ Net.onMsg=function(m){
       if(m.from===S.me.id) break;
       if(window.__storyDelMsg) window.__storyDelMsg(m);
       break;
+    case 'story-req':   /* v167: ある？と きいた 端末へ もっている ストーリーを 再送する */
+      if(m.from===S.me.id) break;
+      if(window.__storyReqMsg) window.__storyReqMsg(m);
+      break;
     case 'live-on':
       if(m.from===S.me.id) break;
       (function(){
@@ -8161,6 +8165,9 @@ function refreshAgo(){
   for(var i=0;i<els.length;i++){ var ts=+els[i].getAttribute('data-zgs-ago'); if(ts>0) els[i].textContent=ago(ts); }
 }
 setInterval(function(){ try{ purge(); refreshAgo(); renderTray(); }catch(e){} },30000);
+setInterval(function(){   /* v167: つながって いたら 60秒に 1かい「ある？」と きく */
+  try{ if(netOK()&&(window.S||{}).paired&&now()-lastReqSent>60000){ lastReqSent=now(); Net.send({t:'story-req'}); } }catch(e){}
+},30000);
 setInterval(function(){ try{ purge(); }catch(e){} },600000);
 function dBytes(u){ var b=atob(String(u).split(',')[1]||''), a=new Uint8Array(b.length); for(var i=0;i<b.length;i++) a[i]=b.charCodeAt(i); return a; }
 function bBytes(a,mime){ var s='',CH=0x8000; for(var i=0;i<a.length;i+=CH) s+=String.fromCharCode.apply(null,a.subarray(i,i+CH)); return 'data:'+(mime||'image/jpeg')+';base64,'+btoa(s); }
@@ -8182,6 +8189,24 @@ function compress(url,cb){
   }catch(e){ cb(url); }
 }
 function netOK(){ return !!(window.Net&&Net.topic&&Net.key); }
+/* v167: つながった あとで おたがいに きいて ながす（とうこう時に あいてが いないと とどかなかった ため） */
+var lastPubAny=0, lastReqSent=0;
+function republish(force){
+  try{
+    if(!netOK()||!D.mine) return;
+    if(now()-lastPubAny<30000) return;   /* あふれよけ: 30秒に 1かい まで */
+    if(!force&&D.mine.pid===window.__zgsLastPubPid&&now()-lastPubReq<120000) return;
+    window.__zgsLastPubPid=D.mine.pid; lastPubReq=now(); lastPubAny=now();
+    publish(D.mine);
+  }catch(e){}
+}
+window.__storyReqMsg=function(m){
+  try{
+    var opp=(window.S&&S.opp&&S.opp.id)||null;
+    if(opp&&m.from!==opp) return;
+    republish(true);
+  }catch(e){}
+};
 function publish(st){
   try{
     if(!netOK()) return;
@@ -8251,7 +8276,9 @@ window.__storyRecv=async function(m){
     if(!bytes||bytes.length<4||bytes[0]!==0xFF||bytes[1]!==0xD8) return;
     var url=bBytes(bytes,'image/jpeg');
     if(url.length>240000) return;
-    D.peer={data:url,at:(typeof m.at==='number'&&m.at>0)?m.at:now(),pid:String(m.id||'').slice(0,24)};
+    var newPid=String(m.id||'').slice(0,24);
+    if(D.peer&&D.peer.pid===newPid) return;   /* v167: おなじ ものは 2度 ださない */
+    D.peer={data:url,at:(typeof m.at==='number'&&m.at>0)?m.at:now(),pid:newPid};
     D.seenAt=0; save(D); try{ renderTray(); }catch(e){}
     toast2(nameOf()+' が ストーリーに とうこうしました');
   }catch(e){}
