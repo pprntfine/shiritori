@@ -791,7 +791,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v170</b>｜ビルド 2026-10-27（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v171</b>｜ビルド 2026-10-27（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -865,7 +865,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v170</b>｜ビルド 2026-10-27（アプリが 裏でも スマホに 直接とどく）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v171</b>｜ビルド 2026-10-27（アプリが 裏でも スマホに 直接とどく）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -5949,11 +5949,12 @@ function camOpen(face){
       if(camStream){ try{ camStream.getTracks().forEach(function(t){ t.stop(); }); }catch(e){} }
       camStream=st;
       var v=$('#cam-video'); if(v){ v.srcObject=st; v.style.visibility='visible'; }
-      camApplyFace(); camPreview(false);
       var mm=$('#cam-modal'); if(mm) mm.classList.add('on');
+      camApplyFace(); camPreview(false);   /* v171: ひらいてから つなぎこむ（🔄が でる） */
     }).catch(function(){ note('カメラが つかえません(きょかが ひつようです)。','#note2'); });
   }catch(e){ note('カメラが つかえません(きょかが ひつようです)。','#note2'); }
 }
+window.camOpen=camOpen; window.camPreview=camPreview; window.camApplyFace=camApplyFace;   /* v171: ストーリー側からも つかえるように */
 function camPreview(on){
   var v=$('#cam-video'),sp=$('#cam-shot'),ok=$('#cam-ok'),ret=$('#cam-retake'),sh=$('#cam-shoot'),fl=$('#cam-flip');
   var mm=document.getElementById('cam-modal');
@@ -8318,7 +8319,7 @@ document.addEventListener('click',function(e){
 function shootMode(){
   try{
     window.__zgsMode=true;
-    camOpen(window.__camFace||'user');   /* v169: 共通の カメラ処理（きりかえ・しかくつき） */
+    window.camOpen(window.__camFace||'user');   /* v171: とおしを みえるように */
   }catch(e){ window.__zgsMode=false; toast2('カメラが つかえません'); }
 }
 window.__storyRecv=async function(m){
