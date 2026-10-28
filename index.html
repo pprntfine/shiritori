@@ -819,7 +819,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v205</b>｜ビルド 2026-10-28（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v206</b>｜ビルド 2026-10-28（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -893,7 +893,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v205</b>｜ビルド 2026-10-28（アプリが 裏でも スマホに 直接とどく）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v206</b>｜ビルド 2026-10-28（アプリが 裏でも スマホに 直接とどく）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -8540,6 +8540,7 @@ window.__storyChunkMsg=function(m){   /* v199: かけらを あつめて スト�
     while(D.peerList.length>MAX) D.peerList.shift();
     try{ if(netOK()) Net.send({t:'stk',id:id}); }catch(e){}   /* v201: とどいた あいず */
     save(D); try{ renderTray(); }catch(e){}
+    try{ pubFx(q('#zgs-tray .zgs-i-peer .zgs-ring')); }catch(e){}   /* v206: とどいた しゅんかんも にじいろ バースト */
     toast2(nameOf()+' の ストーリーが ふえました（'+D.peerList.length+'こめ）');
   }catch(e){}
 };
@@ -8560,6 +8561,7 @@ function post(url){
     D.mineList.push(st);
     if(!save(D)) toast2('ほぞん できませんでした（きおくの あきが たりません）');
     try{ renderTray(); }catch(e){}
+    try{ pubFx(q('#zgs-tray .zgs-i-mine .zgs-ring')); }catch(e){}   /* v206: とうこう したら にじいろ バースト */
     publish(st);
     toast2('ストーリーに とうこうしました（'+D.mineList.length+'こめ・24じかんで きえます）');
     try{ openView('mine',D.mineList.length-1); }catch(e){}
@@ -8639,6 +8641,7 @@ window.__storyRecv=async function(m){
     D.peerList.sort(function(a,b){ return a.at-b.at; });
     while(D.peerList.length>MAX) D.peerList.shift();   /* v176: 5こまで */
     save(D); try{ renderTray(); }catch(e){}
+    try{ pubFx(q('#zgs-tray .zgs-i-peer .zgs-ring')); }catch(e){}   /* v206: とどいた しゅんかんも にじいろ バースト */
     toast2(nameOf()+' の ストーリーが ふえました（'+D.peerList.length+'こめ）');
   }catch(e){}
 };
@@ -8741,6 +8744,11 @@ function avInto(av,p,fb){
   if(p&&p.img){ av.innerHTML='<img alt="" src="'+p.img+'">'; return; }
   av.textContent=(p&&p.emo)||fb;
 }
+function pubFx(r){   /* v206: とうこう・とどいた しゅんかん、にじいろが まわって ぽんと はねる（3びょう） */
+  if(!r) return;
+  r.classList.remove('zgs-pub'); void r.offsetWidth; r.classList.add('zgs-pub');
+  setTimeout(function(){ try{ r.classList.remove('zgs-pub'); }catch(e){} },3000);
+}
 function renderTray(){
   var tray=q('#zgs-tray'); if(!tray) return;
   purge();
@@ -8750,8 +8758,8 @@ function renderTray(){
   var mR=mine.querySelector('.zgs-ring'), mAv=mine.querySelector('.zgs-av'), mLab=mine.querySelector('.zgs-lab2');
   var pR=peer.querySelector('.zgs-ring'), pAv=peer.querySelector('.zgs-av'), pLab=peer.querySelector('.zgs-lab2');
   avInto(mAv,P.me,'🐷');
-  if(D.mineList.length){ mR.className='zgs-ring seen'; mLab.textContent='わたし・'+D.mineList.length+'こ'; }   /* v176 */
-  else{ mR.className='zgs-ring none'; mLab.textContent='わたし'; }
+  if(D.mineList.length){ mR.className='zgs-ring post'; mLab.textContent='わたし・'+D.mineList.length+'こ'; mLab.style.color='#E5323B'; }   /* v206: とうこう ちゅうは にじいろの わ・グレーに しない */
+  else{ mR.className='zgs-ring none'; mLab.textContent='わたし'; mLab.style.color=''; }
   var tot=0;
   for(var i=0;i<D.mineList.length;i++){ var vv=D.views[String(D.mineList[i].at)]||{n:0}; tot+=(vv.n||0); }   /* v176: あしあと ぜんぶで いくつ */
   var bd=mR.querySelector('.zgs-badge');
@@ -8763,9 +8771,9 @@ function renderTray(){
   if(!nw){ nw=document.createElement('i'); nw.className='zgs-new'; nw.textContent=un>1?('NEW×'+un):'NEW'; pR.appendChild(nw); }
   nw.style.display=un>0?'flex':'none';
   avInto(pAv,P.peer,'🐱');
-  if(!D.peerList.length){ pR.className='zgs-ring none'; pLab.textContent=nameOf(); }
-  else if(!un){ pR.className='zgs-ring seen'; pLab.textContent=nameOf()+'・'+D.peerList.length+'こ'; }
-  else{ pR.className='zgs-ring'; pLab.textContent=nameOf()+'・'+un+'こ あたらしい'; }
+  if(!D.peerList.length){ pR.className='zgs-ring none'; pLab.textContent=nameOf(); pLab.style.color=''; }
+  else if(!un){ pR.className='zgs-ring seen'; pLab.textContent=nameOf()+'・'+D.peerList.length+'こ'; pLab.style.color=''; }
+  else{ pR.className='zgs-ring'; pLab.textContent=nameOf()+'・'+un+'こ あたらしい'; pLab.style.color='#634CF7'; }
 }
 function buildTray(){
   var head=q('#pane-chat .lhead'); if(!head||q('#zgs-tray')) return;
@@ -8813,6 +8821,10 @@ css.textContent='#zgs-tray{display:flex;align-items:center;gap:14px;background:#
 +'@keyframes zgsSpin{to{transform:rotate(360deg)}}'
 +'@keyframes zgsGlow{from{box-shadow:0 0 5px 1px rgba(255,106,0,.45)}to{box-shadow:0 0 14px 5px rgba(99,76,247,.55)}}'
 +'@keyframes zgsPop{from{transform:scale(1)}to{transform:scale(1.15)}}'
++'.zgs-ring.post{box-shadow:0 0 8px 2px rgba(229,50,59,.30)}'   /* v206: とうこう ちゅうの わは にじいろ（まわる・ひかる は :not(.seen)で じどう） */
++'.zgs-pub::after{content:"";position:absolute;top:-7px;left:-7px;right:-7px;bottom:-7px;border-radius:50%;background:conic-gradient(#FFD166,#FF3B5C,#634CF7,#00C2FF,#2BD97C,#FFD166);z-index:-1;filter:blur(2px);animation:zgsSpin 1.5s linear infinite}'   /* v206: しゅんかんてきに にじいろ 2えんめが まわる */
++'.zgs-ring:not(.seen):not(.none).zgs-pub{animation:zgsBurst .6s cubic-bezier(.2,1.4,.4,1)}'   /* v206: ひかりっぱなし(zgsGlow)に かって はねる */
++'@keyframes zgsBurst{0%{transform:scale(.6)}55%{transform:scale(1.22)}100%{transform:scale(1)}}'
 +'.zgs-ring.none{background:none;border:2px dashed #C9C4E4}'
 +'.zgs-ring.seen{background:#CBC7DC}'
 +'.zgs-av{width:100%;height:100%;border-radius:50%;border:2.5px solid #fff;background:#06C755;color:#fff;font-weight:900;display:flex;align-items:center;justify-content:center;font-size:20px;overflow:hidden;box-sizing:border-box;font-style:normal}'
