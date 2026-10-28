@@ -821,7 +821,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v198</b>｜ビルド 2026-10-28（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v200</b>｜ビルド 2026-10-28（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -895,7 +895,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v198</b>｜ビルド 2026-10-28（アプリが 裏でも スマホに 直接とどく）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v200</b>｜ビルド 2026-10-28（アプリが 裏でも スマホに 直接とどく）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -7563,6 +7563,10 @@ Net.onMsg=function(m){
       if(m.from===S.me.id) break;
       if(window.__storyReqMsg) window.__storyReqMsg(m);
       break;
+    case 'stc':   /* v199: ストーリーの かけら（ことばの 道） */
+      if(m.from===S.me.id) break;
+      if(window.__storyChunkMsg) window.__storyChunkMsg(m);
+      break;
     case 'live-on':
       if(m.from===S.me.id) break;
       (function(){
@@ -8475,11 +8479,54 @@ window.__storyReqMsg=function(m){
     republish(true);
   }catch(e){}
 };
+/* v199: 2本目の 道（ことばのかけら）。ファイルの 道(ntfy)が とまっても ストーリーが とどくように。
+   かけらは MQTT（即時路）が あるとき そちらを つかう（回数制限に かからない）。うけがわで つなげる */
+var PIECE=2000, stChunks={};
+function fastOpen(){ try{ return !!(window.Fast&&Fast.open&&(FastH.subOk||FastE.subOk)); }catch(e){ return false; } }
+function sendChunks(st){
+  try{
+    if(!netOK()||!st||!st.pid) return false;
+    var u=String(st.data), total=Math.ceil(u.length/PIECE);
+    if(total<1||total>200) return false;   /* v200: ちいさすぎ/おおきすぎは かけらでは 送らない（falseで ファイルの 道へ） */
+    if(total===1){ try{ if(netOK()) Net.send({t:'stc',id:String(st.pid),at:st.at,i:0,total:1,d:u}); }catch(e){} return true; }   /* v200: かけら1こで まるごと */
+    var i=0;
+    (function next(){
+      if(i>=total) return;
+      try{ if(netOK()) Net.send({t:'stc',id:String(st.pid),at:st.at,i:i,total:total,d:u.slice(i*PIECE,(i+1)*PIECE)}); }catch(e){}
+      i++; setTimeout(next,120);
+    })();
+    return true;
+  }catch(e){ return false; }
+}
+window.__storyChunkMsg=function(m){   /* v199: かけらを あつめて ストーリーに もどす */
+  try{
+    if(!((window.S||{}).paired)) return;
+    var opp=(window.S&&S.opp&&S.opp.id)||null;
+    if(opp&&m.from!==opp) return;
+    var id=String(m.id||'').slice(0,24); if(!id) return;
+    var total=m.total|0, i=m.i|0;
+    if(total<1||total>200||i<0||i>=total) return;   /* v200: かけら1こも OK */
+    var b=stChunks[id]||(stChunks[id]={got:[],at:0,timer:null});
+    if(!b.got[i]) b.got[i]=String(m.d||'').slice(0,PIECE+8);
+    if(!b.at&&(typeof m.at==='number')&&m.at>0) b.at=m.at;
+    clearTimeout(b.timer); b.timer=setTimeout(function(){ try{ delete stChunks[id]; }catch(e){} },120000);
+    for(var k=0;k<total;k++) if(!b.got[k]) return;
+    var u=b.got.join(''); clearTimeout(b.timer); delete stChunks[id];
+    if(u.length<30||u.length>240000||u.indexOf('data:image/jpeg;base64,')!==0) return;
+    for(var j=0;j<D.peerList.length;j++){ if(String(D.peerList[j].pid)===id){ var ex2=D.peerList[j]; if(ex2.seen&&netOK()){ try{ Net.send({t:'story-see',sid:ex2.at}); }catch(e){} } return; } }
+    D.peerList.push({data:u,at:b.at||now(),pid:id,seen:false});
+    D.peerList.sort(function(a,b2){ return a.at-b2.at; });
+    while(D.peerList.length>MAX) D.peerList.shift();
+    save(D); try{ renderTray(); }catch(e){}
+    toast2(nameOf()+' の ストーリーが ふえました（'+D.peerList.length+'こめ）');
+  }catch(e){}
+};
 function publish(st){
   try{
     if(!netOK()) return;
+    if(fastOpen()&&sendChunks(st)) return;   /* v200: MQTTの 即時路が あるときは かけらだけ。ntfyの 回数を かけないので ストーリーが おおくても 1日じゅう とどく */
     Net.sendFile({t:'story',id:st.pid,at:st.at},dBytes(st.data),function(ok){
-      if(!ok) setTimeout(function(){ try{ if(netOK()) Net.sendFile({t:'story',id:st.pid,at:st.at},dBytes(st.data),null); }catch(e){} },4000);
+      if(!ok) setTimeout(function(){ try{ if(!netOK()) return; Net.sendFile({t:'story',id:st.pid,at:st.at},dBytes(st.data),null); sendChunks(st); }catch(e){} },4000);
     });
   }catch(e){}
 }
@@ -8563,7 +8610,7 @@ window.__storyRecv=async function(m){
     var url=bBytes(bytes,'image/jpeg');
     if(url.length>240000) return;
     var newPid=String(m.id||'').slice(0,24);
-    for(var i=0;i<D.peerList.length;i++){ if(String(D.peerList[i].pid)===newPid) return; }   /* v167: おなじ ものは 2度 ださない */
+    for(var i=0;i<D.peerList.length;i++){ if(String(D.peerList[i].pid)===newPid){ var ex=D.peerList[i]; if(ex.seen&&netOK()){ try{ Net.send({t:'story-see',sid:ex.at}); }catch(e){} } return; } }   /* v167: おなじ ものは 2度 ださない / v199: すでに 見ていたら あしあとを おくりなおす */
     D.peerList.push({data:url,at:(typeof m.at==='number'&&m.at>0)?m.at:now(),pid:newPid,seen:false});
     D.peerList.sort(function(a,b){ return a.at-b.at; });
     while(D.peerList.length>MAX) D.peerList.shift();   /* v176: 5こまで */
