@@ -819,7 +819,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v203</b>｜ビルド 2026-10-28（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v204</b>｜ビルド 2026-10-28（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -893,7 +893,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v203</b>｜ビルド 2026-10-28（アプリが 裏でも スマホに 直接とどく）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v204</b>｜ビルド 2026-10-28（アプリが 裏でも スマホに 直接とどく）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -8147,6 +8147,9 @@ function paintProf(){
   fillAv($('#lh-av'),PROF.peer,'🐱'); var n=$('#lh-nm'); if(n) n.textContent=peerName();
   var a=$('#p-me'); if(a) a.textContent=meName(); var b=$('#p-opp'); if(b) b.textContent=peerName();
   try{ $('#ig-name').textContent=peerName(); }catch(e){}
+  try{ /* v204: ほぞん・受信の そのときに ストーリーの アイコンも すぐ かえる */
+    if(window.ZGStory&&ZGStory.render) ZGStory.render();
+  }catch(e){}
 }
 function sendProf(){
   try{ if(!Net.topic||!Net.key||!(S.paired||S.linked)) return; Net.send({t:'prof',nm:meName(),emo:(PROF.me&&PROF.me.emo)||'🐷',img:(PROF.me&&PROF.me.img)||'',ps:psrvGet()}); }catch(e){}
