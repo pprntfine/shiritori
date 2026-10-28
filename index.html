@@ -804,6 +804,12 @@ body.in-play .leave-row{display:none!important}
 #btn-attach-photo::before{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='3' y='4' width='26' height='24' rx='4' fill='%23e3f0fa' stroke='%234f769c' stroke-width='1.8'/%3E%3Ccircle cx='22' cy='11' r='3' fill='%23f5cd72'/%3E%3Cpath d='M5 25l8-11 6 8 4-5 4 8z' fill='%238ec6ae' stroke='%23538770' stroke-width='1.3' stroke-linejoin='round'/%3E%3C/svg%3E")}
 #btn-notify::before{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M6 23l3-5v-6a7 7 0 0114 0v6l3 5z' fill='%23f9dfa0' stroke='%23916a27' stroke-width='1.8' stroke-linejoin='round'/%3E%3Cpath d='M12 27q4 5 8 0M16 3v2' fill='none' stroke='%23916a27' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E")}
 #btn-delchat::before{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M7 9l2 20h14l2-20z' fill='%23e0e4ee' stroke='%23636d85' stroke-width='1.8' stroke-linejoin='round'/%3E%3Cpath d='M5 8h22M12 7V3h8v4M13 13v10M19 13v10' fill='none' stroke='%23636d85' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E")}
+/* v218: 操作ボタンは必要なときだけ開く。入力欄と送信は常に残す。 */
+.line-composer .chat-tool-menu{grid-area:tools;min-width:0}
+.line-composer #chat-tools[hidden]{display:none!important}
+.line-composer #chat-tools:not([hidden]){margin-top:6px}
+.line-composer .chat-tools-toggle{display:block;min-height:36px;padding:6px 12px;border:1px solid #D9E2E9;border-radius:18px;background:#fff;color:#357459;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
+.line-composer .chat-tools-toggle:focus-visible{outline:3px solid #32795b;outline-offset:2px}
 </style>
 </head>
 <body>
@@ -832,7 +838,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v217</b>｜ビルド 2026-10-29（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v218</b>｜ビルド 2026-10-29（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -906,7 +912,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v217</b>｜ビルド 2026-10-29（アプリが 裏でも スマホに 直接とどく）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v218</b>｜ビルド 2026-10-29（アプリが 裏でも スマホに 直接とどく）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -990,7 +996,9 @@ body.in-play .leave-row{display:none!important}
     <div class="lhead"><span class="lh-av" id="lh-av">🐱</span><span class="lh-nm" id="lh-nm">にゃん</span><span class="lh-dot" id="lh-dot"></span><button type="button" id="btn-prof">名前</button><button type="button" id="btn-top2">トップ</button><button type="button" id="btn-unpair">でる</button></div>
     <div id="chat-log" class="line-chat" role="log" aria-live="polite"></div>
     <form id="form-chat" class="line-composer" autocomplete="off">
-      <div class="tools">
+      <div class="chat-tool-menu">
+        <button id="btn-chat-tools" type="button" class="chat-tools-toggle" aria-expanded="false" aria-controls="chat-tools">メニュー</button>
+      <div id="chat-tools" class="tools" hidden>
         <button id="btn-live" type="button" class="notify-btn" title="ライブ えいぞう">ライブ</button>
         <button id="btn-call" type="button" class="notify-btn" title="こえで はなす">電話:オフ</button>
         <button id="btn-photo" type="button" class="notify-btn" title="しゃしんを おくる">カメラ</button>
@@ -998,6 +1006,7 @@ body.in-play .leave-row{display:none!important}
         <input id="chat-photo-file" type="file" accept="image/*" hidden>
         <button id="btn-notify" type="button" class="notify-btn" title="メッセージ通知(内容は表示しません)">通知:オフ</button>
         <button id="btn-delchat" type="button" class="notify-btn" title="この スマホの トークを ぜんぶ けす">けす</button>
+      </div>
       </div>
       <textarea id="in-chat" rows="1" maxlength="300" placeholder="メッセージを入力" enterkeyhint="enter" autocomplete="off" spellcheck="false" inputmode="text"></textarea>
       <button class="line-send cute-send" type="submit" id="btn-chat-send" aria-label="送信"><span class="cs-ico">🐾</span></button>
@@ -1097,6 +1106,32 @@ body.in-play .leave-row{display:none!important}
 <script>
 (function(){
 'use strict';
+
+/* v218: 元の操作処理やファイル選択のクリックを妨げず、操作欄だけ開閉する。 */
+(function(){
+  var toggle=document.getElementById('btn-chat-tools');
+  var tools=document.getElementById('chat-tools');
+  function setToolsOpen(open){
+    var returnFocus=!open&&tools.contains(document.activeElement);
+    tools.hidden=!open;
+    toggle.setAttribute('aria-expanded',String(open));
+    toggle.textContent=open?'閉じる':'メニュー';
+    if(returnFocus) toggle.focus({preventScroll:true});
+  }
+  toggle.addEventListener('click',function(){ setToolsOpen(tools.hidden); });
+  tools.addEventListener('click',function(e){
+    var button=e.target.closest('button');
+    if(button&&tools.contains(button)) setToolsOpen(false);
+  });
+  document.getElementById('form-chat').addEventListener('keydown',function(e){
+    if(e.key==='Escape'&&!tools.hidden){
+      e.preventDefault(); e.stopPropagation(); setToolsOpen(false); toggle.focus({preventScroll:true});
+    }
+  });
+  window.addEventListener('pageshow',function(){ setToolsOpen(false); });
+  setToolsOpen(false);
+})();
+/* v218 menu end */
 
 /* =================================================================
    1. かな正規化（しりとりの判定）
