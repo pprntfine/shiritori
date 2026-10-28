@@ -821,7 +821,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v212</b>｜ビルド 2026-10-28（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v213</b>｜ビルド 2026-10-28（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -895,7 +895,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v212</b>｜ビルド 2026-10-28（アプリが 裏でも スマホに 直接とどく）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v213</b>｜ビルド 2026-10-28（アプリが 裏でも スマホに 直接とどく）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -6273,11 +6273,46 @@ async function recvAttachment(m){
   finally{ attachmentReceiving.delete(id); }
 }
 var attachmentURLs=[];
+function attachmentKind(bytes,name){
+  var ext=String(name||'').toLowerCase().split('.').pop();
+  if(bytes[0]===255&&bytes[1]===216) return 'image/jpeg';
+  if(bytes[0]===137&&bytes[1]===80&&bytes[2]===78&&bytes[3]===71) return 'image/png';
+  if(String.fromCharCode.apply(null,bytes.subarray(0,6)).indexOf('GIF8')===0) return 'image/gif';
+  if(String.fromCharCode.apply(null,bytes.subarray(0,4))==='RIFF'&&String.fromCharCode.apply(null,bytes.subarray(8,12))==='WEBP') return 'image/webp';
+  if(String.fromCharCode.apply(null,bytes.subarray(0,5))==='%PDF-') return 'application/pdf';
+  if(['txt','csv','tsv','json','md','log'].indexOf(ext)>=0) return 'text/plain';
+  if(['mp4','webm','mp3','wav','ogg','m4a'].indexOf(ext)>=0) return ({mp4:'video/mp4',webm:'video/webm',mp3:'audio/mpeg',wav:'audio/wav',ogg:'audio/ogg',m4a:'audio/mp4'})[ext];
+  return 'application/octet-stream';
+}
 function attachmentLink(m){
-  var a=document.createElement('a'); a.textContent=(m.fileName||'ファイル')+'（'+Math.ceil((m.fileSize||0)/1024)+' KB）を保存';
-  a.download=m.fileName||'ファイル'; a.style.cssText='color:inherit;text-decoration:underline;overflow-wrap:anywhere';
-  try{ var u=URL.createObjectURL(new Blob([dataURLBytes(m.data)],{type:'application/octet-stream'})); attachmentURLs.push(u); a.href=u; }catch(e){ a.textContent='ファイルを 読みこめません'; }
-  a.addEventListener('click',function(e){ e.stopPropagation(); }); return a;
+  var wrap=document.createElement('div'); wrap.style.cssText='max-width:100%;min-width:0';
+  wrap.addEventListener('click',function(e){ e.stopPropagation(); });
+  var title=document.createElement('div'); title.textContent=m.fileName||'ファイル'; title.style.cssText='font-weight:bold;overflow-wrap:anywhere;margin-bottom:8px'; wrap.appendChild(title);
+  try{
+    var bytes=dataURLBytes(m.data),mime=attachmentKind(bytes,m.fileName);
+    var u=URL.createObjectURL(new Blob([bytes],{type:mime})); attachmentURLs.push(u);
+    var view;
+    if(mime.indexOf('image/')===0){
+      view=document.createElement('img'); view.src=u; view.alt=m.fileName||'写真'; view.className='photo-msg';
+      view.addEventListener('load',scrollChatBottom);
+    }else if(mime==='text/plain'){
+      view=document.createElement('pre'); view.textContent=new TextDecoder('utf-8').decode(bytes.subarray(0,65536))+(bytes.length>65536?'\n（続きは保存して確認できます）':'');
+      view.style.cssText='white-space:pre-wrap;overflow-wrap:anywhere;max-height:320px;overflow:auto;font:inherit;margin:0';
+    }else if(mime==='application/pdf'){
+      view=document.createElement('iframe'); view.src=u; view.title=m.fileName||'PDF'; view.style.cssText='display:block;width:min(62vw,320px);height:360px;border:0;background:white';
+      var hint=document.createElement('div'); hint.textContent='PDFが表示されない端末では、下の「開く」で確認してください。'; wrap.appendChild(hint);
+    }else if(mime.indexOf('video/')===0||mime.indexOf('audio/')===0){
+      view=document.createElement(mime.indexOf('video/')===0?'video':'audio'); view.src=u; view.controls=true; view.preload='metadata'; view.setAttribute('playsinline',''); view.style.cssText='display:block;max-width:100%;width:min(62vw,300px)';
+    }else{
+      view=document.createElement('div'); view.textContent='この形式はトーク内で表示できません。保存して対応するアプリで開いてください。';
+    }
+    wrap.appendChild(view);
+    if(mime!=='application/octet-stream'&&mime!=='text/plain'){
+      var open=document.createElement('a'); open.href=u; open.target='_blank'; open.rel='noopener noreferrer'; open.textContent='開く'; open.style.cssText='display:inline-block;color:inherit;margin:8px 16px 0 0'; wrap.appendChild(open);
+    }
+    var save=document.createElement('a'); save.href=u; save.download=m.fileName||'ファイル'; save.textContent='保存（'+Math.ceil((m.fileSize||bytes.length)/1024)+' KB）'; save.style.cssText='display:inline-block;color:inherit;margin-top:8px'; wrap.appendChild(save);
+  }catch(e){ var err=document.createElement('div'); err.textContent='ファイルを 読みこめません'; wrap.appendChild(err); }
+  return wrap;
 }
 /* v115: 写真は あんごうした 1つの ファイルとして おくる（かけらに わけない ので とちゅうで 欠けない） */
 function dataURLBytes(u){ var b=atob(String(u).split(',')[1]||''), a=new Uint8Array(b.length); for(var i=0;i<b.length;i++) a[i]=b.charCodeAt(i); return a; }
