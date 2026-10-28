@@ -1,0 +1,142 @@
+--- /tmp/opencode/index-v210.html	2026-10-28 16:49:57.315406672 +0900
++++ /home/user/workspace/shiritori/index.html	2026-10-28 16:49:57.358453977 +0900
+@@ -819,7 +819,7 @@
+       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
+       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
+             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
+-      <p class="verline">バージョン <b id="ver">v210</b>｜ビルド 2026-10-28（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
++      <p class="verline">バージョン <b id="ver">v211</b>｜ビルド 2026-10-28（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+     </section>
+ 
+     <!-- 裏メニュー（トップを 5回 タップ） -->
+@@ -893,7 +893,7 @@
+     <!-- 待機 -->
+     <section id="s-wait" class="screen">
+       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
+-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v210</b>｜ビルド 2026-10-28（アプリが 裏でも スマホに 直接とどく）</p>
++      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v211</b>｜ビルド 2026-10-28（アプリが 裏でも スマホに 直接とどく）</p>
+       <div id="joinreq" class="joinreq" hidden>
+         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
+         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
+@@ -7563,6 +7563,10 @@
+       if(m.from===S.me.id) break;
+       if(window.__storyChunkMsg) window.__storyChunkMsg(m);
+       break;
++    case 'stc-nak':   /* v211: たりない かけらだけ もういちど */
++      if(m.from===S.me.id) break;
++      if(window.__storyNakMsg) window.__storyNakMsg(m);
++      break;
+     case 'stk':   /* v201: ストーリーが とどいた あいず */
+       if(m.from===S.me.id) break;
+       if(window.__storyAckMsg) window.__storyAckMsg(m);
+@@ -8526,6 +8530,7 @@
+       +'MQTT1: '+f(window.FastH)+'／MQTT2: '+f(window.FastE)+'・ながれ: '+(Net.open?(Net.transport+' ひらく'):'とじる')+'<br>'
+       +'中継の せいげん: '+cool+'・さいごの 送信: '+(Net.lastPostStatus||'-')+'<br>'
+       +'わたし '+D.mineList.length+'こ／'+nameOf()+' '+D.peerList.length+'こ（あたらしい '+un+'）・とどいた✓ '+Object.keys(window.__zgsAck||{}).length+'<br>'
++      +'かけら: 送 '+(window.__zgsStcS||0)+'・受け '+(window.__zgsStcR||0)+'・たのみ '+(window.__zgsNakS||0)+'<br>'   /* v211 */
+       +(lg?('さいきん:<br>'+lg):'さいきんの できごと: まだ ない');
+   }catch(e){}
+ }
+@@ -8558,16 +8563,37 @@
+     if(!fastOpen()) return false;   /* v208: MQTTが ほんとに ひらく/うけた ときだけ かけら。ないときは ファイルの 道（ntfyへ ~100POSTで せいげんを つかいきる のを やめる） */
+     var u=String(st.data), total=Math.ceil(u.length/PIECE);
+     if(total<1||total>200) return false;   /* v200: ちいさすぎ/おおきすぎは かけらでは 送らない（falseで ファイルの 道へ） */
+-    if(total===1){ try{ if(netOK()) Net.send({t:'stc',id:String(st.pid),at:st.at,i:0,total:1,d:u}); }catch(e){} return true; }   /* v200: かけら1こで まるごと */
++    if(total===1){ try{ if(netOK()){ Net.send({t:'stc',id:String(st.pid),at:st.at,i:0,total:1,d:u}); window.__zgsStcS=(window.__zgsStcS||0)+1; } }catch(e){} return true; }   /* v200: かけら1こで まるごと */
+     var i=0;
+     (function next(){
+       if(i>=total) return;
+-      try{ if(netOK()) Net.send({t:'stc',id:String(st.pid),at:st.at,i:i,total:total,d:u.slice(i*PIECE,(i+1)*PIECE)}); }catch(e){}
++      try{ if(netOK()){ Net.send({t:'stc',id:String(st.pid),at:st.at,i:i,total:total,d:u.slice(i*PIECE,(i+1)*PIECE)}); window.__zgsStcS=(window.__zgsStcS||0)+1; } }catch(e){}
+       i++; setTimeout(next,120);
+     })();
+     return true;
+   }catch(e){ return false; }
+ }
++window.__storyNakMsg=function(m){   /* v211: たりない かけらだけ おくる */
++  try{
++    var opp=(window.S&&S.opp&&S.opp.id)||null;
++    if(opp&&m.from!==opp) return;
++    var id=String(m.id||'').slice(0,24); if(!id) return;
++    if(window.__zgsAck&&window.__zgsAck[id]) return;
++    var ns=String(m.ns||'').split(',').map(function(x){ return x|0; }).filter(function(x){ return x>=0; }).slice(0,200);
++    if(!ns.length) return;
++    for(var i=0;i<D.mineList.length;i++){
++      var st=D.mineList[i]; if(!st||String(st.pid)!==id) continue;
++      var u=String(st.data), total=Math.ceil(u.length/PIECE);
++      (function nx(j){
++        if(j>=ns.length) return;
++        try{ if(netOK()&&fastOpen()){ Net.send({t:'stc',id:id,at:st.at,i:ns[j],total:total,d:u.slice(ns[j]*PIECE,(ns[j]+1)*PIECE)}); window.__zgsStcS=(window.__zgsStcS||0)+1; } }catch(e){}
++        setTimeout(function(){ nx(j+1); },120);
++      })(0);
++      try{ zlog('たりない かけら '+ns.length+'こ わたす'); }catch(e){}
++      return;
++    }
++  }catch(e){}
++};
+ window.__storyChunkMsg=function(m){   /* v199: かけらを あつめて ストーリーに もどす */
+   try{
+     if(!((window.S||{}).paired)) return;
+@@ -8576,12 +8602,29 @@
+     var id=String(m.id||'').slice(0,24); if(!id) return;
+     var total=m.total|0, i=m.i|0;
+     if(total<1||total>200||i<0||i>=total) return;   /* v200: かけら1こも OK */
++    window.__zgsStcR=(window.__zgsStcR||0)+1;   /* v211 */
+     var b=stChunks[id]||(stChunks[id]={got:[],at:0,timer:null});
+     if(!b.got[i]) b.got[i]=String(m.d||'').slice(0,PIECE+8);
+     if(!b.at&&(typeof m.at==='number')&&m.at>0) b.at=m.at;
+     clearTimeout(b.timer); b.timer=setTimeout(function(){ try{ delete stChunks[id]; }catch(e){} },120000);
+-    for(var k=0;k<total;k++) if(!b.got[k]) return;
+-    var u=b.got.join(''); clearTimeout(b.timer); delete stChunks[id];
++    var need=[]; for(var k=0;k<total;k++) if(!b.got[k]) need.push(k);
++    if(need.length){   /* v211: たりない かけらを たのむ（2.5秒ご・15秒おき 6かいまで） */
++      if(!b.nakT){
++        b.nakT=setInterval(function(){
++          try{
++            var b2=stChunks[id]; if(!b2||(window.__zgsAck&&window.__zgsAck[id])){ clearInterval(b.nakT); b.nakT=null; return; }
++            var nd=[]; for(var k3=0;k3<total;k3++) if(!b2.got[k3]) nd.push(k3);
++            if(!nd.length){ clearInterval(b.nakT); b.nakT=null; return; }
++            if(++b.nakN>6){ clearInterval(b.nakT); b.nakT=null; return; }
++            try{ if(netOK()){ Net.send({t:'stc-nak',id:id,ns:nd.join(',')}); window.__zgsNakS=(window.__zgsNakS||0)+1; zlog('かけら '+nd.length+'こ たりない — たのむ'); } }catch(e6){}
++          }catch(e5){}
++        },15000);
++        b.nakN=0;
++        setTimeout(function(){ try{ if(netOK()){ Net.send({t:'stc-nak',id:id,ns:need.join(',')}); window.__zgsNakS=(window.__zgsNakS||0)+1; } }catch(e6){} },2500);
++      }
++      return;
++    }
++    var u=b.got.join(''); clearTimeout(b.timer); if(b.nakT){ clearInterval(b.nakT); b.nakT=null; } delete stChunks[id];
+     try{ zlog('かけらが あつまった'); }catch(e){}   /* v208 */
+     if(u.length<30||u.length>240000||u.indexOf('data:image/jpeg;base64,')!==0) return;
+     for(var j=0;j<D.peerList.length;j++){ if(String(D.peerList[j].pid)===id){ var ex2=D.peerList[j]; if(ex2.seen&&netOK()){ try{ Net.send({t:'story-see',sid:ex2.at}); }catch(e){} } try{ if(netOK()) Net.send({t:'stk',id:id}); }catch(e){} return; } }   /* v167: おなじ ものは 2度 ださない / v199: あしあと おくりなおし / v201: もりこめた あいず */
+@@ -8616,7 +8659,8 @@
+       try{
+         if((window.__zgsAck&&window.__zgsAck[st.pid])||D.mineList.indexOf(st)<0){ clearInterval(ft); return; }
+         if(++tries>10){ clearInterval(ft); return; }
+-        try{ sendChunks(st); if(tries===1) zlog('かけらを おくりなおす'); }catch(e5){}
++        var sOK=false; try{ sOK=sendChunks(st); }catch(e5){}
++        try{ zlog('おくりなおし'+tries+': '+(sOK?'かけら(MQTT)':'MQTT とじる')); }catch(e5b){}   /* v211 */
+       }catch(e){}
+     },30000);
+     var ft2=setInterval(function(){   /* v210: ファイルの 道も ✓まで 90秒おきに だしなおす（10かいまで） */
+@@ -8639,7 +8683,7 @@
+     try{ zlog('とうこう '+D.mineList.length+'こめ'); }catch(e){}   /* v208 */
+     publish(st);
+     toast2(netOK()?('ストーリーに とうこうしました（'+D.mineList.length+'こめ・24じかんで きえます）'):'ストーリーに とうこうしました（つながったら あいてに とどけます）');   /* v207: つながらない ときも ことばを そえる */
+-    setTimeout(function(){ try{ if(!window.__zgsAck[st.pid]&&netOK()) toast2('あいてに まだ とどいていない かもしれません。あいてが つながったら じどうで とどきます'); }catch(e){} },25000);   /* v207: ✓の つうちが ない まま 25秒 たったら ヒント */
++    setTimeout(function(){ try{ if(!window.__zgsAck[st.pid]&&netOK()){ var mq='?'; try{ mq=fastOpen()?'ひらく':'とじる'; }catch(e8){} toast2('まだ とどいてないみたい（MQTT '+mq+'・かけら '+(window.__zgsStcS||0)+'こ 送った）'); } }catch(e){} },25000);   /* v211: しんだんを いっしょに 伝える */
+     try{ openView('mine',D.mineList.length-1); }catch(e){}
+   });
+ }
+@@ -8863,7 +8907,10 @@
+   head.after(t);
+   t.querySelector('.zgs-i-mine').addEventListener('click',function(){ if(D.mineList.length) openView('mine'); else shootMode(); });
+   var zadd=t.querySelector('.zgs-i-mine .zgs-add'); if(zadd) zadd.addEventListener('click',function(e){ e.stopPropagation(); try{ shootMode(); }catch(e2){} });   /* v209: ＋= とうこう（インスタ式） */
+-  t.querySelector('.zgs-i-peer').addEventListener('click',function(){ if(D.peerList.length) openView('peer'); else toast2(nameOf()+'の ストーリーは まだ ありません'); });
++  t.querySelector('.zgs-i-peer').addEventListener('click',function(){ if(D.peerList.length){ openView('peer'); return; }
++    var mq2='?'; try{ mq2=fastOpen()?'ひらく':'とじる'; }catch(e){}
++    var zz=0; for(var k9 in stChunks){ zz++; }
++    toast2(nameOf()+'の ストーリーは まだ とどいていません（MQTT '+mq2+'・かけら受け '+(window.__zgsStcR||0)+'こ'+(zz?('・あつめちゅう '+zz):'')+'）');   /* v211: しんだんを いっしょに */ });
+ }
+ function buildView(){
+   if(q('#zgs-view')) return;
