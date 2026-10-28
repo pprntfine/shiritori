@@ -819,7 +819,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v206</b>｜ビルド 2026-10-28（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v208</b>｜ビルド 2026-10-28（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -893,7 +893,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v206</b>｜ビルド 2026-10-28（アプリが 裏でも スマホに 直接とどく）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v208</b>｜ビルド 2026-10-28（アプリが 裏でも スマホに 直接とどく）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -8438,9 +8438,9 @@ function refreshAgo(){
   for(var i=0;i<els.length;i++){ var ts=+els[i].getAttribute('data-zgs-ago'); if(ts>0) els[i].textContent=ago(ts); }
 }
 setInterval(function(){ try{ purge(); refreshAgo(); renderTray(); }catch(e){} },30000);
-setInterval(function(){   /* v167: つながって いたら 60秒に 1かい「ある？」と きく */
-  try{ if(netOK()&&(window.S||{}).paired&&now()-lastReqSent>60000){ lastReqSent=now(); Net.send({t:'story-req'}); } }catch(e){}
-},30000);
+setInterval(function(){   /* v167: つながって いたら「ある？」ときく・v207: 20秒に 1かいに はやめた（とりこぼしを すぐ うめる） */
+  try{ if(netOK()&&(window.S||{}).paired&&now()-lastReqSent>20000){ lastReqSent=now(); Net.send({t:'story-req'}); } }catch(e){}
+},15000);
 setInterval(function(){ try{ purge(); }catch(e){} },600000);
 function dBytes(u){ var b=atob(String(u).split(',')[1]||''), a=new Uint8Array(b.length); for(var i=0;i<b.length;i++) a[i]=b.charCodeAt(i); return a; }
 function bBytes(a,mime){ var s='',CH=0x8000; for(var i=0;i<a.length;i+=CH) s+=String.fromCharCode.apply(null,a.subarray(i,i+CH)); return 'data:'+(mime||'image/jpeg')+';base64,'+btoa(s); }
@@ -8467,17 +8467,17 @@ var lastPubAny=0, lastReqSent=0;
 function republish(force){
   try{
     if(!netOK()||!D.mineList.length) return;
-    if(now()-lastPubAny<30000) return;   /* あふれよけ: 30秒に 1かい まで */
+    if(!force&&now()-lastPubAny<30000) return;   /* あふれよけ: 30秒に 1かい まで（v208: あいてが たのんだ ときは すぐ） */
     var t=now();   /* v176: もっている ストーリーを 1こ ずつ(おなじ ものは 2分に 1かい) */
     for(var i=0;i<D.mineList.length;i++){
       var st=D.mineList[i]; if(!st||!st.pid) continue;
       if(window.__zgsAck&&window.__zgsAck[st.pid]) continue;   /* v201: あいてが もりこんだ しょこは もう 送らない */
       var lr=(window.__zgsPubAt&&window.__zgsPubAt[st.pid])||0;
-      if(t-lr<120000) continue;
+      if(!force&&t-lr<120000) continue;   /* v208: たのまれた ときは 2分まちも しない */
       (window.__zgsPubAt=window.__zgsPubAt||{})[st.pid]=t;
       sendChunks(st);   /* v201: かけらは むりょうなので いつも（MQTTが あるとき） */
       var lf=(window.__zgsFileAt&&window.__zgsFileAt[st.pid])||0;   /* v201: ファイルの 道は 15分に 1かい（ふるい 端末の ため・回数を まもる） */
-      if(t-lf>900000){ (window.__zgsFileAt=window.__zgsFileAt||{})[st.pid]=t; try{ Net.sendFile({t:'story',id:st.pid,at:st.at},dBytes(st.data),null); }catch(e){} }
+      if(t-lf>(force?90000:900000)){ (window.__zgsFileAt=window.__zgsFileAt||{})[st.pid]=t; try{ zlog('たのまれたので ファイルの 道 だしなおし'); }catch(e2b){} try{ Net.sendFile({t:'story',id:st.pid,at:st.at},dBytes(st.data),null); }catch(e){} }   /* v208: たのまれた ときは 90秒おき（ふだんは 15分） */
     }
     lastPubAny=t;
   }catch(e){}
@@ -8486,6 +8486,7 @@ window.__storyReqMsg=function(m){
   try{
     var opp=(window.S&&S.opp&&S.opp.id)||null;
     if(opp&&m.from!==opp) return;
+    try{ zlog('「ある？」が きた → だしなおす'); }catch(e){}   /* v208 */
     republish(true);
   }catch(e){}
 };
@@ -8497,16 +8498,58 @@ window.__storyAckMsg=function(m){
     var id=String(m.id||'').slice(0,24); if(!id) return;
     var first=!window.__zgsAck[id];
     window.__zgsAck[id]=1;
+    try{ zlog('あいてに とどいた ✓'); }catch(e){}   /* v208 */
     if(first) toast2('あいてに ストーリーが とどきました ✓');
   }catch(e){}
 };
 /* v199: 2本目の 道（ことばのかけら）。ファイルの 道(ntfy)が とまっても ストーリーが とどくように。
    かけらは MQTT（即時路）が あるとき そちらを つかう（回数制限に かからない）。うけがわで つなげる */
 var PIECE=2000, stChunks={};
+function zlog(msg){   /* v208: ストーリーの できごとを おぼえて おく（裏メニューで 見る） */
+  try{ (window.__zgsLog=window.__zgsLog||[]).push({t:now(),m:String(msg).slice(0,60)}); if(window.__zgsLog.length>40) window.__zgsLog.shift(); }catch(e){}
+}
+function zdiag(){   /* v208: なぜ とどかないか を みえるように */
+  try{
+    var zt=document.getElementById('zgs-diag-txt'); if(!zt) return;
+    var f=function(x){ try{ return (x&&x.open?'ひらく':'とじる')+(x&&x.subOk?'/受け':''); }catch(e){ return '?'; } };
+    var un=0; for(var i=0;i<D.peerList.length;i++){ if(!D.peerList[i].seen) un++; }
+    var cool=(Net.coolUntil&&Date.now()<Net.coolUntil)?(Math.ceil((Net.coolUntil-Date.now())/1000)+'秒 やすみちゅう'):'なし';
+    var lg=(window.__zgsLog||[]).slice(-6).reverse().map(function(e2){ var d2=new Date(e2.t); return ('0'+d2.getHours()).slice(-2)+':'+('0'+d2.getMinutes()).slice(-2)+':'+('0'+d2.getSeconds()).slice(-2)+' '+e2.m; }).join('<br>');
+    zt.innerHTML='<b>ストーリー しんだん</b><br>'
+      +'つうしん: '+(netOK()?'OK':'まだ')+'・ペア: '+(((window.S||{}).paired)?'OK':'いいえ')+'<br>'
+      +'MQTT1: '+f(window.FastH)+'／MQTT2: '+f(window.FastE)+'・ながれ: '+(Net.open?(Net.transport+' ひらく'):'とじる')+'<br>'
+      +'中継の せいげん: '+cool+'・さいごの 送信: '+(Net.lastPostStatus||'-')+'<br>'
+      +'わたし '+D.mineList.length+'こ／'+nameOf()+' '+D.peerList.length+'こ（あたらしい '+un+'）・とどいた✓ '+Object.keys(window.__zgsAck||{}).length+'<br>'
+      +(lg?('さいきん:<br>'+lg):'さいきんの できごと: まだ ない');
+  }catch(e){}
+}
+try{
+  var zsec=document.getElementById('s-secret');
+  if(zsec&&!document.getElementById('zgs-diag-box')){
+    var zd=document.createElement('div'); zd.id='zgs-diag-box';
+    zd.style.cssText='margin:10px 0;padding:8px 10px;border:1px dashed #888;border-radius:8px;font-size:12px;line-height:1.55';
+    var zt2=document.createElement('div'); zt2.id='zgs-diag-txt'; zt2.textContent='ストーリー しんだんを じゅんび ちゅう…';
+    var zb=document.createElement('button'); zb.type='button'; zb.className='chalk-btn wide'; zb.textContent='ストーリーを だしなおす（とどかない とき）';
+    zb.style.cssText='margin-top:8px';
+    zb.addEventListener('click',function(){
+      try{
+        lastPubAny=0; window.__zgsPubAt={}; window.__zgsFileAt={};
+        for(var i2=0;i2<D.mineList.length;i2++){ var st2=D.mineList[i2]; if(!st2||!st2.pid||(window.__zgsAck&&window.__zgsAck[st2.pid])) continue; (window.__zgsFileAt=window.__zgsFileAt||{})[st2.pid]=0; sendChunks(st2); }
+        republish(true);
+        try{ if(netOK()) Net.send({t:'story-req'}); }catch(e3){}
+        zlog('だしなおし ボタンをおした');
+        toast2('ストーリーを だしなおしました');
+      }catch(e2){}
+    });
+    zd.appendChild(zt2); zd.appendChild(zb); zsec.appendChild(zd);
+  }
+}catch(e){}
+setInterval(function(){ try{ var s2=document.getElementById('s-secret'); if(s2&&s2.offsetParent!==null) zdiag(); }catch(e){} },5000);
 function fastOpen(){ try{ return !!(window.Fast&&Fast.open&&(FastH.subOk||FastE.subOk)); }catch(e){ return false; } }
 function sendChunks(st){
   try{
     if(!netOK()||!st||!st.pid) return false;
+    if(!fastOpen()) return false;   /* v208: MQTTが ほんとに ひらく/うけた ときだけ かけら。ないときは ファイルの 道（ntfyへ ~100POSTで せいげんを つかいきる のを やめる） */
     var u=String(st.data), total=Math.ceil(u.length/PIECE);
     if(total<1||total>200) return false;   /* v200: ちいさすぎ/おおきすぎは かけらでは 送らない（falseで ファイルの 道へ） */
     if(total===1){ try{ if(netOK()) Net.send({t:'stc',id:String(st.pid),at:st.at,i:0,total:1,d:u}); }catch(e){} return true; }   /* v200: かけら1こで まるごと */
@@ -8533,6 +8576,7 @@ window.__storyChunkMsg=function(m){   /* v199: かけらを あつめて スト�
     clearTimeout(b.timer); b.timer=setTimeout(function(){ try{ delete stChunks[id]; }catch(e){} },120000);
     for(var k=0;k<total;k++) if(!b.got[k]) return;
     var u=b.got.join(''); clearTimeout(b.timer); delete stChunks[id];
+    try{ zlog('かけらが あつまった'); }catch(e){}   /* v208 */
     if(u.length<30||u.length>240000||u.indexOf('data:image/jpeg;base64,')!==0) return;
     for(var j=0;j<D.peerList.length;j++){ if(String(D.peerList[j].pid)===id){ var ex2=D.peerList[j]; if(ex2.seen&&netOK()){ try{ Net.send({t:'story-see',sid:ex2.at}); }catch(e){} } try{ if(netOK()) Net.send({t:'stk',id:id}); }catch(e){} return; } }   /* v167: おなじ ものは 2度 ださない / v199: あしあと おくりなおし / v201: もりこめた あいず */
     D.peerList.push({data:u,at:b.at||now(),pid:id,seen:false});
@@ -8548,10 +8592,28 @@ function publish(st){
   try{
     if(!netOK()) return;
     if(window.__zgsAck&&window.__zgsAck[st.pid]) return;   /* v201: もう とどいてるものは 送らない */
-    sendChunks(st);   /* v201: かけら（MQTTが あるとき・すぐとどく） */
-    Net.sendFile({t:'story',id:st.pid,at:st.at},dBytes(st.data),function(ok){   /* v201: とうこうの しょんじは ファイルの 道も 1かい（ふるい 端末にも とどける） */
-      if(!ok) setTimeout(function(){ try{ if(!netOK()) return; Net.sendFile({t:'story',id:st.pid,at:st.at},dBytes(st.data),null); sendChunks(st); }catch(e){} },4000);
-    });
+    var chOk=sendChunks(st);   /* v201: かけら（MQTTが あるとき・すぐとどく） */
+    try{ zlog('おくる: '+(chOk?'かけら(MQTT)':'ファイルの 道')); }catch(e){}   /* v208 */
+    var tries=0;
+    var sendFile1=function(why){
+      try{
+        if(window.__zgsAck&&window.__zgsAck[st.pid]) return;
+        Net.sendFile({t:'story',id:st.pid,at:st.at},dBytes(st.data),function(ok){   /* v201: とうこうの しょんじは ファイルの 道も 1かい（ふるい 端末にも とどける） */
+          try{ zlog('ファイルの 道: '+(ok?'だした':'だせなかった')+(why?('('+why+')'):'')); }catch(e2){}
+          if(!ok) setTimeout(function(){ try{ if(netOK()) Net.sendFile({t:'story',id:st.pid,at:st.at},dBytes(st.data),null); }catch(e){} },4000);
+        });
+      }catch(e){}
+    };
+    sendFile1('とうこう');
+    if(!chOk){   /* v208: MQTTが ない ときは ✓が くるまで 90秒おきに だしなおす（10かいまで） */
+      var ft=setInterval(function(){
+        try{
+          if(window.__zgsAck&&window.__zgsAck[st.pid]){ clearInterval(ft); return; }
+          if(++tries>10){ clearInterval(ft); return; }
+          sendFile1('だしなおし'+tries);
+        }catch(e){}
+      },90000);
+    }
   }catch(e){}
 }
 function post(url){
@@ -8562,8 +8624,10 @@ function post(url){
     if(!save(D)) toast2('ほぞん できませんでした（きおくの あきが たりません）');
     try{ renderTray(); }catch(e){}
     try{ pubFx(q('#zgs-tray .zgs-i-mine .zgs-ring')); }catch(e){}   /* v206: とうこう したら にじいろ バースト */
+    try{ zlog('とうこう '+D.mineList.length+'こめ'); }catch(e){}   /* v208 */
     publish(st);
-    toast2('ストーリーに とうこうしました（'+D.mineList.length+'こめ・24じかんで きえます）');
+    toast2(netOK()?('ストーリーに とうこうしました（'+D.mineList.length+'こめ・24じかんで きえます）'):'ストーリーに とうこうしました（つながったら あいてに とどけます）');   /* v207: つながらない ときも ことばを そえる */
+    setTimeout(function(){ try{ if(!window.__zgsAck[st.pid]&&netOK()) toast2('あいてに まだ とどいていない かもしれません。あいてが つながったら じどうで とどきます'); }catch(e){} },25000);   /* v207: ✓の つうちが ない まま 25秒 たったら ヒント */
     try{ openView('mine',D.mineList.length-1); }catch(e){}
   });
 }
@@ -8637,6 +8701,7 @@ window.__storyRecv=async function(m){
     var newPid=String(m.id||'').slice(0,24);
     for(var i=0;i<D.peerList.length;i++){ if(String(D.peerList[i].pid)===newPid){ var ex=D.peerList[i]; if(ex.seen&&netOK()){ try{ Net.send({t:'story-see',sid:ex.at}); }catch(e){} } try{ if(netOK()) Net.send({t:'stk',id:newPid}); }catch(e){} return; } }   /* v167: おなじ ものは 2度 ださない / v199: あしあと おくりなおし / v201: もりこめた あいず */
     D.peerList.push({data:url,at:(typeof m.at==='number'&&m.at>0)?m.at:now(),pid:newPid,seen:false});
+    try{ zlog(nameOf()+' の ストーリーを 受けとった'); }catch(e){}   /* v208 */
     try{ if(netOK()) Net.send({t:'stk',id:newPid}); }catch(e){}   /* v201: とどいた あいず */
     D.peerList.sort(function(a,b){ return a.at-b.at; });
     while(D.peerList.length>MAX) D.peerList.shift();   /* v176: 5こまで */
@@ -8758,7 +8823,7 @@ function renderTray(){
   var mR=mine.querySelector('.zgs-ring'), mAv=mine.querySelector('.zgs-av'), mLab=mine.querySelector('.zgs-lab2');
   var pR=peer.querySelector('.zgs-ring'), pAv=peer.querySelector('.zgs-av'), pLab=peer.querySelector('.zgs-lab2');
   avInto(mAv,P.me,'🐷');
-  if(D.mineList.length){ mR.className='zgs-ring post'; mLab.textContent='わたし・'+D.mineList.length+'こ'; mLab.style.color='#E5323B'; }   /* v206: とうこう ちゅうは にじいろの わ・グレーに しない */
+  if(D.mineList.length){ var mn=false; for(var mi=0;mi<D.mineList.length;mi++){ if(!D.views[String(D.mineList[mi].at)]){ mn=true; break; } } mR.className='zgs-ring'+(mn?' post':' seen'); mLab.textContent='わたし・'+D.mineList.length+'こ'; mLab.style.color=mn?'#E5323B':''; }   /* v207: あいてが まだ 見ていない ときだけ にじいろ・見られたら グレーへ（あたらしい 投稿で また にじいろ） */
   else{ mR.className='zgs-ring none'; mLab.textContent='わたし'; mLab.style.color=''; }
   var tot=0;
   for(var i=0;i<D.mineList.length;i++){ var vv=D.views[String(D.mineList[i].at)]||{n:0}; tot+=(vv.n||0); }   /* v176: あしあと ぜんぶで いくつ */
