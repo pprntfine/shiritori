@@ -821,7 +821,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v213</b>｜ビルド 2026-10-28（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v215</b>｜ビルド 2026-10-28（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -895,7 +895,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v213</b>｜ビルド 2026-10-28（アプリが 裏でも スマホに 直接とどく）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v215</b>｜ビルド 2026-10-28（アプリが 裏でも スマホに 直接とどく）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -984,9 +984,7 @@ body.in-play .leave-row{display:none!important}
         <button id="btn-call" type="button" class="notify-btn" title="こえで はなす">電話:オフ</button>
         <button id="btn-photo" type="button" class="notify-btn" title="しゃしんを おくる">カメラ</button>
         <button id="btn-attach-photo" type="button" class="notify-btn">写真</button>
-        <button id="btn-attach-file" type="button" class="notify-btn">ファイル</button>
         <input id="chat-photo-file" type="file" accept="image/*" hidden>
-        <input id="chat-any-file" type="file" hidden>
         <button id="btn-notify" type="button" class="notify-btn" title="メッセージ通知(内容は表示しません)">通知:オフ</button>
         <button id="btn-delchat" type="button" class="notify-btn" title="この スマホの トークを ぜんぶ けす">🗑 けす</button>
       </div>
@@ -5879,6 +5877,10 @@ function renderPlay(){
 }
 var LINE_GROUP_MS=5*60000;
 var chatComposing=false, chatDeferred=false;
+var chatRenderTicket=0,chatScrollUserTicket=0;
+['touchstart','wheel','pointerdown','keydown'].forEach(function(type){
+  $('#chat-log').addEventListener(type,function(){ chatScrollUserTicket++; },{passive:true});
+});
 function renderChat(forceBottom){
   try{
     var ai=document.activeElement;
@@ -5888,9 +5890,20 @@ function renderChat(forceBottom){
   persistChat();
   var box=$('#chat-log');
   if(!box) return;
-  /* v115: LINEと おなじ。あたらしい メッセージ・トークを ひらいた とき・下の ほうを 見ている ときは 最新(いちばん 下)へ */
-  var stick = S._jump || (S.chat.length!==S._rcLen) || (box.scrollHeight-box.scrollTop-box.clientHeight<160);
+  /* v215: 新しいメッセージと画面を開いたときだけ下へ。既読などの更新では位置を保つ。 */
+  var previousTop=box.scrollTop;
+  var messageKeys=S.chat.filter(function(m){ return !m.sys; }).map(function(m){ return String(m.from)+':'+String(m.pid||m.uid||m.n||m.at); });
+  var knownMessages=S._rcMessages;
+  var stick=!!S._jump || !knownMessages || messageKeys.some(function(key){ return !knownMessages.has(key); });
+  S._rcMessages=new Set(messageKeys);
   S._jump=false; S._rcLen=S.chat.length;
+  var renderTicket=++chatRenderTicket;
+  var userTicket=chatScrollUserTicket;
+  box.querySelectorAll('[data-attachment-play]').forEach(function(v){
+    attachmentPlayback[v.dataset.attachmentPlay]={time:v.currentTime||0,ended:v.ended,paused:v.paused};
+    v.pause();
+  });
+  if(typeof attachmentObservers!=='undefined'){ attachmentObservers.forEach(function(o){ o.disconnect(); }); attachmentObservers=[]; }
   if(typeof attachmentURLs!=='undefined'){ attachmentURLs.forEach(function(u){ URL.revokeObjectURL(u); }); attachmentURLs=[]; }
   box.innerHTML='';
   var lastOwnN=0,i;
@@ -5920,7 +5933,10 @@ function renderChat(forceBottom){
       prow.className='msg '+(mine?'out':'in')+(cont?' cont':'');
       var pbub=document.createElement('div'); pbub.className='bubble photo-b';
       var pim=document.createElement('img'); pim.className='photo-msg'; pim.src=m.data; pim.alt='しゃしん';
-      pim.addEventListener('load',function(){ scrollChatBottom(); });
+      pim.addEventListener('load',function(){
+        if(renderTicket!==chatRenderTicket || userTicket!==chatScrollUserTicket) return;
+        if(stick) scrollChatBottom(); else box.scrollTop=previousTop;
+      });
       pbub.appendChild(pim);
       var pmeta=document.createElement('div'); pmeta.className='meta';
       pmeta.textContent=metaText(m,mine,at,groupEnd);
@@ -5956,7 +5972,7 @@ function renderChat(forceBottom){
     box.appendChild(row);
     prevFrom=m.from; prevAt=at;
   }
-  if(stick) scrollChatBottom();
+  if(stick) scrollChatBottom(); else box.scrollTop=previousTop;
 }
 /* v115: 1つの ふきだしに 表示は 1つだけ（送信中 → 未読 → 既読） */
 function metaText(m,mine,at,groupEnd){
@@ -5970,7 +5986,8 @@ function metaText(m,mine,at,groupEnd){
 }
 function scrollChatBottom(){
   var box=$('#chat-log'); if(!box) return;
-  var go=function(){ try{ box.scrollTop=box.scrollHeight; }catch(e){} };
+  var renderTicket=chatRenderTicket,userTicket=chatScrollUserTicket;
+  var go=function(){ if(renderTicket!==chatRenderTicket || userTicket!==chatScrollUserTicket) return; try{ box.scrollTop=box.scrollHeight; }catch(e){} };
   go();
   try{ (window.requestAnimationFrame||setTimeout)(go,16); }catch(e){}
   setTimeout(go,120);
@@ -6226,7 +6243,7 @@ function attachmentPhoto(url){ return new Promise(function(resolve,reject){
 }); }
 function attachmentButton(id,input){ $('#'+id).addEventListener('click',function(){ if(!attachmentReady()) return; var f=$('#'+input); f.value=''; f.click(); }); }
 attachmentButton('btn-attach-photo','chat-photo-file');
-attachmentButton('btn-attach-file','chat-any-file');
+/* 一般ファイルを選ぶ項目は表示しない。過去の添付の表示は残す。 */
 async function attachmentSelected(input,isPhoto){
   var file=input.files&&input.files[0]; input.value=''; if(!file||!attachmentReady()) return;
   if(file.size>(isPhoto?20*1024*1024:ATTACH_MAX)){ toast(isPhoto?'写真は 20 MB 以下を 選んでください。':'ファイルは 2 MB 以下を 選んでください。'); return; }
@@ -6242,7 +6259,7 @@ async function attachmentSelected(input,isPhoto){
   }catch(e){ toast(isPhoto?'写真を 読みこめませんでした。JPEGやPNGの写真で お試しください。':'ファイルを 読みこめませんでした。もう一度 選んでください。'); }
 }
 $('#chat-photo-file').addEventListener('change',function(){ attachmentSelected(this,true); });
-$('#chat-any-file').addEventListener('change',function(){ attachmentSelected(this,false); });
+/* 写真の選択だけを受け付ける。 */
 function sendAttachment(msg,tries){
   tries=tries||0; if(!attachmentReady()) return;
   var topic=Net.topic,key=Net.key;
@@ -6273,6 +6290,27 @@ async function recvAttachment(m){
   finally{ attachmentReceiving.delete(id); }
 }
 var attachmentURLs=[];
+var attachmentObservers=[],attachmentPlayback={};
+function attachmentAutoPlay(view,m,wrap){
+  var id=String(m.from)+':'+String(m.pid||m.n||m.at),previous=attachmentPlayback[id];
+  view.dataset.attachmentPlay=id;
+  view.autoplay=!previous||(!previous.ended&&!previous.paused);
+  view.setAttribute('playsinline','');
+  if(view.tagName.toLowerCase()==='video'){ view.muted=true; view.defaultMuted=true; view.setAttribute('muted',''); }
+  var status=document.createElement('div'); status.style.cssText='font-size:12px;margin-top:6px';
+  status.textContent=view.muted?'音なしで自動再生します。音は動画の操作ボタンで出せます。':'自動再生を試みます。'; wrap.appendChild(status);
+  view.addEventListener('loadedmetadata',function(){ if(previous&&previous.time) try{ view.currentTime=previous.time; }catch(e){} });
+  view.addEventListener('playing',function(){ status.textContent=view.muted?'音なしで再生中。音は動画の操作ボタンで出せます。':'再生中'; });
+  function start(){
+    if(!view.isConnected||!chatOnScreen()||!view.autoplay) return;
+    try{ var p=view.play(); if(p&&p.catch) p.catch(function(){ status.textContent='端末の設定で自動再生が止まりました。再生ボタンを押してください。'; }); }catch(e){ status.textContent='再生ボタンを押してください。'; }
+  }
+  if(typeof IntersectionObserver!=='undefined'){
+    var ob=new IntersectionObserver(function(entries){ entries.forEach(function(e){ if(e.isIntersecting) start(); else view.pause(); }); },{threshold:0.25});
+    ob.observe(view); attachmentObservers.push(ob);
+  }else setTimeout(start,100);
+}
+
 function attachmentKind(bytes,name){
   var ext=String(name||'').toLowerCase().split('.').pop();
   if(bytes[0]===255&&bytes[1]===216) return 'image/jpeg';
@@ -6302,7 +6340,8 @@ function attachmentLink(m){
       view=document.createElement('iframe'); view.src=u; view.title=m.fileName||'PDF'; view.style.cssText='display:block;width:min(62vw,320px);height:360px;border:0;background:white';
       var hint=document.createElement('div'); hint.textContent='PDFが表示されない端末では、下の「開く」で確認してください。'; wrap.appendChild(hint);
     }else if(mime.indexOf('video/')===0||mime.indexOf('audio/')===0){
-      view=document.createElement(mime.indexOf('video/')===0?'video':'audio'); view.src=u; view.controls=true; view.preload='metadata'; view.setAttribute('playsinline',''); view.style.cssText='display:block;max-width:100%;width:min(62vw,300px)';
+      view=document.createElement(mime.indexOf('video/')===0?'video':'audio'); view.src=u; view.controls=true; view.preload='auto'; view.setAttribute('playsinline',''); view.style.cssText='display:block;max-width:100%;width:min(62vw,300px)';
+      attachmentAutoPlay(view,m,wrap);
     }else{
       view=document.createElement('div'); view.textContent='この形式はトーク内で表示できません。保存して対応するアプリで開いてください。';
     }
@@ -7120,7 +7159,7 @@ $('#in-chat').addEventListener('input',chatGrow);
     document.documentElement.style.setProperty('--app-h', Math.round(v.height)+'px');
     var main=document.querySelector('main');
     if(main){ main.style.paddingBottom = (open&&!document.body.classList.contains('in-play')) ? Math.min(kb,260)+'px' : ''; }
-    if(document.body.classList.contains('in-play')){ try{ window.scrollTo(0,0); }catch(e){} scrollChatBottom(); }
+    if(document.body.classList.contains('in-play')){ try{ window.scrollTo(0,0); }catch(e){} }
     if(open && document.activeElement===inp){
       clearTimeout(window.__kbT);
       window.__kbT=setTimeout(function(){ try{ inp.scrollIntoView({block:'nearest'}); }catch(e){} },60);
