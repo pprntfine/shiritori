@@ -819,7 +819,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v204</b>｜ビルド 2026-10-28（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v205</b>｜ビルド 2026-10-28（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -893,7 +893,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v204</b>｜ビルド 2026-10-28（アプリが 裏でも スマホに 直接とどく）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v205</b>｜ビルド 2026-10-28（アプリが 裏でも スマホに 直接とどく）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -7209,7 +7209,7 @@ function wipePairLocal(){
   unreadClear(); chatClearStore(); hwmClear(); try{ swClearNotifs(); }catch(e){}
   try{ localStorage.removeItem('mtp_since_v1'); localStorage.removeItem('mtp_cid_v1'); }catch(e){}
   try{ localStorage.removeItem(OUT_KEY); }catch(e){}
-  try{ localStorage.removeItem('mtp_prof_v1'); PROF=profLoad(); }catch(e){}
+  try{ localStorage.removeItem('mtp_prof_v1'); PROF=profLoad(); try{ window.PROF=PROF; }catch(e){} }catch(e){}
   try{ closeLive(); }catch(e){}
   try{ stopCall(false); }catch(e){}
   try{ Net.close(); }catch(e){}
@@ -8138,7 +8138,7 @@ var PROF_KEY='mtp_prof_v1';
 var EMOS=['🐷','🐱','🐶','🐰','🐻','🐼','🦊','🐸','🐵','🐧','🐤','🦁','🐯','🐨','🐹','🍄‍🟫','🌸','⭐','🍓','🍙','⚽','🎮','👑','😺'];
 function profLoad(){ try{ var o=JSON.parse(localStorage.getItem(PROF_KEY)||'null'); if(o) return o; }catch(e){} return {me:{name:'ぶー',emo:'🐷',img:''},peer:{name:'にゃん',emo:'🐱',img:''},alias:''}; }
 var PROF=profLoad();
-function profSave(){ try{ localStorage.setItem(PROF_KEY,JSON.stringify(PROF)); }catch(e){ try{ var c=JSON.parse(JSON.stringify(PROF)); c.peer.img=''; localStorage.setItem(PROF_KEY,JSON.stringify(c)); }catch(_){} } }
+function profSave(){ try{ window.PROF=PROF; }catch(e){} try{ localStorage.setItem(PROF_KEY,JSON.stringify(PROF)); }catch(e){ try{ var c=JSON.parse(JSON.stringify(PROF)); c.peer.img=''; localStorage.setItem(PROF_KEY,JSON.stringify(c)); }catch(_){} } }
 function meName(){ return (PROF.me&&PROF.me.name)||'ぶー'; }
 function peerName(){ return (PROF.peer&&PROF.peer.name)||'にゃん'; } /* v203: よびかた上書きは やめ。あいてが きめた 名前 */
 function avHTML(p,fb){ if(p&&p.img) return '<img alt="" src="'+p.img+'">'; return (p&&p.emo)||fb; }
@@ -8401,7 +8401,7 @@ function load(){ try{ var o=JSON.parse(localStorage.getItem(KEY)||'null'); if(o&
 function save(o){ try{ localStorage.setItem(KEY,JSON.stringify(o)); return true; }catch(e){ return false; } }   /* v173: ほぞんの せいかいを 返す */
 var D=load();
 function now(){ return Date.now(); }
-function profs(){ var p=GV('PROF',null); if(p&&p.me&&p.peer) return p; return {me:{name:'ぶー',emo:'🐷',img:''},peer:{name:'にゃん',emo:'🐱',img:''}}; }
+function profs(){ var p=null; try{ p=JSON.parse(localStorage.getItem('mtp_prof_v1')||'null'); }catch(e){} if(p&&p.me&&p.peer) return p; p=GV('PROF',null); if(p&&p.me&&p.peer) return p; return {me:{name:'ぶー',emo:'🐷',img:''},peer:{name:'にゃん',emo:'🐱',img:''}}; } /* v205: ほぞんを じかよみ(ストーリー側に じぶん/あいての せっていを とどける) */
 function nameOf(){ var p=profs(); return (p.peer&&p.peer.name)||'にゃん'; }   /* v203: あいてが きめた 名前 */
 function toast2(m){
   try{ if(typeof window.toast==='function'){ window.toast(m); return; } }catch(e){}
