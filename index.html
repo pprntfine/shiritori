@@ -793,6 +793,17 @@ body.in-play .leave-row{display:none!important}
 .line-composer .line-send.cute-send.pop .cs-ico{animation:cspop .45s ease}
 @keyframes cspop{0%{transform:rotate(-12deg) scale(1)}40%{transform:rotate(8deg) scale(1.35)}100%{transform:rotate(-12deg) scale(1)}}
 #ig-eye{cursor:help}
+/* v216: 状態の文字が変わっても消えない、イラスト付きの操作ボタン */
+.line-composer .tools{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px!important;overflow:visible!important;width:100%;min-width:0}
+.line-composer .tools button{display:flex!important;flex-direction:column;align-items:center;justify-content:center;gap:3px;width:100%;min-width:0;min-height:62px;padding:6px 2px!important;border-radius:12px;font-size:11px!important;line-height:1.3;white-space:normal;overflow-wrap:anywhere}
+.line-composer .tools button::before{content:'';display:block;width:28px;height:28px;flex:none;background:center/contain no-repeat}
+.line-composer .tools button:focus-visible{outline:3px solid #32795b;outline-offset:2px}
+#btn-live::before{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='2' y='7' width='20' height='19' rx='5' fill='%23dbedf9' stroke='%23336f9b' stroke-width='1.8'/%3E%3Cpath d='M22 13l8-5v17l-8-5z' fill='%2399c9e8' stroke='%23336f9b' stroke-width='1.8' stroke-linejoin='round'/%3E%3Ccircle cx='9' cy='13' r='3' fill='%23f27987'/%3E%3C/svg%3E")}
+#btn-call::before{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M7 3l6 6-4 5c2 4 4 6 8 8l5-4 6 6-3 5C13 31 1 19 3 7z' fill='%23b4e1ce' stroke='%23357459' stroke-width='1.8' stroke-linejoin='round'/%3E%3Cpath d='M21 4c4 1 6 3 7 7M21 9l3 3' fill='none' stroke='%23357459' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E")}
+#btn-photo::before{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M4 9h5l3-4h8l3 4h5v19H4z' fill='%23f5d6e3' stroke='%2394496d' stroke-width='1.8' stroke-linejoin='round'/%3E%3Ccircle cx='16' cy='18' r='7' fill='%23fff' stroke='%2394496d' stroke-width='1.8'/%3E%3Ccircle cx='16' cy='18' r='4' fill='%23c4def0'/%3E%3Ccircle cx='26' cy='12' r='1.3' fill='%2394496d'/%3E%3C/svg%3E")}
+#btn-attach-photo::before{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='3' y='4' width='26' height='24' rx='4' fill='%23e3f0fa' stroke='%234f769c' stroke-width='1.8'/%3E%3Ccircle cx='22' cy='11' r='3' fill='%23f5cd72'/%3E%3Cpath d='M5 25l8-11 6 8 4-5 4 8z' fill='%238ec6ae' stroke='%23538770' stroke-width='1.3' stroke-linejoin='round'/%3E%3C/svg%3E")}
+#btn-notify::before{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M6 23l3-5v-6a7 7 0 0114 0v6l3 5z' fill='%23f9dfa0' stroke='%23916a27' stroke-width='1.8' stroke-linejoin='round'/%3E%3Cpath d='M12 27q4 5 8 0M16 3v2' fill='none' stroke='%23916a27' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E")}
+#btn-delchat::before{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M7 9l2 20h14l2-20z' fill='%23e0e4ee' stroke='%23636d85' stroke-width='1.8' stroke-linejoin='round'/%3E%3Cpath d='M5 8h22M12 7V3h8v4M13 13v10M19 13v10' fill='none' stroke='%23636d85' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E")}
 </style>
 </head>
 <body>
@@ -821,7 +832,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v215</b>｜ビルド 2026-10-28（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v216</b>｜ビルド 2026-10-28（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -895,7 +906,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v215</b>｜ビルド 2026-10-28（アプリが 裏でも スマホに 直接とどく）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v216</b>｜ビルド 2026-10-28（アプリが 裏でも スマホに 直接とどく）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -986,7 +997,7 @@ body.in-play .leave-row{display:none!important}
         <button id="btn-attach-photo" type="button" class="notify-btn">写真</button>
         <input id="chat-photo-file" type="file" accept="image/*" hidden>
         <button id="btn-notify" type="button" class="notify-btn" title="メッセージ通知(内容は表示しません)">通知:オフ</button>
-        <button id="btn-delchat" type="button" class="notify-btn" title="この スマホの トークを ぜんぶ けす">🗑 けす</button>
+        <button id="btn-delchat" type="button" class="notify-btn" title="この スマホの トークを ぜんぶ けす">けす</button>
       </div>
       <textarea id="in-chat" rows="1" maxlength="300" placeholder="メッセージを入力" enterkeyhint="enter" autocomplete="off" spellcheck="false" inputmode="text"></textarea>
       <button class="line-send cute-send" type="submit" id="btn-chat-send" aria-label="送信"><span class="cs-ico">🐾</span></button>
