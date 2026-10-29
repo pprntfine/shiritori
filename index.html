@@ -832,13 +832,16 @@ body.in-play .leave-row{display:none!important}
 .line-composer #chat-tools:not([hidden]){margin-top:6px}
 .line-composer .chat-tools-toggle{display:block;min-height:36px;padding:6px 12px;border:1px solid #D9E2E9;border-radius:18px;background:#fff;color:#357459;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
 .line-composer .chat-tools-toggle:focus-visible{outline:3px solid #32795b;outline-offset:2px}
-/* v223: 入力幅を減らさない独立したスタンプ欄。画像や外部素材は使わない。 */
+/* v224: 入力幅を減らさない独立したスタンプ欄。画像や外部素材は使わない。 */
 .chat-composer-actions{display:flex;gap:8px;align-items:center}
 .line-composer .chat-composer-actions button{min-height:44px}
 .line-composer #btn-stickers[aria-expanded="true"]{background:#e5f7da;border-color:#32795b}
 .sticker-picker{grid-column:1/-1;grid-row:2;min-width:0;max-height:min(300px,45dvh);overflow-y:auto;overscroll-behavior:contain;background:#fff;border:1px solid #D9E2E9;border-radius:16px;padding:8px;color:#34493c}
 .sticker-picker-head{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;padding-left:4px}
 .sticker-picker-close{min-width:44px;min-height:44px;border:0;border-radius:12px;background:#f2f6f3;color:inherit;font:inherit;cursor:pointer}
+.sticker-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;margin:4px 0 8px}
+.sticker-tab{min-width:0;min-height:44px;padding:5px 2px;border:1px solid #D9E2E9;border-radius:12px;background:#f2f6f3;color:inherit;font:inherit;font-size:12px;cursor:pointer}
+.sticker-tab[aria-selected="true"]{background:#e5f7da;border-color:#32795b;font-weight:700}
 .sticker-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}
 .sticker-choice{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-width:0;min-height:66px;padding:5px 2px;border:1px solid transparent;border-radius:12px;background:transparent;color:inherit;font:inherit;cursor:pointer}
 .sticker-choice:hover,.sticker-choice:active{background:#e5f7da}
@@ -876,7 +879,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v223</b>｜ビルド 2026-10-29（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v224</b>｜ビルド 2026-10-29（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -950,7 +953,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v223</b>｜ビルド 2026-10-29（アプリが 裏でも スマホに 直接とどく）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v224</b>｜ビルド 2026-10-29（アプリが 裏でも スマホに 直接とどく）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -6679,10 +6682,18 @@ setInterval(reactionReconnect,120000);
 window.addEventListener('online',reactionReconnect);
 document.addEventListener('visibilitychange',function(){ if(!document.hidden) reactionReconnect(); else closeReactionPalette(); });
 
-/* v223: 許可リストと完全一致する本文だけを大きなスタンプとして表示する。
+/* v224: 許可リストと完全一致する本文だけを大きなスタンプとして表示する。
    既存の chats 電文・固定 mid・暗号化保存・送信待ちをそのまま利用し、旧版にも絵文字で届く。 */
-var STICKERS=['😊','🙏','👍','❤️','😂','🎉','👋','🙆','😮','😢','💪','😴'];
-var STICKER_NAMES=['にっこり','ありがとう','いいね','ハート','大笑い','おめでとう','またね','オーケー','びっくり','悲しい','がんばって','おやすみ'];
+var STICKER_CATEGORIES=[
+  {name:'表情',items:[['😊','にっこり'],['😂','大笑い'],['😮','びっくり'],['😢','悲しい'],['😀','にこにこ'],['😆','うれし笑い'],['🤣','笑い転げる'],['😎','かっこいい'],['🤔','考え中'],['😅','苦笑い'],['😤','ふんっ'],['🥱','あくび']]},
+  {name:'あいさつ',items:[['🙏','ありがとう'],['👋','またね'],['🙆','オーケー'],['😴','おやすみ'],['🙋','はーい'],['🙇','ぺこり'],['🤝','よろしく'],['🌅','おはよう'],['🌙','こんばんは'],['☀️','こんにちは'],['🫡','了解です'],['🚶','いってきます']]},
+  {name:'応援',items:[['👍','いいね'],['🎉','おめでとう'],['💪','がんばって'],['👏','拍手'],['🙌','やったね'],['✊','ファイト'],['🔥','燃えてきた'],['🏆','大成功'],['🥇','一番だね'],['💯','満点'],['📣','応援してる'],['🌟','輝いてる']]},
+  {name:'気持ち',items:[['❤️','ハート'],['🥹','じーん'],['🥲','うれし涙'],['😌','ほっとした'],['😔','しょんぼり'],['😡','ぷんぷん'],['😱','ひえー'],['🤯','頭がいっぱい'],['😥','心配だよ'],['😑','むむっ'],['🫶','大切だよ'],['💐','感謝をこめて']]},
+  {name:'くらし',items:[['☕','ひと休み'],['🍵','お茶どうぞ'],['🍚','ごはんだよ'],['🍰','おやつの時間'],['🛁','お風呂の時間'],['🛌','休憩中'],['🏠','ただいま'],['🛍️','お買い物'],['💻','作業中'],['📚','勉強中'],['🎵','ごきげん'],['☔','雨だね']]},
+  {name:'大人の気分',items:[['😘','キスを送る'],['💋','キスマーク'],['😉','ウインク'],['😳','照れちゃう'],['🥰','うっとり'],['😍','見とれちゃう'],['😚','そっとキス'],['😙','キスの気分'],['💘','心を射抜かれた'],['💕','寄り添うハート'],['💞','通じ合うハート'],['👀','見つめてる']]}
+];
+var STICKERS=[],STICKER_NAMES=[];
+STICKER_CATEGORIES.forEach(function(category){ category.items.forEach(function(item){ STICKERS.push(item[0]); STICKER_NAMES.push(item[1]); }); });
 var stickerPicker=null,stickerPickerScope='';
 function isSticker(value){ return typeof value==='string'&&STICKERS.indexOf(value)>=0; }
 function closeStickerPicker(restoreFocus){
@@ -6709,19 +6720,43 @@ function openStickerPicker(){
   var head=document.createElement('div'); head.className='sticker-picker-head';
   var title=document.createElement('span'); title.textContent='選ぶとスタンプを送信'; head.appendChild(title);
   var close=document.createElement('button'); close.type='button'; close.className='sticker-picker-close'; close.textContent='閉じる'; close.addEventListener('click',function(){ closeStickerPicker(); }); head.appendChild(close); p.appendChild(head);
-  var grid=document.createElement('div'); grid.className='sticker-grid';
+  var tabs=document.createElement('div'); tabs.className='sticker-tabs'; tabs.setAttribute('role','tablist'); tabs.setAttribute('aria-label','スタンプの分類'); p.appendChild(tabs);
+  var grid=document.createElement('div'); grid.id='sticker-panel'; grid.className='sticker-grid'; grid.setAttribute('role','tabpanel'); p.appendChild(grid);
   var scope=deletionScope();
-  STICKERS.forEach(function(value,i){
-    var b=document.createElement('button'); b.type='button'; b.className='sticker-choice'; b.setAttribute('aria-label',STICKER_NAMES[i]+'のスタンプを送信');
-    var emoji=document.createElement('span'); emoji.textContent=value; emoji.setAttribute('aria-hidden','true'); b.appendChild(emoji);
-    var label=document.createElement('small'); label.textContent=STICKER_NAMES[i]; b.appendChild(label);
-    b.addEventListener('click',function(){
-      /* 閉じた欄の古いボタンや二重クリックでは再送しない。 */
-      if(stickerPicker!==p) return;
-      closeStickerPicker();
-      if(scope===deletionScope()) sendSticker(value);
-    }); grid.appendChild(b);
-  }); p.appendChild(grid);
+  function selectCategory(index,focusTab){
+    if(stickerPicker&&stickerPicker!==p) return;
+    Array.from(tabs.children).forEach(function(tab,i){ tab.setAttribute('aria-selected',String(i===index)); tab.tabIndex=i===index?0:-1; });
+    grid.setAttribute('aria-labelledby','sticker-tab-'+index); grid.replaceChildren();
+    STICKER_CATEGORIES[index].items.forEach(function(item){
+      var value=item[0],name=item[1];
+      var b=document.createElement('button'); b.type='button'; b.className='sticker-choice'; b.setAttribute('aria-label',name+'のスタンプを送信');
+      var emoji=document.createElement('span'); emoji.textContent=value; emoji.setAttribute('aria-hidden','true'); b.appendChild(emoji);
+      var label=document.createElement('small'); label.textContent=name; b.appendChild(label);
+      b.addEventListener('click',function(){
+        /* 閉じた欄・切替前の古いボタンや二重クリックでは再送しない。 */
+        if(stickerPicker!==p||!grid.contains(b)) return;
+        closeStickerPicker();
+        if(scope===deletionScope()) sendSticker(value);
+      }); grid.appendChild(b);
+    });
+    p.scrollTop=0;
+    if(focusTab) tabs.children[index].focus({preventScroll:true});
+  }
+  STICKER_CATEGORIES.forEach(function(category,i){
+    var tab=document.createElement('button'); tab.type='button'; tab.id='sticker-tab-'+i; tab.className='sticker-tab'; tab.textContent=category.name;
+    tab.setAttribute('role','tab'); tab.setAttribute('aria-controls','sticker-panel');
+    tab.addEventListener('click',function(){ if(stickerPicker===p) selectCategory(i,false); });
+    tab.addEventListener('keydown',function(e){
+      var next=i;
+      if(e.key==='ArrowRight') next=(i+1)%STICKER_CATEGORIES.length;
+      else if(e.key==='ArrowLeft') next=(i+STICKER_CATEGORIES.length-1)%STICKER_CATEGORIES.length;
+      else if(e.key==='Home') next=0;
+      else if(e.key==='End') next=STICKER_CATEGORIES.length-1;
+      else return;
+      e.preventDefault(); if(stickerPicker===p) selectCategory(next,true);
+    }); tabs.appendChild(tab);
+  });
+  selectCategory(0,false);
   $('#form-chat').appendChild(p); stickerPicker=p; stickerPickerScope=scope;
   $('#form-chat').classList.add('stickers-open'); $('#btn-stickers').setAttribute('aria-expanded','true');
   appNav.open('sticker-picker',closeStickerPicker,function(){ return !!stickerPicker; });
@@ -6737,7 +6772,7 @@ document.addEventListener('keydown',function(e){
   if(!stickerPicker) return;
   if(e.key==='Escape'){ e.preventDefault(); e.stopImmediatePropagation(); closeStickerPicker(); }
   else if(e.key==='Tab'){
-    var buttons=Array.from(stickerPicker.querySelectorAll('button')),at=buttons.indexOf(document.activeElement);
+    var buttons=Array.from(stickerPicker.querySelectorAll('button')).filter(function(b){ return b.tabIndex!==-1; }),at=buttons.indexOf(document.activeElement);
     if((e.shiftKey&&at<=0)||(!e.shiftKey&&at===buttons.length-1)){ e.preventDefault(); buttons[e.shiftKey?buttons.length-1:0].focus(); }
   }
 },true);
