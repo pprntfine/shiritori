@@ -860,7 +860,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v221</b>｜ビルド 2026-10-29（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v222</b>｜ビルド 2026-10-29（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -934,7 +934,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v221</b>｜ビルド 2026-10-29（アプリが 裏でも スマホに 直接とどく）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v222</b>｜ビルド 2026-10-29（アプリが 裏でも スマホに 直接とどく）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -2925,9 +2925,12 @@ function copyText(txt,btn,label,okLabel){
     try{
       var ta=document.createElement('textarea');
       ta.value=txt; ta.setAttribute('readonly',''); ta.style.position='fixed'; ta.style.opacity='0';
-      document.body.appendChild(ta); ta.select();
-      var ok=document.execCommand('copy');
-      document.body.removeChild(ta); done(ok);
+      var previousFocus=document.activeElement;
+      document.body.appendChild(ta); ta.focus({preventScroll:true}); ta.select();
+      var ok;
+      try{ ok=document.execCommand('copy'); }
+      finally{ ta.remove(); if(previousFocus&&previousFocus.isConnected) previousFocus.focus({preventScroll:true}); }
+      done(ok);
     }catch(e){ done(false); }
   }
 }
@@ -6475,11 +6478,18 @@ async function recallMsg(uid){
     removeDeletedMessages(); await chatSaveNow(); syncDeletions();
   }catch(e){ toast('削除できませんでした。端末の保存領域や空き容量を確認してください。'); }
 }
-/* v221: 長押しは操作欄を開く。受信本文の通常の文脈メニューは残す。 */
+/* v222: 長押しの操作欄は維持し、標準のコピー用メニューは末尾の共通処理で止める。 */
 function bindMessageDeletion(box){
   var hold=null,ghost=null;
   function targetRow(target){
-    if(!target||!target.closest||target.closest('button,a,input,textarea,select,video,audio,[contenteditable="true"]')) return null;
+    if(!target||!target.closest||target.closest('button,a,input,textarea,select,video,audio')) return null;
+    for(var edit=target;edit&&edit.nodeType===1;edit=edit.parentElement){
+      var value=edit.getAttribute('contenteditable');
+      if(value===null) continue;
+      value=value.toLowerCase();
+      if(value==='false') break;
+      if(value===''||value==='true'||value==='plaintext-only') return null;
+    }
     var b=target.closest('.bubble'),row=b&&b.closest('.msg'); return row&&row.dataset.uid?row:null;
   }
   function cancel(){ if(hold) clearTimeout(hold.timer); hold=null; }
@@ -9012,16 +9022,42 @@ window.addEventListener('pagehide',function(){ closeCam(); stopCall(false); });
 /* 選択制御と相手の接続記録は引き続き利用する。 */
 (function(){
 var css=document.createElement('style');
-css.textContent='body,body *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}input,textarea,.msg.in .bubble,.msg.in .bubble *{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}';
+/* v222: 表示内容は選択不可。入力欄と実際に編集可能な領域だけ標準操作を残す。
+   :read-write は子孫にも適用され、contenteditable=false の境界もブラウザーが判定する。 */
+css.textContent='body,body *{-webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:none!important}body input,body textarea,body :read-write{-webkit-user-select:text!important;user-select:text!important;-webkit-touch-callout:default!important}';
 document.head.appendChild(css);
 (function(){
-  if(window.__zgNoCopy) return; window.__zgNoCopy=1;   /* v172: 画面ぜんたいを あいてい（にゅうりょくらんは のぞく） */
-  function inEdit(t){ try{ return !!(t&&t.closest&&t.closest('input,textarea')); }catch(e){ return false; } }
-  ['contextmenu','selectstart'].forEach(function(ev){
-    document.addEventListener(ev,function(e){ if(inEdit(e.target)||(e.target&&e.target.closest&&e.target.closest('#chat-log'))) return; e.preventDefault(); });
-  });
-  ['copy','cut'].forEach(function(ev){
-    document.addEventListener(ev,function(e){ if(inEdit(e.target)) return; e.preventDefault(); });
+  if(window.__zgNoCopy) return; window.__zgNoCopy=1;
+  function element(t){ return t&&t.nodeType===3?t.parentElement:t; }
+  function inEdit(t){
+    for(var el=element(t);el&&el.nodeType===1;el=el.parentElement){
+      if(el.matches('input,textarea')) return true;
+      var value=el.getAttribute('contenteditable');
+      if(value===null) continue;
+      value=value.toLowerCase();
+      if(value==='false') return false;
+      if(value===''||value==='true'||value==='plaintext-only') return true;
+    }
+    return false;
+  }
+  function editableEvent(e){
+    if(inEdit(e.target)) return true;
+    /* 一部のブラウザーの編集用コピーは document を対象に発火する。 */
+    if((e.type==='copy'||e.type==='cut')&&(e.target===document||e.target===document.body||e.target===document.documentElement)){
+      var selection=window.getSelection();
+      if(selection&&!selection.isCollapsed) return inEdit(selection.anchorNode)&&inEdit(selection.focusNode);
+      return inEdit(document.activeElement);
+    }
+    return false;
+  }
+  ['copy','cut','contextmenu','selectstart','dragstart'].forEach(function(ev){
+    document.addEventListener(ev,function(e){
+      if(editableEvent(e)) return;
+      var target=element(e.target);
+      if(ev==='contextmenu'&&target&&target.closest&&target.closest('select,option')) return;
+      /* 伝播は止めない。吹き出しの反応・削除操作や明示的なコピー用ボタンを維持する。 */
+      e.preventDefault();
+    });
   });
 })();
 setInterval(function(){
