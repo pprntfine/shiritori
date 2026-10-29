@@ -897,7 +897,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v228</b>｜ビルド 2026-10-29（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v229</b>｜ビルド 2026-10-29（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -971,7 +971,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v228</b>｜ビルド 2026-10-29（アプリが 裏でも スマホに 直接とどく）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v229</b>｜ビルド 2026-10-29（アプリが 裏でも スマホに 直接とどく）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -2606,7 +2606,7 @@ function nameOf(id){ return id===S.me.id ? meName() : peerName(); }
    5. 画面まわり
    ================================================================= */
 function show(which){
-  clearStickerFullscreen();
+  if(which!=='play') clearStickerFullscreen();   /* v229: トーク以外へは即後始末。トークを開くときは最後の再演が置き換える */
   closeStickerPicker(false);
   S.phase=which;
   appNav.changed();
@@ -2615,6 +2615,7 @@ function show(which){
   $('#btn-quit').hidden = (which!=='play');
   updateTalkbackBadges(); updateTitleBadge();
   window.scrollTo(0,0);
+  if(which==='play'&&S.tab==='chat') stickerReplayOpen({fresh:true,source:'show-play'});   /* v229: トーク画面を開くたびに最新の全画面を一度だけ（タブ移動は setTab 側で） */
 }
 /* ペア成立後は 部屋を でても トークだけ つづく */
 function updateTalkbackBadges(){
@@ -2634,7 +2635,7 @@ document.querySelectorAll('.talk-back').forEach(function(b){
 function updateTitleBadge(){ document.title=((S.hostAlert?'⚠ ':'')+(S.unread>0?'('+S.unread+') ':''))+'雑学王'; }
 if($('#tab-to-chat')) $('#tab-to-chat').addEventListener('click',function(){ setTab('chat',1); });
 function setTab(which,byUser){
-  clearStickerFullscreen();
+  if(which!=='chat') clearStickerFullscreen();   /* v229: トークを離れたら即後始末。開くときは再演が置き換える */
   closeStickerPicker(false);
   S.tab=which;
   appNav.changed();
@@ -2644,7 +2645,7 @@ function setTab(which,byUser){
   if($('#tab-chat')){ $('#tab-chat').classList.toggle('on',which==='chat'); $('#tab-chat').setAttribute('aria-selected',which==='chat'); }
   if($('#pane-game')) $('#pane-game').classList.toggle('on',which==='game');
   if($('#pane-chat')) $('#pane-chat').classList.toggle('on',which==='chat');
-  if(which==='chat'){ S.unread=0; updateBadge(); updateTalkbackBadges(); try{ if(navigator.serviceWorker&&navigator.serviceWorker.controller) navigator.serviceWorker.controller.postMessage('clear'); }catch(e){} try{ if(swReg&&swReg.getNotifications) swReg.getNotifications({tag:'mtp-chat'}).then(function(a){ a.forEach(function(n){ n.close(); }); }); }catch(e){} S._jump=true; renderChat(true); maybeSendRead(); setTimeout(scrollChatBottom,200); }
+  if(which==='chat'){ S.unread=0; updateBadge(); updateTalkbackBadges(); try{ if(navigator.serviceWorker&&navigator.serviceWorker.controller) navigator.serviceWorker.controller.postMessage('clear'); }catch(e){} try{ if(swReg&&swReg.getNotifications) swReg.getNotifications({tag:'mtp-chat'}).then(function(a){ a.forEach(function(n){ n.close(); }); }); }catch(e){} S._jump=true; renderChat(true); maybeSendRead(); setTimeout(scrollChatBottom,200); stickerReplayOpen({fresh:true,source:'set-tab-chat'}); }   /* v229: トークを開くたびに最新の全画面を一度だけ */
   else { renderQuiz(); }
 }
 function updateBadge(){
@@ -6777,16 +6778,17 @@ function decorateStickerMotion(row,bubble,m){
   var emoji=document.createElement('span'); emoji.textContent=m.text; emoji.setAttribute('aria-hidden','true');
   prepareStickerMotion(emoji,m.text); bubble.replaceChildren(emoji); bubble.classList.add('sticker-animated');
 }
-/* 描画からは呼ばない。新しい送信・受信の追加地点だけで一度消費する。 */
-function newStickerFullscreen(m){
+/* 描画からは呼ばない。新しい送信・受信の追加地点と、開き直しの再演だけで一度消費する。 */
+function newStickerFullscreen(m,fromOpen){
   var particles=m&&!m.sys&&!m.file&&!m.photo&&stickerFullscreenMap.get(m.text);
   if(!particles||!m.from) return;
   var scope=deletionScope(),id=m.mid;
   if(!scope||typeof id!=='string'||!/^M[0-9a-f]{32}$/.test(id)) return;
   var key=JSON.stringify([scope,m.from,id]);
-  if(stickerFullscreenSeen.has(key)||stickerFullscreenSeen.size>=STICKER_EFFECT_LIMIT) return;
+  if(!fromOpen&&(stickerFullscreenSeen.has(key)||stickerFullscreenSeen.size>=STICKER_EFFECT_LIMIT)) return;   /* v229: 開き直しの再演は直前に記録した鍵なので、新規経路だけここで止める */
   stickerFullscreenSeen.add(key);
-  if(!S.chatLoaded||!chatOnScreen()||stickerReducedMotion()||messageDeleted(m)||typeof m.at!=='number'||m.at<stickerEffectsStartedAt) return;
+  if(!S.chatLoaded||!chatOnScreen()||stickerReducedMotion()||messageDeleted(m)||typeof m.at!=='number') return;
+  if(!fromOpen&&m.at<stickerEffectsStartedAt) return;   /* v229: 会話を開いたときの再演は起動前の履歴も対象 */
   clearStickerFullscreen();
   var layer=document.createElement('div'); layer.className='sticker-fullscreen'; layer.setAttribute('aria-hidden','true'); layer.dataset.scope=deletionScope();
   /* 二十四粒・一枚・約三秒。画面全体へ広がるが、入力やスクロールを捕まえない。 */
@@ -6811,6 +6813,37 @@ function newStickerFullscreen(m){
 function stickerMotionChanged(){
   refreshStickerMotion();
   if(!chatOnScreen()||stickerReducedMotion()||(stickerFullscreenLayer&&stickerFullscreenLayer.dataset.scope!==deletionScope())) clearStickerFullscreen();
+}
+/* v229: 非表示から表示へ戻ったときも「開いた」扱い。低減設定の切替など他の事象では再演しない。 */
+document.addEventListener('visibilitychange',function(){
+  if(document.hidden||stickerFullscreenLayer||!chatOnScreen()||stickerReducedMotion()) return;
+  stickerReplayOpen({fresh:true,source:'visibility-return'});
+});
+/* v229: 会話を開く・表示へ戻るごとに、この会話の最新の全画面スタンプを一度だけ再生する。
+   描画や既読・反応・スクロールでは呼ばない。削除済み・固定識別子なし・未送信の自分・低減設定は対象外。
+   起動前の履歴（stickerEffectsStartedAt 以前）も開き直しの対象にする。 */
+function stickerEffectsReady(){
+  var q=document.querySelector('#s-play');
+  return S.linked&&S.phase==='play'&&!!(q&&q.classList.contains('on'));
+}
+function stickerReplayOpen(o){
+  o=o||{};
+  if(!S.chatLoaded||!stickerEffectsReady()) return;
+  if(stickerFullscreenLayer) return;   /* 同じ開き方の散発では一枚を維持する */
+  var scope=deletionScope();
+  if(!scope) return;
+  var m=null,i,p;
+  for(i=S.chat.length-1;i>=0;i--){
+    p=S.chat[i];
+    if(p&&!p.sys&&!p.file&&!p.photo&&p.text&&stickerFullscreenMap.get(p.text)){ m=p; break; }
+  }
+  if(!m||messageDeleted(m)||typeof m.at!=='number') return;
+  if(chatOnScreen()&&!o.fresh) return;   /* 見えている間の通常再描画・バッチ処理では再演しない */
+  stickerFullscreenSeen.add(JSON.stringify([scope,m.from,m.mid]));
+  if(stickerFullscreenSeen.size>STICKER_EFFECT_LIMIT) stickerFullscreenSeen.delete(stickerFullscreenSeen.values().next().value);
+  if(stickerReducedMotion()) return;
+  if(m.from===S.me.id&&m.sent===false) return;   /* まだ中継へ届いていない自分の送信は履歴再演しない */
+  newStickerFullscreen({mid:m.mid,from:m.from,text:m.text,at:m.at,n:m.n||0,sys:false,file:false,photo:false},true);
 }
 if(stickerMotionPreference){
   if(stickerMotionPreference.addEventListener) stickerMotionPreference.addEventListener('change',stickerMotionChanged);
