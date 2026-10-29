@@ -804,6 +804,26 @@ body.in-play .leave-row{display:none!important}
 #btn-attach-photo::before{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='3' y='4' width='26' height='24' rx='4' fill='%23e3f0fa' stroke='%234f769c' stroke-width='1.8'/%3E%3Ccircle cx='22' cy='11' r='3' fill='%23f5cd72'/%3E%3Cpath d='M5 25l8-11 6 8 4-5 4 8z' fill='%238ec6ae' stroke='%23538770' stroke-width='1.3' stroke-linejoin='round'/%3E%3C/svg%3E")}
 #btn-notify::before{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M6 23l3-5v-6a7 7 0 0114 0v6l3 5z' fill='%23f9dfa0' stroke='%23916a27' stroke-width='1.8' stroke-linejoin='round'/%3E%3Cpath d='M12 27q4 5 8 0M16 3v2' fill='none' stroke='%23916a27' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E")}
 #btn-delchat::before{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M7 9l2 20h14l2-20z' fill='%23e0e4ee' stroke='%23636d85' stroke-width='1.8' stroke-linejoin='round'/%3E%3Cpath d='M5 8h22M12 7V3h8v4M13 13v10M19 13v10' fill='none' stroke='%23636d85' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E")}
+/* v221: 既存の白・緑の吹き出しに合わせた小さな反応欄。 */
+.message-content{position:relative;display:flex;flex-direction:column;align-items:flex-start;max-width:78%;min-width:0}
+.msg .incol .message-content{max-width:100%}
+.msg .message-content>.bubble{max-width:100%!important;box-sizing:border-box}
+.msg.out>.message-content{align-items:flex-end}
+.reaction-strip{display:flex;gap:4px;margin-top:3px;flex-wrap:wrap}
+.reaction-strip[hidden]{display:none}
+.reaction-chip{border:1px solid #b6c7be;border-radius:12px;background:#fff;padding:1px 7px;min-height:27px;font-size:15px;line-height:1.4;color:#15241a;cursor:pointer}
+.reaction-chip.mine{background:#e5f7da;border-color:#32795b}
+.reaction-action{position:absolute;right:0;top:0;transform:translateY(-50%);border:1px solid #b6c7be;background:#fff;color:#34493c;border-radius:50%;width:28px;height:28px;opacity:0;cursor:pointer}
+.message-content:hover>.reaction-action,.message-content:focus-within>.reaction-action{opacity:1}
+.reaction-palette{position:fixed;z-index:12000;width:292px;max-width:calc(100vw - 16px);box-sizing:border-box;padding:10px;background:#fff;color:#15241a;border:1px solid #b6c7be;border-radius:18px;box-shadow:0 6px 24px #15241a30;font-family:inherit}
+.reaction-choices{display:flex;gap:2px;justify-content:space-between}
+.reaction-choices button{border:1px solid transparent;background:#f2f6f3;border-radius:12px;min-width:42px;min-height:44px;padding:4px;font-size:23px;cursor:pointer}
+.reaction-choices button[aria-pressed="true"]{border-color:#32795b;background:#e5f7da}
+.reaction-palette small{display:block;text-align:center;font-size:11px;margin:7px 0;color:#526259}
+.reaction-delete,.reaction-close{display:block;width:100%;min-height:36px;border:0;background:transparent;font:inherit;cursor:pointer;color:#34493c}
+.reaction-delete{color:#a12e2e;border-top:1px solid #e0e8e2}
+.reaction-palette button:focus-visible,.reaction-chip:focus-visible,.reaction-action:focus-visible,.msg .bubble:focus-visible{outline:3px solid #32795b;outline-offset:2px}
+
 /* v219: 削除操作のキーボードフォーカス。既存の見た目は変えない。 */
 .msg.out .bubble:focus-visible{outline:3px solid #32795b;outline-offset:3px}
 /* v218: 操作ボタンは必要なときだけ開く。入力欄と送信は常に残す。 */
@@ -840,7 +860,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v220</b>｜ビルド 2026-10-29（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v221</b>｜ビルド 2026-10-29（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -914,7 +934,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v220</b>｜ビルド 2026-10-29（アプリが 裏でも スマホに 直接とどく）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v221</b>｜ビルド 2026-10-29（アプリが 裏でも スマホに 直接とどく）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -1874,7 +1894,7 @@ var Net={
       } else return;
     }
     if(!env||env.v!==V||typeof env.t!=='string') return;
-    if(({chats:1,chat:1,photo:1,attachment:1,'photo-chunk':1,recall:1,'recall-ack':1}[env.t])&&(!S.sealed||legacy||!S.opp||env.from!==S.opp.id)) return;
+    if(({chats:1,chat:1,photo:1,attachment:1,'photo-chunk':1,recall:1,'recall-ack':1,reaction:1,'reaction-ack':1}[env.t])&&(!S.sealed||legacy||!S.opp||env.from!==S.opp.id)) return;
     env.__legacy=legacy;
     env.__att=(att&&att.url)?String(att.url):'';
     /* v115: 番号は「同じものを 2回 うけとらない」ためだけに つかう。
@@ -5491,7 +5511,7 @@ async function savePairState(){
     try{ skb=b64(await crypto.subtle.exportKey('raw',S.sessKey)); }catch(e){ return false; }
     pairSave({peerId:(S.opp&&S.opp.id)||'',peerName:(S.opp&&S.opp.name)||'あいて',
       isHost:S.isHost,topic:Net.topic,rk:rkb,sk:skb});
-    S.chatLoaded=true; persistChat(); syncDeletions();   /* v219: 新規ペアでも削除同期を初期化 */
+    S.chatLoaded=true; persistChat(); syncDeletions(); reactionReconnect();   /* v219: 新規ペアでも削除同期を初期化 */
     return true;
   }catch(e){ return false; }
 }
@@ -5622,7 +5642,7 @@ function persistChat(){
   chatSaveT=setTimeout(function(){ chatSaveT=null; chatSaveNow(); },400);
 }
 async function chatRestore(sk){
-  await deletionLoad();
+  await deletionLoad(); await reactionLoad();
   var k=0;
   try{
     var v=await chatDbGet(); if(!v||!v.ct) return 0;
@@ -6082,7 +6102,7 @@ function renderChat(forceBottom){
         if(!cont) fillAv(pav,PROF.peer,'🐱');
         prow.appendChild(pav); prow.appendChild(pbub); prow.appendChild(pmeta);
       }
-      box.appendChild(prow);
+      decorateReactions(prow); box.appendChild(prow);
       prevFrom=m.from; prevAt=at;
       continue;
     }
@@ -6105,7 +6125,7 @@ function renderChat(forceBottom){
       col.appendChild(bub);
       row.appendChild(av); row.appendChild(col); row.appendChild(meta);
     }
-    box.appendChild(row);
+    decorateReactions(row); box.appendChild(row);
     prevFrom=m.from; prevAt=at;
   }
   if(stick) scrollChatBottom(); else box.scrollTop=previousTop;
@@ -6403,6 +6423,7 @@ async function deletionRemember(owner,ids){
   }); deletionWrites=run; return run;
 }
 function removeDeletedMessages(){
+  closeReactionPalette();
   var removedUnread=0;
   S.chat=S.chat.filter(function(m){ if(!m.sys&&messageDeleted(m)){ if(m.from!==S.me.id&&m.n>(S.readSent||0)) removedUnread++; m.cancelled=true; m.data=''; m.text=''; m.env=null; return false; } return true; });
   S.unread=Math.max(0,(S.unread||0)-removedUnread);
@@ -6454,17 +6475,20 @@ async function recallMsg(uid){
     removeDeletedMessages(); await chatSaveNow(); syncDeletions();
   }catch(e){ toast('削除できませんでした。端末の保存領域や空き容量を確認してください。'); }
 }
-/* v219: 指を動かしたら解除。通常のタップは写真・添付の操作をそのまま通す。 */
+/* v221: 長押しは操作欄を開く。受信本文の通常の文脈メニューは残す。 */
 function bindMessageDeletion(box){
   var hold=null,ghost=null;
-  function own(target){ var b=target&&target.closest&&target.closest('.bubble'); var row=b&&b.closest('.msg.out'); return row&&row.dataset.uid?row:null; }
+  function targetRow(target){
+    if(!target||!target.closest||target.closest('button,a,input,textarea,select,video,audio,[contenteditable="true"]')) return null;
+    var b=target.closest('.bubble'),row=b&&b.closest('.msg'); return row&&row.dataset.uid?row:null;
+  }
   function cancel(){ if(hold) clearTimeout(hold.timer); hold=null; }
   function start(e){
     cancel(); if(e.isPrimary===false||e.button>0) return;
-    var row=own(e.target); if(!row) return;
-    var p=e.touches?e.touches[0]:e; if(e.touches&&e.touches.length!==1) return;
-    hold={row:row,x:p.clientX,y:p.clientY,id:e.pointerId}; var current=hold;
-    hold.timer=setTimeout(function(){ if(hold!==current||!row.isConnected) return; ghost={row:row,until:Date.now()+2000}; cancel(); recallMsg(row.dataset.uid); ghost.until=Date.now()+2000; },600);
+    var row=targetRow(e.target); if(!row) return;
+    var p=e.touches?e.touches[0]:e; if(!p||(e.touches&&e.touches.length!==1)) return;
+    hold={row:row,x:p.clientX,y:p.clientY}; var current=hold;
+    hold.timer=setTimeout(function(){ if(hold!==current||!row.isConnected) return; ghost={row:row,until:Date.now()+2000}; cancel(); openReactionPalette(row); },600);
   }
   function move(e){ if(!hold) return; var p=e.touches?e.touches[0]:e; if(!p||Math.hypot(p.clientX-hold.x,p.clientY-hold.y)>10||(e.touches&&e.touches.length!==1)) cancel(); }
   var pointer=typeof PointerEvent!=='undefined';
@@ -6473,19 +6497,153 @@ function bindMessageDeletion(box){
   [pointer?'pointerup':'touchend',pointer?'pointercancel':'touchcancel','scroll','wheel'].forEach(function(t){ box.addEventListener(t,cancel,{passive:true}); });
   if(pointer) box.addEventListener('pointerleave',cancel,{passive:true});
   document.addEventListener('visibilitychange',cancel); window.addEventListener('blur',cancel);
-  box.addEventListener('contextmenu',function(e){ if(own(e.target)) e.preventDefault(); });
-  box.addEventListener('click',function(e){ if(ghost&&Date.now()<ghost.until&&ghost.row.contains(e.target)){ e.preventDefault(); e.stopImmediatePropagation(); } },true);
-  box.addEventListener('keydown',function(e){ var row=own(e.target); if(row&&(e.key==='Delete'||e.key==='ContextMenu'||(e.shiftKey&&e.key==='F10'))){ e.preventDefault(); recallMsg(row.dataset.uid); } });
+  box.addEventListener('contextmenu',function(e){ var row=targetRow(e.target); if(!row) return;
+    if(row.classList.contains('out')||(ghost&&ghost.row===row&&Date.now()<ghost.until)){ e.preventDefault(); cancel(); openReactionPalette(row); }
+  });
+  box.addEventListener('click',function(e){ if(ghost&&Date.now()<ghost.until&&ghost.row.contains(e.target)&&!e.target.closest('button')){ e.preventDefault(); e.stopImmediatePropagation(); } },true);
+  box.addEventListener('keydown',function(e){ var row=targetRow(e.target); if(!row) return;
+    if(e.key==='Delete'&&row.classList.contains('out')){ e.preventDefault(); closeReactionPalette(); recallMsg(row.dataset.uid); }
+    else if(e.key==='ContextMenu'||(e.shiftKey&&e.key==='F10')){ e.preventDefault(); cancel(); openReactionPalette(row); }
+  });
 }
 function markDeletable(row,bubble,m,mine){
   if(!m.uid) m.uid=String(++UID);
-  row.dataset.messageId=messageId(m); row.dataset.author=m.from;
-  if(mine){ row.dataset.uid=m.uid; bubble.tabIndex=0; bubble.title='長押しで削除'; bubble.setAttribute('aria-label','送信したメッセージ。長押し、または削除キーで双方から削除'); bubble.setAttribute('aria-keyshortcuts','Delete Shift+F10'); }
+  row.dataset.messageId=messageId(m); row.dataset.author=m.from; row.dataset.uid=m.uid;
+  bubble.tabIndex=0; bubble.title='長押しで反応を選ぶ'; bubble.setAttribute('aria-label',(mine?'送信した':'受信した')+'メッセージ。長押し、または操作ボタンで反応を選ぶ'); bubble.setAttribute('aria-keyshortcuts',mine?'Delete Shift+F10':'Shift+F10');
 }
 bindMessageDeletion($('#chat-log'));
 setInterval(syncDeletions,15000);
-window.addEventListener('online',function(){ deletionAcked.clear(); syncDeletions(); });
-document.addEventListener('visibilitychange',function(){ if(!document.hidden){ deletionAcked.clear(); syncDeletions(); } });
+window.addEventListener('online',function(){ deletionAcked.clear(); syncDeletions(); reactionReconnect(); });
+document.addEventListener('visibilitychange',function(){ if(!document.hidden){ deletionAcked.clear(); syncDeletions(); reactionReconnect(); } });
+/* v221: 本文とは別の暗号化領域。取消も保持し、古い電文で復活させない。
+   上限では既存記録を捨てず新しい対象を拒否する。本人ごとの論理番号は保存後に送る。 */
+var REACTIONS=['👍','❤️','😂','😮','😢','🙏'], REACTION_NAMES=['いいね','ハート','笑った','びっくり','悲しい','ありがとう'];
+var REACTION_MAX=4096, reactionState=null,reactionLoading=null,reactionWrites=Promise.resolve(),reactionAcked=new Map(),reactionCursor=0;
+var reactionPalette=null,reactionFocus=null,reactionScopeOpen='';
+function reactionKey(owner,id,actor){ return JSON.stringify([owner,id,actor]); }
+function validReaction(e){ return !!e&&typeof e==='object'&&!Array.isArray(e)&&
+  (e.owner===S.me.id||e.owner===(S.opp&&S.opp.id))&&validDeletionId(e.id)&&
+  (e.actor===S.me.id||e.actor===(S.opp&&S.opp.id))&&Number.isSafeInteger(e.rev)&&e.rev>0&&e.rev<Number.MAX_SAFE_INTEGER&&
+  (e.value===''||REACTIONS.indexOf(e.value)>=0); }
+function reactionStamp(e){ return e.rev+':'+e.value; }
+async function reactionLoad(){
+  var scope=deletionScope(); if(!scope) return null;
+  if(reactionState&&reactionState.scope===scope) return reactionState;
+  if(reactionLoading&&reactionLoading.scope===scope) return reactionLoading.promise;
+  var key=S.sessKey;
+  var promise=(async function(){
+    var db=await chatDbOpen(),v;
+    try{ v=await new Promise(function(resolve,reject){ var q=db.transaction('c','readonly').objectStore('c').get('r:'+scope); q.onsuccess=function(){ resolve(q.result); }; q.onerror=function(){ reject(q.error); }; }); }finally{ db.close(); }
+    var data=v?JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({name:'AES-GCM',iv:v.iv},key,v.ct))):{entries:[]};
+    if(!Array.isArray(data.entries)||data.entries.length>REACTION_MAX) throw new Error('反応の記録を確認できません');
+    var d={scope:scope,key:key,entries:new Map(),clock:0};
+    if(deletionScope()!==scope) return d;
+    data.entries.forEach(function(e){ if(validReaction(e)){ d.entries.set(reactionKey(e.owner,e.id,e.actor),e); if(e.actor===S.me.id) d.clock=Math.max(d.clock,e.rev); } });
+    reactionState=d; reactionAcked=new Map(); reactionCursor=0; return d;
+  })(); reactionLoading={scope:scope,promise:promise};
+  try{ return await promise; }finally{ if(reactionLoading&&reactionLoading.promise===promise) reactionLoading=null; }
+}
+function reactionFor(owner,id,actor){ var d=reactionState; return d&&d.scope===deletionScope()?d.entries.get(reactionKey(owner,id,actor)):null; }
+async function reactionWrite(event,local){
+  var scope=deletionScope(); await deletionLoad();
+  var d=await reactionLoad(); if(!d||d.scope!==scope||deletionScope()!==scope) return null;
+  var run=reactionWrites.catch(function(){}).then(async function(){
+    if(deletionScope()!==scope) return null;
+    var e={owner:event.owner,id:event.id,actor:event.actor,rev:event.rev,value:event.value};
+    if(local){
+      var target=S.chat.find(function(m){ return !m.sys&&m.from===e.owner&&messageId(m)===e.id; });
+      if(!target||messageDeleted(target)) return null;
+      e.actor=S.me.id; e.rev=d.clock+1;
+      var current=d.entries.get(reactionKey(e.owner,e.id,e.actor)); if(current&&current.value===e.value) e.value='';
+    }
+    if(!validReaction(e)||messageDeleted({from:e.owner,mid:e.id})) return null;
+    var k=reactionKey(e.owner,e.id,e.actor),old=d.entries.get(k);
+    /* 同じ本人の番号が衝突した場合も文字列順で必ず同じ結果に収束する。 */
+    if(old&&(old.rev>e.rev||(old.rev===e.rev&&old.value>=e.value))) return old;
+    if(!old&&d.entries.size>=REACTION_MAX) throw new Error('反応の保存件数が上限に達しました');
+    var entries=new Map(d.entries); entries.set(k,e);
+    var iv=crypto.getRandomValues(new Uint8Array(12)),ct=await crypto.subtle.encrypt({name:'AES-GCM',iv:iv},d.key,new TextEncoder().encode(JSON.stringify({entries:Array.from(entries.values())})));
+    var db=await chatDbOpen();
+    try{ await new Promise(function(resolve,reject){ var tx=db.transaction('c','readwrite'); tx.objectStore('c').put({iv:iv,ct:new Uint8Array(ct)},'r:'+scope); tx.oncomplete=resolve; tx.onerror=tx.onabort=function(){ reject(tx.error||new Error('保存できません')); }; }); }finally{ db.close(); }
+    d.entries=entries; if(e.actor===S.me.id) d.clock=Math.max(d.clock,e.rev);
+    if(deletionScope()===scope) refreshReactions(); return e;
+  }); reactionWrites=run; return run;
+}
+async function chooseReaction(owner,id,value){
+  if(REACTIONS.indexOf(value)<0) return;
+  try{ var e=await reactionWrite({owner:owner,id:id,value:value},true); if(e) syncReactions(); }
+  catch(e){ toast('反応を保存できませんでした。保存領域の空き容量や件数を確認してください。'); }
+}
+async function receiveReaction(m){
+  if(!S.sealed||m.__legacy||!S.opp||m.from!==S.opp.id||m.from===S.me.id||!Array.isArray(m.entries)||!m.entries.length||m.entries.length>16) return;
+  if(!m.entries.every(function(e){ return validReaction(e)&&e.actor===m.from; })) return;
+  var scope=deletionScope(),acks=[];
+  for(var i=0;i<m.entries.length;i++){
+    try{ var e=await reactionWrite(m.entries[i],false); if(e) acks.push(e); }catch(err){}
+  }
+  if(scope===deletionScope()&&acks.length) Net.send({t:'reaction-ack',entries:acks});
+}
+function receiveReactionAck(m){
+  if(!S.sealed||m.__legacy||!S.opp||m.from!==S.opp.id||!Array.isArray(m.entries)||m.entries.length>16) return;
+  m.entries.forEach(function(e){ if(!validReaction(e)||e.actor!==S.me.id) return; var own=reactionFor(e.owner,e.id,e.actor); if(own&&reactionStamp(own)===reactionStamp(e)) reactionAcked.set(reactionKey(e.owner,e.id,e.actor),reactionStamp(e)); });
+}
+async function syncReactions(){
+  if(!S.linked||!S.chatLoaded||!Net.topic||!Net.key||navigator.onLine===false) return;
+  try{ var d=await reactionLoad(); if(!d||d.scope!==deletionScope()) return;
+    var entries=Array.from(d.entries.values()).filter(function(e){ return e.actor===S.me.id&&!messageDeleted({from:e.owner,mid:e.id})&&reactionAcked.get(reactionKey(e.owner,e.id,e.actor))!==reactionStamp(e); });
+    if(!entries.length) return; if(reactionCursor>=entries.length) reactionCursor=0;
+    var part=entries.slice(reactionCursor,reactionCursor+16); reactionCursor+=part.length;
+    Net.send({t:'reaction',entries:part});
+  }catch(e){}
+}
+function reactionReconnect(){ reactionAcked.clear(); reactionCursor=0; syncReactions(); }
+function closeReactionPalette(){
+  if(!reactionPalette) return; reactionPalette.remove(); reactionPalette=null; appNav.dismiss('reaction-palette');
+  var focus=reactionFocus; reactionFocus=null; if(focus&&focus.isConnected) focus.focus({preventScroll:true});
+}
+function openReactionPalette(row,focus){
+  var m=S.chat.find(function(m){ return !m.sys&&m.from===row.dataset.author&&messageId(m)===row.dataset.messageId; });
+  if(!m||messageDeleted(m)) return;
+  closeReactionPalette(); reactionFocus=focus||row.querySelector('.bubble'); reactionScopeOpen=deletionScope();
+  var p=document.createElement('div'); p.id='reaction-palette'; p.className='reaction-palette'; p.dataset.owner=m.from; p.dataset.id=messageId(m); p.setAttribute('role','dialog'); p.setAttribute('aria-label','メッセージの操作');
+  var list=document.createElement('div'); list.className='reaction-choices';
+  REACTIONS.forEach(function(value,i){ var b=document.createElement('button'); b.type='button'; b.textContent=value; b.setAttribute('aria-label',REACTION_NAMES[i]); var current=reactionFor(m.from,messageId(m),S.me.id); b.setAttribute('aria-pressed',String(!!current&&current.value===value)); b.addEventListener('click',function(){ closeReactionPalette(); chooseReaction(m.from,messageId(m),value); }); list.appendChild(b); }); p.appendChild(list);
+  var hint=document.createElement('small'); hint.textContent='同じ反応を選ぶと取り消せます'; p.appendChild(hint);
+  if(m.from===S.me.id){ var del=document.createElement('button'); del.type='button'; del.className='reaction-delete'; del.textContent='メッセージを削除'; del.addEventListener('click',function(){ closeReactionPalette(); recallMsg(m.uid); }); p.appendChild(del); }
+  var close=document.createElement('button'); close.type='button'; close.className='reaction-close'; close.textContent='閉じる'; close.addEventListener('click',closeReactionPalette); p.appendChild(close);
+  document.body.appendChild(p); reactionPalette=p;
+  var rect=row.getBoundingClientRect(),height=p.getBoundingClientRect().height||150;
+  p.style.left=Math.max(8,Math.min((window.innerWidth||390)-p.offsetWidth-8,rect.left))+'px';
+  p.style.top=Math.max(8,Math.min((window.innerHeight||844)-height-8,rect.top-height-6))+'px';
+  appNav.open('reaction-palette',closeReactionPalette,function(){ return !!reactionPalette; }); list.firstChild.focus({preventScroll:true});
+}
+function paintReactions(row){
+  var strip=row.querySelector('.reaction-strip'); if(!strip) return; strip.replaceChildren();
+  [S.me.id,S.opp&&S.opp.id].forEach(function(actor){ var e=reactionFor(row.dataset.author,row.dataset.messageId,actor); if(!e||!e.value||messageDeleted({from:e.owner,mid:e.id})) return;
+    var b=document.createElement('button'); b.type='button'; b.className='reaction-chip'+(actor===S.me.id?' mine':''); b.textContent=e.value;
+    b.setAttribute('aria-label',(actor===S.me.id?'自分':'相手')+'の反応：'+REACTION_NAMES[REACTIONS.indexOf(e.value)]+'。反応を選ぶ'); b.setAttribute('aria-pressed',String(actor===S.me.id));
+    b.addEventListener('click',function(){ openReactionPalette(row,b); }); strip.appendChild(b);
+  }); strip.hidden=!strip.childNodes.length;
+}
+function decorateReactions(row){
+  var bubble=row.querySelector('.bubble'); if(!bubble) return;
+  var col=document.createElement('div'); col.className='message-content'; bubble.replaceWith(col); col.appendChild(bubble);
+  var strip=document.createElement('div'); strip.className='reaction-strip'; col.appendChild(strip);
+  var action=document.createElement('button'); action.type='button'; action.className='reaction-action'; action.textContent='…'; action.setAttribute('aria-label','メッセージの反応と操作'); action.addEventListener('click',function(){ openReactionPalette(row,action); }); col.appendChild(action); paintReactions(row);
+}
+function refreshReactions(){
+  var box=$('#chat-log'),top=box.scrollTop; box.querySelectorAll('.msg[data-message-id]').forEach(paintReactions); box.scrollTop=top;
+  if(reactionPalette&&(reactionScopeOpen!==deletionScope()||messageDeleted({from:reactionPalette.dataset.owner,mid:reactionPalette.dataset.id}))) closeReactionPalette();
+}
+['pointerdown','touchstart','mousedown'].forEach(function(type){ document.addEventListener(type,function(e){ if(reactionPalette&&!reactionPalette.contains(e.target)) closeReactionPalette(); },{capture:true,passive:true}); });
+document.addEventListener('click',function(e){ if(reactionPalette&&!reactionPalette.contains(e.target)&&!e.target.closest('.reaction-action,.reaction-chip,.bubble')) closeReactionPalette(); });
+document.addEventListener('keydown',function(e){ if(!reactionPalette) return; if(e.key==='Escape'){ e.preventDefault(); e.stopImmediatePropagation(); closeReactionPalette(); }else if(e.key==='Tab'){ var buttons=Array.from(reactionPalette.querySelectorAll('button')),at=buttons.indexOf(document.activeElement); if((e.shiftKey&&at<=0)||(!e.shiftKey&&at===buttons.length-1)){ e.preventDefault(); buttons[e.shiftKey?buttons.length-1:0].focus(); } } },true);
+setInterval(syncReactions,15000);
+/* 接続済みの受領記録も定期的に再送可能にし、相手側の復元後に収束させる。 */
+setInterval(reactionReconnect,120000);
+window.addEventListener('online',reactionReconnect);
+document.addEventListener('visibilitychange',function(){ if(!document.hidden) reactionReconnect(); else closeReactionPalette(); });
+
 /* v212: 本体の写真とファイルを選んで送る */
 var ATTACH_MAX=2*1024*1024;
 function attachmentReady(){
@@ -7784,7 +7942,7 @@ var fwLast=0;
 function stopFullWatch(){ if(S.fwTimer){ clearInterval(S.fwTimer); S.fwTimer=null; } }
 function startFullWatch(){ /* v111: 定期チェックは 廃止（回数制限の 最大の 原因） */ }
 async function fullWatchTick(){ }
-Net.onState=function(state){ setNet(state); if(state==='open'){ deletionAcked.clear(); syncDeletions(); } };
+Net.onState=function(state){ setNet(state); if(state==='open'){ deletionAcked.clear(); syncDeletions(); reactionReconnect(); } };
 /* 制限で 送れなかった トークを、復帰したら 順に 送りなおす */
 setInterval(function(){
   try{
@@ -7811,12 +7969,12 @@ var LEGACY_OK={join:1,in2:1,in3:1,keyed:1,deny:1,full:1,expired:1,ping:1,ob:1,ne
 var LOBBY_TYPES={join:1,welcome:1,deny:1,full:1,expired:1,bye:1,ping:1,ready:1,ready2:1};
 Net.onMsg=function(m){
   /* v219: 保存領域の復元と削除を先に完了し、同時受信・再接続時の復活を防ぐ。 */
-  if(m&&({chats:1,chat:1,photo:1,attachment:1,'photo-chunk':1,recall:1}[m.t])&&!deletionReady.has(m)){
+  if(m&&({chats:1,chat:1,photo:1,attachment:1,'photo-chunk':1,recall:1,reaction:1}[m.t])&&!deletionReady.has(m)){
     var scope=deletionScope(); if(!scope) return;
     deletionInbox=deletionInbox.catch(function(){}).then(async function(){
-      await deletionLoad(); if(deletionScope()!==scope) return;
+      await deletionLoad(); await reactionLoad(); if(deletionScope()!==scope) return;
       deletionReady.add(m);
-      if(m.t==='recall') await receiveDeletion(m); else Net.onMsg(m);
+      if(m.t==='recall') await receiveDeletion(m); else if(m.t==='reaction') await receiveReaction(m); else Net.onMsg(m);
     }).catch(function(){}); return;
   }
   if(m.from) S.lastPeer=Date.now();
@@ -7837,13 +7995,15 @@ Net.onMsg=function(m){
     if(S.isHost && S.guest && m.from!==S.guest.did) return;
     if(!S.isHost && S.paired && S.opp.id && m.from!==S.opp.id) return;
   }
-  var PRIV={recall:1,'recall-ack':1,'live-on':1,'live-see':1,'live-off':1,igh:1,chats:1,chat:1,photo:1,'photo-chunk':1,read:1,ack:1,prof:1,unpair:1,rtc2:1,rtc:1,'rtc-bye':1,'call-no':1,'rtc-sdp':1,'rtc-ice':1,'live-jpg':1,'live-ctl':1,'live-frame':1,'live-audio':1,call:1,'call-end':1};
+  var PRIV={reaction:1,'reaction-ack':1,recall:1,'recall-ack':1,'live-on':1,'live-see':1,'live-off':1,igh:1,chats:1,chat:1,photo:1,'photo-chunk':1,read:1,ack:1,prof:1,unpair:1,rtc2:1,rtc:1,'rtc-bye':1,'call-no':1,'rtc-sdp':1,'rtc-ice':1,'live-jpg':1,'live-ctl':1,'live-frame':1,'live-audio':1,call:1,'call-end':1};
   if(PRIV[m.t]&&(m.__legacy||!S.sealed)) return;
   /* 連投よけ(1秒60通まで) */
   var nowMs=Date.now();
   if(!S.rl||nowMs-S.rl.t>1000) S.rl={t:nowMs,n:0};
   S.rl.n++; if(S.rl.n>60) return;
   switch(m.t){
+    case 'reaction-ack': receiveReactionAck(m); break;
+    case 'reaction': break;
     case 'ping':
       if(S.isHost===null){ probeDecide(m.from,false); break; }
       /* 部屋を ひらいた人が ぬし。ゲストの ping で ぬしが 入れかわらない ように する */
