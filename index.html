@@ -851,21 +851,24 @@ body.in-play .leave-row{display:none!important}
 .line-composer.stickers-open{grid-template-areas:"tools tools" "stickers stickers" "input send"!important}
 .msg .bubble.sticker-b{font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif;font-size:76px!important;line-height:1.25!important;padding:6px 10px!important;min-width:96px;box-sizing:border-box;background:transparent!important;border:0!important;box-shadow:none!important}
 .msg .bubble.sticker-b::before,.msg .bubble.sticker-b::after{display:none!important;content:none!important}
-/* v225: 新しい十二種だけを三秒間動かす。本文・操作欄は動かさない。 */
+/* v226: 見えているスタンプを自動で繰り返す。入力欄や本文の位置は動かさない。 */
 .msg .bubble.sticker-animated{font-size:52px!important;white-space:nowrap;padding:10px!important}
 .sticker-motion{display:inline-block;transform-origin:center;vertical-align:middle}
-.sticker-motion.is-playing{animation-duration:750ms;animation-iteration-count:4;animation-timing-function:ease-in-out}
-.sticker-motion.is-playing[data-motion="pulse"]{animation-name:sticker-pulse}
-.sticker-motion.is-playing[data-motion="bob"]{animation-name:sticker-bob}
-.sticker-motion.is-playing[data-motion="sway"]{animation-name:sticker-sway}
-.sticker-motion.is-playing[data-motion="spark"]{animation-name:sticker-spark}
-.sticker-replay{display:block;margin:2px auto 0;min-width:44px;min-height:32px;padding:3px 8px;border:1px solid #b6c7be;border-radius:12px;background:#fff;color:#34493c;font:inherit;font-size:12px;cursor:pointer}
-.sticker-replay:focus-visible{outline:2px solid #32795b;outline-offset:2px}
+.sticker-motion{animation-duration:1500ms;animation-iteration-count:infinite;animation-timing-function:ease-in-out;animation-play-state:paused}
+.sticker-motion-active .sticker-motion.is-visible{animation-play-state:running}
+.sticker-motion[data-motion="pulse"]{animation-name:sticker-pulse}
+.sticker-motion[data-motion="bob"]{animation-name:sticker-bob}
+.sticker-motion[data-motion="sway"]{animation-name:sticker-sway}
+.sticker-motion[data-motion="spark"]{animation-name:sticker-spark}
+.sticker-fullscreen,.sticker-fullscreen *{pointer-events:none!important}
+.sticker-fullscreen{position:fixed;inset:0;z-index:10000;overflow:hidden;contain:strict;user-select:none}
+.sticker-particle{position:absolute;left:50%;top:50%;font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif;font-size:clamp(28px,8vw,48px);line-height:1.2;opacity:0;animation:sticker-spread 2600ms ease-out both;animation-delay:var(--delay)}
+@keyframes sticker-spread{0%{opacity:0;transform:translate(-50%,-50%) scale(.5)}15%{opacity:.42}75%{opacity:.35}100%{opacity:0;transform:translate(calc(-50% + var(--x)),calc(-50% + var(--y))) rotate(var(--turn)) scale(1.1)}}
 @keyframes sticker-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}
 @keyframes sticker-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
 @keyframes sticker-sway{0%,100%{transform:rotate(0)}25%{transform:rotate(-7deg)}75%{transform:rotate(7deg)}}
 @keyframes sticker-spark{0%,100%{transform:scale(1) rotate(0)}35%{transform:scale(1.1) rotate(-5deg)}65%{transform:scale(1.04) rotate(5deg)}}
-@media(prefers-reduced-motion:reduce){.sticker-motion.is-playing{animation:none!important;transform:none!important}}
+@media(prefers-reduced-motion:reduce){.sticker-motion{animation:none!important;transform:none!important}.sticker-fullscreen{display:none!important}}
 </style>
 </head>
 <body>
@@ -894,7 +897,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v225</b>｜ビルド 2026-10-29（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v226</b>｜ビルド 2026-10-29（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -968,7 +971,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v225</b>｜ビルド 2026-10-29（アプリが 裏でも スマホに 直接とどく）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v226</b>｜ビルド 2026-10-29（アプリが 裏でも スマホに 直接とどく）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -2603,6 +2606,7 @@ function nameOf(id){ return id===S.me.id ? meName() : peerName(); }
    5. 画面まわり
    ================================================================= */
 function show(which){
+  clearStickerFullscreen();
   closeStickerPicker(false);
   S.phase=which;
   appNav.changed();
@@ -2630,6 +2634,7 @@ document.querySelectorAll('.talk-back').forEach(function(b){
 function updateTitleBadge(){ document.title=((S.hostAlert?'⚠ ':'')+(S.unread>0?'('+S.unread+') ':''))+'雑学王'; }
 if($('#tab-to-chat')) $('#tab-to-chat').addEventListener('click',function(){ setTab('chat',1); });
 function setTab(which,byUser){
+  clearStickerFullscreen();
   closeStickerPicker(false);
   S.tab=which;
   appNav.changed();
@@ -6175,6 +6180,7 @@ function renderChat(forceBottom){
     if(!m.file&&isSticker(m.text)) decorateStickerMotion(row,bub,m);
     prevFrom=m.from; prevAt=at;
   }
+  observeStickerMotion();
   if(stick) scrollChatBottom(); else box.scrollTop=previousTop;
 }
 /* v115: 1つの ふきだしに 表示は 1つだけ（送信中 → 未読 → 既読） */
@@ -6707,45 +6713,102 @@ var STICKER_CATEGORIES=[
   {name:'気持ち',items:[['❤️','ハート'],['🥹','じーん'],['🥲','うれし涙'],['😌','ほっとした'],['😔','しょんぼり'],['😡','ぷんぷん'],['😱','ひえー'],['🤯','頭がいっぱい'],['😥','心配だよ'],['😑','むむっ'],['🫶','大切だよ'],['💐','感謝をこめて']]},
   {name:'くらし',items:[['☕','ひと休み'],['🍵','お茶どうぞ'],['🍚','ごはんだよ'],['🍰','おやつの時間'],['🛁','お風呂の時間'],['🛌','休憩中'],['🏠','ただいま'],['🛍️','お買い物'],['💻','作業中'],['📚','勉強中'],['🎵','ごきげん'],['☔','雨だね']]},
   {name:'大人の気分',items:[['😘','キスを送る'],['💋','キスマーク'],['😉','ウインク'],['😳','照れちゃう'],['🥰','うっとり'],['😍','見とれちゃう'],['😚','そっとキス'],['😙','キスの気分'],['💘','心を射抜かれた'],['💕','寄り添うハート'],['💞','通じ合うハート'],['👀','見つめてる']]},
-  {name:'動くハート',items:[['😘❤️','熱いキス','pulse'],['💓💓','ドキドキ','pulse'],['🥰💕','もっと一緒に','sway'],['😍💖','大好き','spark'],['💋❤️','キスを重ねて','bob'],['😚💗','やさしいキス','sway'],['🫶💞','ずっとそばに','pulse'],['😉💘','君に夢中','spark'],['💑💕','寄り添いたい','bob'],['💏💖','二人のキス','sway'],['💝✨','恋のきらめき','spark'],['💌💓','会いたいな','bob']]}
+  {name:'動くハート',items:[['😘❤️','熱いキス','pulse'],['💓💓','ドキドキ','pulse'],['🥰💕','もっと一緒に','sway'],['😍💖','大好き','spark'],['💋❤️','キスを重ねて','bob'],['😚💗','やさしいキス','sway'],['🫶💞','ずっとそばに','pulse'],['😉💘','君に夢中','spark'],['💑💕','寄り添いたい','bob'],['💏💖','二人のキス','sway'],['💝✨','恋のきらめき','spark'],['💌💓','会いたいな','bob']]},
+  {name:'全画面',items:[['❤️💕❤️','広がるハート','pulse',['❤️','💕','💗']],['😘💋✨','キスの風','sway',['😘','💋','💕']],['✨💖✨','星のきらめき','spark',['✨','💖','🌟']],['🎉🎊✨','お祝いの花吹雪','bob',['🎉','🎊','✨']],['🌸💕🌸','桜の便り','sway',['🌸','💕','🌸']],['🫶💗🫶','大切なあなたへ','pulse',['🫶','💗','💕']],['🌈✨🌈','虹の祝福','spark',['🌈','✨','💖']],['💐🌼💐','花束をどうぞ','bob',['💐','🌼','🌷']],['👏🌟👏','いっぱいの拍手','sway',['👏','🌟','✨']],['🎈🎉🎈','風船のお祝い','bob',['🎈','🎉','🎊']],['💌💕💌','想いを届ける','pulse',['💌','💕','💗']],['🌙⭐✨','おやすみの星','spark',['🌙','⭐','✨']]]}
 ];
 var STICKERS=[],STICKER_NAMES=[];
 STICKER_CATEGORIES.forEach(function(category){ category.items.forEach(function(item){ STICKERS.push(item[0]); STICKER_NAMES.push(item[1]); }); });
 var stickerPicker=null,stickerPickerScope='';
-var stickerMotionMap=new Map();
-STICKER_CATEGORIES[6].items.forEach(function(item){ stickerMotionMap.set(item[0],item[2]); });
-var stickerMotionSeen=new Set(),stickerMotionScope='';
+var stickerMotionMap=new Map(),stickerFullscreenMap=new Map();
+STICKER_CATEGORIES.slice(6).forEach(function(category){ category.items.forEach(function(item){ stickerMotionMap.set(item[0],item[2]); }); });
+STICKER_CATEGORIES[7].items.forEach(function(item){ stickerFullscreenMap.set(item[0],item[3]); });
+var stickerMotionObserver=null,stickerFullscreenLayer=null,stickerFullscreenTimer=null,stickerFullscreenWatch=null;
+/* 起動前の中継履歴と復元中の受信では全画面を出さない。電文は変更しない。 */
+var stickerEffectsStartedAt=Date.now();
+/* 古い識別子を追い出して再演しない。上限後はこの起動中の全画面演出を控える。 */
+var stickerFullscreenSeen=new Set(),STICKER_EFFECT_LIMIT=4096;
+var stickerMotionPreference=window.matchMedia?window.matchMedia('(prefers-reduced-motion: reduce)'):null;
 function isSticker(value){ return typeof value==='string'&&STICKERS.indexOf(value)>=0; }
 function stickerMotion(value){ return typeof value==='string'?stickerMotionMap.get(value)||'':''; }
-function playStickerMotion(emoji){
-  if(!emoji||!emoji.isConnected||!emoji.dataset.motion) return;
-  emoji.classList.remove('is-playing');
-  if(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  void emoji.offsetWidth;
-  emoji.classList.add('is-playing');
+function stickerReducedMotion(){ return !!(stickerMotionPreference&&stickerMotionPreference.matches); }
+function clearStickerFullscreen(){
+  if(stickerFullscreenTimer!==null) clearTimeout(stickerFullscreenTimer);
+  stickerFullscreenTimer=null;
+  if(stickerFullscreenWatch!==null) clearTimeout(stickerFullscreenWatch);
+  stickerFullscreenWatch=null;
+  if(stickerFullscreenLayer) stickerFullscreenLayer.remove();
+  stickerFullscreenLayer=null;
 }
+function refreshStickerMotion(){
+  var active=chatOnScreen()&&!stickerReducedMotion();
+  if(document.body.classList.contains('sticker-motion-active')!==active) document.body.classList.toggle('sticker-motion-active',active);
+}
+function observeStickerMotion(){
+  if(stickerMotionObserver) stickerMotionObserver.disconnect();
+  document.querySelectorAll('.sticker-motion').forEach(function(emoji){
+    if(stickerMotionObserver) stickerMotionObserver.observe(emoji);
+    else emoji.classList.add('is-visible');
+  });
+  refreshStickerMotion();
+}
+if(typeof IntersectionObserver==='function') stickerMotionObserver=new IntersectionObserver(function(entries){
+  entries.forEach(function(entry){ entry.target.classList.toggle('is-visible',entry.isIntersecting); });
+},{threshold:0.01});
 function prepareStickerMotion(emoji,value){
   var motion=stickerMotion(value); if(!motion) return false;
   emoji.classList.add('sticker-motion'); emoji.dataset.motion=motion;
-  emoji.addEventListener('animationend',function(e){ if(e.target===emoji) emoji.classList.remove('is-playing'); });
   return true;
 }
 function decorateStickerMotion(row,bubble,m){
   if(!stickerMotion(m.text)) return;
   var emoji=document.createElement('span'); emoji.textContent=m.text; emoji.setAttribute('aria-hidden','true');
   prepareStickerMotion(emoji,m.text); bubble.replaceChildren(emoji); bubble.classList.add('sticker-animated');
-  var replay=document.createElement('button'); replay.type='button'; replay.className='sticker-replay'; replay.textContent='再生';
-  replay.setAttribute('aria-label',STICKER_NAMES[STICKERS.indexOf(m.text)]+'の動きを再生');
-  replay.addEventListener('click',function(e){ e.preventDefault(); e.stopPropagation(); playStickerMotion(emoji); });
-  bubble.parentElement.appendChild(replay);
-  /* 描画し直しや既読更新では自動再生しない。送信内容・識別子は変えない。 */
-  var scope=deletionScope(); if(stickerMotionScope!==scope){ stickerMotionSeen.clear(); stickerMotionScope=scope; }
-  var key=JSON.stringify([m.from,messageId(m)]);
-  if(!stickerMotionSeen.has(key)){ stickerMotionSeen.add(key); playStickerMotion(emoji); }
 }
+/* 描画からは呼ばない。新しい送信・受信の追加地点だけで一度消費する。 */
+function newStickerFullscreen(m){
+  var particles=m&&!m.sys&&!m.file&&!m.photo&&stickerFullscreenMap.get(m.text);
+  if(!particles||!m.from) return;
+  var scope=deletionScope(),id=m.mid;
+  if(!scope||typeof id!=='string'||!/^M[0-9a-f]{32}$/.test(id)) return;
+  var key=JSON.stringify([scope,m.from,id]);
+  if(stickerFullscreenSeen.has(key)||stickerFullscreenSeen.size>=STICKER_EFFECT_LIMIT) return;
+  stickerFullscreenSeen.add(key);
+  if(!S.chatLoaded||!chatOnScreen()||stickerReducedMotion()||messageDeleted(m)||typeof m.at!=='number'||m.at<stickerEffectsStartedAt) return;
+  clearStickerFullscreen();
+  var layer=document.createElement('div'); layer.className='sticker-fullscreen'; layer.setAttribute('aria-hidden','true'); layer.dataset.scope=deletionScope();
+  /* 二十四粒・一枚・約三秒。画面全体へ広がるが、入力やスクロールを捕まえない。 */
+  for(var i=0;i<24;i++){
+    var particle=document.createElement('span'); particle.className='sticker-particle'; particle.textContent=particles[i%particles.length];
+    var angle=(i/24)*Math.PI*2,radius=i%2?1:.62;
+    particle.style.setProperty('--x',(Math.cos(angle)*48*radius).toFixed(2)+'vw');
+    particle.style.setProperty('--y',(Math.sin(angle)*48*radius).toFixed(2)+'dvh');
+    particle.style.setProperty('--turn',(i%2?18:-18)+'deg');
+    particle.style.setProperty('--delay',(i%4)*80+'ms'); layer.appendChild(particle);
+  }
+  document.body.appendChild(layer); stickerFullscreenLayer=layer;
+  stickerFullscreenTimer=setTimeout(clearStickerFullscreen,3000);
+  /* DOM更新を伴わない鍵・ペア変更も、動作中だけ短い監視で後始末する。 */
+  function watch(){
+    stickerFullscreenWatch=null;
+    stickerMotionChanged();
+    if(stickerFullscreenLayer) stickerFullscreenWatch=setTimeout(watch,100);
+  }
+  stickerFullscreenWatch=setTimeout(watch,100);
+}
+function stickerMotionChanged(){
+  refreshStickerMotion();
+  if(!chatOnScreen()||stickerReducedMotion()||(stickerFullscreenLayer&&stickerFullscreenLayer.dataset.scope!==deletionScope())) clearStickerFullscreen();
+}
+if(stickerMotionPreference){
+  if(stickerMotionPreference.addEventListener) stickerMotionPreference.addEventListener('change',stickerMotionChanged);
+  else if(stickerMotionPreference.addListener) stickerMotionPreference.addListener(stickerMotionChanged);
+}
+document.addEventListener('visibilitychange',stickerMotionChanged);
+window.addEventListener('pagehide',clearStickerFullscreen);
 function closeStickerPicker(restoreFocus){
   if(!stickerPicker) return;
   stickerPicker.remove(); stickerPicker=null; stickerPickerScope='';
+  observeStickerMotion();
   $('#form-chat').classList.remove('stickers-open');
   $('#btn-stickers').setAttribute('aria-expanded','false');
   appNav.dismiss('sticker-picker');
@@ -6786,7 +6849,7 @@ function openStickerPicker(){
         if(scope===deletionScope()) sendSticker(value);
       }); grid.appendChild(b);
     });
-    grid.querySelectorAll('.sticker-motion').forEach(playStickerMotion);
+    observeStickerMotion();
     p.scrollTop=0;
     if(focusTab) tabs.children[index].focus({preventScroll:true});
   }
@@ -6806,6 +6869,7 @@ function openStickerPicker(){
   });
   selectCategory(0,false);
   $('#form-chat').appendChild(p); stickerPicker=p; stickerPickerScope=scope;
+  observeStickerMotion();
   $('#form-chat').classList.add('stickers-open'); $('#btn-stickers').setAttribute('aria-expanded','true');
   appNav.open('sticker-picker',closeStickerPicker,function(){ return !!stickerPicker; });
   grid.firstChild.focus({preventScroll:true});
@@ -6828,6 +6892,7 @@ document.addEventListener('visibilitychange',function(){ if(document.hidden) clo
 /* ペアや画面が外部の操作で切り替わった場合も、古い選択欄を残さない。 */
 new MutationObserver(function(){
   if(stickerPicker&&(S.phase!=='play'||S.tab!=='chat'||stickerPickerScope!==deletionScope())) closeStickerPicker(false);
+  stickerMotionChanged();
 }).observe(document.body,{attributes:true,subtree:true,attributeFilter:['class']});
 
 /* v212: 本体の写真とファイルを選んで送る */
@@ -7894,6 +7959,7 @@ function queueChat(txt,at){
   S.chat.push(msg);
   item.msg=msg;
   renderChat(true);
+  newStickerFullscreen(msg);
   if(!S.flushT) S.flushT=setTimeout(function(){ S.flushT=null; flushOutbox(); },60);
   return msg;
 }
@@ -8594,6 +8660,7 @@ case 'ack':
           var incoming={mid:validDeletionId(it.mid)?it.mid:'',from:m.from,text:tx,at:(typeof it.at==='number'?it.at:Date.now()),sent:true,n:m.n||0};
           if(messageDeleted(incoming)||S.chat.some(function(c){ return !c.sys&&c.from===incoming.from&&messageId(c)===messageId(incoming); })) continue;
           S.chat.push(incoming);
+          newStickerFullscreen(incoming);
           added++;
         }
         try{ if(m.n){ Net.send({t:'ack',n1:m.n}); setTimeout(function(){ try{ Net.send({t:'ack',n1:m.n}); }catch(e){} },1500); } }catch(e){}
@@ -8614,6 +8681,7 @@ case 'ack':
       S.lastPeerN=Math.max(S.lastPeerN,m.n||0);
       S.chat.push({mid:validDeletionId(m.mid)?m.mid:'',from:m.from,text:String(m.text||'').slice(0,MAX_CHAT),
         at:(typeof m.at==='number'?m.at:Date.now()),sent:true,n:m.n||0});
+      newStickerFullscreen(S.chat[S.chat.length-1]);
       unreadSave();
       /* v111: 受領の しるしは 20秒に 1回だけ まとめて 返す */
       (function(){
