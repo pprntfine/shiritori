@@ -832,6 +832,22 @@ body.in-play .leave-row{display:none!important}
 .line-composer #chat-tools:not([hidden]){margin-top:6px}
 .line-composer .chat-tools-toggle{display:block;min-height:36px;padding:6px 12px;border:1px solid #D9E2E9;border-radius:18px;background:#fff;color:#357459;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
 .line-composer .chat-tools-toggle:focus-visible{outline:3px solid #32795b;outline-offset:2px}
+/* v223: 入力幅を減らさない独立したスタンプ欄。画像や外部素材は使わない。 */
+.chat-composer-actions{display:flex;gap:8px;align-items:center}
+.line-composer .chat-composer-actions button{min-height:44px}
+.line-composer #btn-stickers[aria-expanded="true"]{background:#e5f7da;border-color:#32795b}
+.sticker-picker{grid-column:1/-1;grid-row:2;min-width:0;max-height:min(300px,45dvh);overflow-y:auto;overscroll-behavior:contain;background:#fff;border:1px solid #D9E2E9;border-radius:16px;padding:8px;color:#34493c}
+.sticker-picker-head{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;padding-left:4px}
+.sticker-picker-close{min-width:44px;min-height:44px;border:0;border-radius:12px;background:#f2f6f3;color:inherit;font:inherit;cursor:pointer}
+.sticker-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}
+.sticker-choice{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-width:0;min-height:66px;padding:5px 2px;border:1px solid transparent;border-radius:12px;background:transparent;color:inherit;font:inherit;cursor:pointer}
+.sticker-choice:hover,.sticker-choice:active{background:#e5f7da}
+.sticker-choice span{font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif;font-size:32px;line-height:1.2}
+.sticker-choice small{font-size:11px;line-height:1.3}
+.sticker-picker button:focus-visible{outline:3px solid #32795b;outline-offset:-3px}
+.line-composer.stickers-open{grid-template-areas:"tools tools" "stickers stickers" "input send"!important}
+.msg .bubble.sticker-b{font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif;font-size:76px!important;line-height:1.25!important;padding:6px 10px!important;min-width:96px;box-sizing:border-box;background:transparent!important;border:0!important;box-shadow:none!important}
+.msg .bubble.sticker-b::before,.msg .bubble.sticker-b::after{display:none!important;content:none!important}
 </style>
 </head>
 <body>
@@ -860,7 +876,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v222</b>｜ビルド 2026-10-29（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v223</b>｜ビルド 2026-10-29（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -934,7 +950,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v222</b>｜ビルド 2026-10-29（アプリが 裏でも スマホに 直接とどく）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v223</b>｜ビルド 2026-10-29（アプリが 裏でも スマホに 直接とどく）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -1019,7 +1035,10 @@ body.in-play .leave-row{display:none!important}
     <div id="chat-log" class="line-chat" role="log" aria-live="polite"></div>
     <form id="form-chat" class="line-composer" autocomplete="off">
       <div class="chat-tool-menu">
-        <button id="btn-chat-tools" type="button" class="chat-tools-toggle" aria-expanded="false" aria-controls="chat-tools">メニュー</button>
+        <div class="chat-composer-actions">
+          <button id="btn-chat-tools" type="button" class="chat-tools-toggle" aria-expanded="false" aria-controls="chat-tools">メニュー</button>
+          <button id="btn-stickers" type="button" class="chat-tools-toggle" aria-expanded="false" aria-controls="sticker-picker" aria-haspopup="dialog">スタンプ</button>
+        </div>
       <div id="chat-tools" class="tools" hidden>
         <button id="btn-live" type="button" class="notify-btn" title="ライブ えいぞう">ライブ</button>
         <button id="btn-call" type="button" class="notify-btn" title="こえで はなす">電話:オフ</button>
@@ -2566,6 +2585,7 @@ function nameOf(id){ return id===S.me.id ? meName() : peerName(); }
    5. 画面まわり
    ================================================================= */
 function show(which){
+  closeStickerPicker(false);
   S.phase=which;
   appNav.changed();
   try{ document.body.classList.toggle('in-play',which==='play'); }catch(e){}
@@ -2592,6 +2612,7 @@ document.querySelectorAll('.talk-back').forEach(function(b){
 function updateTitleBadge(){ document.title=((S.hostAlert?'⚠ ':'')+(S.unread>0?'('+S.unread+') ':''))+'雑学王'; }
 if($('#tab-to-chat')) $('#tab-to-chat').addEventListener('click',function(){ setTab('chat',1); });
 function setTab(which,byUser){
+  closeStickerPicker(false);
   S.tab=which;
   appNav.changed();
   if(which==='chat') swClearNotifs();   /* v142: トークを 見たら 通知を 消す */
@@ -6118,6 +6139,10 @@ function renderChat(forceBottom){
     meta.className='meta';
     meta.textContent=metaText(m,mine,at,groupEnd);
     markDeletable(row,bub,m,mine);
+    if(!m.file&&isSticker(m.text)){
+      bub.classList.add('sticker-b');
+      bub.setAttribute('aria-label',(mine?'送信した':'受信した')+'スタンプ「'+STICKER_NAMES[STICKERS.indexOf(m.text)]+'」。長押し、または操作ボタンで反応を選ぶ');
+    }
     if(mine){ row.dataset.uid=m.uid||''; row.appendChild(meta); row.appendChild(bub); }
     else{
       var av=document.createElement('div');
@@ -6653,6 +6678,74 @@ setInterval(syncReactions,15000);
 setInterval(reactionReconnect,120000);
 window.addEventListener('online',reactionReconnect);
 document.addEventListener('visibilitychange',function(){ if(!document.hidden) reactionReconnect(); else closeReactionPalette(); });
+
+/* v223: 許可リストと完全一致する本文だけを大きなスタンプとして表示する。
+   既存の chats 電文・固定 mid・暗号化保存・送信待ちをそのまま利用し、旧版にも絵文字で届く。 */
+var STICKERS=['😊','🙏','👍','❤️','😂','🎉','👋','🙆','😮','😢','💪','😴'];
+var STICKER_NAMES=['にっこり','ありがとう','いいね','ハート','大笑い','おめでとう','またね','オーケー','びっくり','悲しい','がんばって','おやすみ'];
+var stickerPicker=null,stickerPickerScope='';
+function isSticker(value){ return typeof value==='string'&&STICKERS.indexOf(value)>=0; }
+function closeStickerPicker(restoreFocus){
+  if(!stickerPicker) return;
+  stickerPicker.remove(); stickerPicker=null; stickerPickerScope='';
+  $('#form-chat').classList.remove('stickers-open');
+  $('#btn-stickers').setAttribute('aria-expanded','false');
+  appNav.dismiss('sticker-picker');
+  if(restoreFocus!==false) $('#btn-stickers').focus({preventScroll:true});
+}
+function sendSticker(value){
+  if(!isSticker(value)) return false;
+  if(!S.sealed||!S.sessKey||!S.opp||!Net.topic||!Net.key||!(S.paired||S.linked)){
+    toast('まだ つながっていません。接続してから おしてください。'); return false;
+  }
+  /* 入力欄・変換中の文章には触れず、一通の独立したメッセージを作る。 */
+  queueChat(value,Date.now()); return true;
+}
+function openStickerPicker(){
+  if(stickerPicker){ closeStickerPicker(); return; }
+  closeReactionPalette();
+  var p=document.createElement('div'); p.id='sticker-picker'; p.className='sticker-picker';
+  p.setAttribute('role','dialog'); p.setAttribute('aria-label','スタンプを選んで送信');
+  var head=document.createElement('div'); head.className='sticker-picker-head';
+  var title=document.createElement('span'); title.textContent='選ぶとスタンプを送信'; head.appendChild(title);
+  var close=document.createElement('button'); close.type='button'; close.className='sticker-picker-close'; close.textContent='閉じる'; close.addEventListener('click',function(){ closeStickerPicker(); }); head.appendChild(close); p.appendChild(head);
+  var grid=document.createElement('div'); grid.className='sticker-grid';
+  var scope=deletionScope();
+  STICKERS.forEach(function(value,i){
+    var b=document.createElement('button'); b.type='button'; b.className='sticker-choice'; b.setAttribute('aria-label',STICKER_NAMES[i]+'のスタンプを送信');
+    var emoji=document.createElement('span'); emoji.textContent=value; emoji.setAttribute('aria-hidden','true'); b.appendChild(emoji);
+    var label=document.createElement('small'); label.textContent=STICKER_NAMES[i]; b.appendChild(label);
+    b.addEventListener('click',function(){
+      /* 閉じた欄の古いボタンや二重クリックでは再送しない。 */
+      if(stickerPicker!==p) return;
+      closeStickerPicker();
+      if(scope===deletionScope()) sendSticker(value);
+    }); grid.appendChild(b);
+  }); p.appendChild(grid);
+  $('#form-chat').appendChild(p); stickerPicker=p; stickerPickerScope=scope;
+  $('#form-chat').classList.add('stickers-open'); $('#btn-stickers').setAttribute('aria-expanded','true');
+  appNav.open('sticker-picker',closeStickerPicker,function(){ return !!stickerPicker; });
+  grid.firstChild.focus({preventScroll:true});
+}
+$('#btn-stickers').addEventListener('click',openStickerPicker);
+['pointerdown','touchstart','mousedown','click'].forEach(function(type){
+  document.addEventListener(type,function(e){
+    if(stickerPicker&&!stickerPicker.contains(e.target)&&!$('#btn-stickers').contains(e.target)) closeStickerPicker(false);
+  },{capture:true,passive:true});
+});
+document.addEventListener('keydown',function(e){
+  if(!stickerPicker) return;
+  if(e.key==='Escape'){ e.preventDefault(); e.stopImmediatePropagation(); closeStickerPicker(); }
+  else if(e.key==='Tab'){
+    var buttons=Array.from(stickerPicker.querySelectorAll('button')),at=buttons.indexOf(document.activeElement);
+    if((e.shiftKey&&at<=0)||(!e.shiftKey&&at===buttons.length-1)){ e.preventDefault(); buttons[e.shiftKey?buttons.length-1:0].focus(); }
+  }
+},true);
+document.addEventListener('visibilitychange',function(){ if(document.hidden) closeStickerPicker(false); });
+/* ペアや画面が外部の操作で切り替わった場合も、古い選択欄を残さない。 */
+new MutationObserver(function(){
+  if(stickerPicker&&(S.phase!=='play'||S.tab!=='chat'||stickerPickerScope!==deletionScope())) closeStickerPicker(false);
+}).observe(document.body,{attributes:true,subtree:true,attributeFilter:['class']});
 
 /* v212: 本体の写真とファイルを選んで送る */
 var ATTACH_MAX=2*1024*1024;
