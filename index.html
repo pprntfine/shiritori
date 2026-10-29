@@ -832,7 +832,7 @@ body.in-play .leave-row{display:none!important}
 .line-composer #chat-tools:not([hidden]){margin-top:6px}
 .line-composer .chat-tools-toggle{display:block;min-height:36px;padding:6px 12px;border:1px solid #D9E2E9;border-radius:18px;background:#fff;color:#357459;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
 .line-composer .chat-tools-toggle:focus-visible{outline:3px solid #32795b;outline-offset:2px}
-/* v224: 入力幅を減らさない独立したスタンプ欄。画像や外部素材は使わない。 */
+/* v225: 入力幅を減らさない独立したスタンプ欄。画像や外部素材は使わない。 */
 .chat-composer-actions{display:flex;gap:8px;align-items:center}
 .line-composer .chat-composer-actions button{min-height:44px}
 .line-composer #btn-stickers[aria-expanded="true"]{background:#e5f7da;border-color:#32795b}
@@ -851,6 +851,21 @@ body.in-play .leave-row{display:none!important}
 .line-composer.stickers-open{grid-template-areas:"tools tools" "stickers stickers" "input send"!important}
 .msg .bubble.sticker-b{font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif;font-size:76px!important;line-height:1.25!important;padding:6px 10px!important;min-width:96px;box-sizing:border-box;background:transparent!important;border:0!important;box-shadow:none!important}
 .msg .bubble.sticker-b::before,.msg .bubble.sticker-b::after{display:none!important;content:none!important}
+/* v225: 新しい十二種だけを三秒間動かす。本文・操作欄は動かさない。 */
+.msg .bubble.sticker-animated{font-size:52px!important;white-space:nowrap;padding:10px!important}
+.sticker-motion{display:inline-block;transform-origin:center;vertical-align:middle}
+.sticker-motion.is-playing{animation-duration:750ms;animation-iteration-count:4;animation-timing-function:ease-in-out}
+.sticker-motion.is-playing[data-motion="pulse"]{animation-name:sticker-pulse}
+.sticker-motion.is-playing[data-motion="bob"]{animation-name:sticker-bob}
+.sticker-motion.is-playing[data-motion="sway"]{animation-name:sticker-sway}
+.sticker-motion.is-playing[data-motion="spark"]{animation-name:sticker-spark}
+.sticker-replay{display:block;margin:2px auto 0;min-width:44px;min-height:32px;padding:3px 8px;border:1px solid #b6c7be;border-radius:12px;background:#fff;color:#34493c;font:inherit;font-size:12px;cursor:pointer}
+.sticker-replay:focus-visible{outline:2px solid #32795b;outline-offset:2px}
+@keyframes sticker-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}
+@keyframes sticker-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+@keyframes sticker-sway{0%,100%{transform:rotate(0)}25%{transform:rotate(-7deg)}75%{transform:rotate(7deg)}}
+@keyframes sticker-spark{0%,100%{transform:scale(1) rotate(0)}35%{transform:scale(1.1) rotate(-5deg)}65%{transform:scale(1.04) rotate(5deg)}}
+@media(prefers-reduced-motion:reduce){.sticker-motion.is-playing{animation:none!important;transform:none!important}}
 </style>
 </head>
 <body>
@@ -879,7 +894,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v224</b>｜ビルド 2026-10-29（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v225</b>｜ビルド 2026-10-29（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -953,7 +968,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v224</b>｜ビルド 2026-10-29（アプリが 裏でも スマホに 直接とどく）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v225</b>｜ビルド 2026-10-29（アプリが 裏でも スマホに 直接とどく）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -6157,6 +6172,7 @@ function renderChat(forceBottom){
       row.appendChild(av); row.appendChild(col); row.appendChild(meta);
     }
     decorateReactions(row); box.appendChild(row);
+    if(!m.file&&isSticker(m.text)) decorateStickerMotion(row,bub,m);
     prevFrom=m.from; prevAt=at;
   }
   if(stick) scrollChatBottom(); else box.scrollTop=previousTop;
@@ -6682,7 +6698,7 @@ setInterval(reactionReconnect,120000);
 window.addEventListener('online',reactionReconnect);
 document.addEventListener('visibilitychange',function(){ if(!document.hidden) reactionReconnect(); else closeReactionPalette(); });
 
-/* v224: 許可リストと完全一致する本文だけを大きなスタンプとして表示する。
+/* v225: 許可リストと完全一致する本文だけを大きなスタンプとして表示する。
    既存の chats 電文・固定 mid・暗号化保存・送信待ちをそのまま利用し、旧版にも絵文字で届く。 */
 var STICKER_CATEGORIES=[
   {name:'表情',items:[['😊','にっこり'],['😂','大笑い'],['😮','びっくり'],['😢','悲しい'],['😀','にこにこ'],['😆','うれし笑い'],['🤣','笑い転げる'],['😎','かっこいい'],['🤔','考え中'],['😅','苦笑い'],['😤','ふんっ'],['🥱','あくび']]},
@@ -6690,12 +6706,43 @@ var STICKER_CATEGORIES=[
   {name:'応援',items:[['👍','いいね'],['🎉','おめでとう'],['💪','がんばって'],['👏','拍手'],['🙌','やったね'],['✊','ファイト'],['🔥','燃えてきた'],['🏆','大成功'],['🥇','一番だね'],['💯','満点'],['📣','応援してる'],['🌟','輝いてる']]},
   {name:'気持ち',items:[['❤️','ハート'],['🥹','じーん'],['🥲','うれし涙'],['😌','ほっとした'],['😔','しょんぼり'],['😡','ぷんぷん'],['😱','ひえー'],['🤯','頭がいっぱい'],['😥','心配だよ'],['😑','むむっ'],['🫶','大切だよ'],['💐','感謝をこめて']]},
   {name:'くらし',items:[['☕','ひと休み'],['🍵','お茶どうぞ'],['🍚','ごはんだよ'],['🍰','おやつの時間'],['🛁','お風呂の時間'],['🛌','休憩中'],['🏠','ただいま'],['🛍️','お買い物'],['💻','作業中'],['📚','勉強中'],['🎵','ごきげん'],['☔','雨だね']]},
-  {name:'大人の気分',items:[['😘','キスを送る'],['💋','キスマーク'],['😉','ウインク'],['😳','照れちゃう'],['🥰','うっとり'],['😍','見とれちゃう'],['😚','そっとキス'],['😙','キスの気分'],['💘','心を射抜かれた'],['💕','寄り添うハート'],['💞','通じ合うハート'],['👀','見つめてる']]}
+  {name:'大人の気分',items:[['😘','キスを送る'],['💋','キスマーク'],['😉','ウインク'],['😳','照れちゃう'],['🥰','うっとり'],['😍','見とれちゃう'],['😚','そっとキス'],['😙','キスの気分'],['💘','心を射抜かれた'],['💕','寄り添うハート'],['💞','通じ合うハート'],['👀','見つめてる']]},
+  {name:'動くハート',items:[['😘❤️','熱いキス','pulse'],['💓💓','ドキドキ','pulse'],['🥰💕','もっと一緒に','sway'],['😍💖','大好き','spark'],['💋❤️','キスを重ねて','bob'],['😚💗','やさしいキス','sway'],['🫶💞','ずっとそばに','pulse'],['😉💘','君に夢中','spark'],['💑💕','寄り添いたい','bob'],['💏💖','二人のキス','sway'],['💝✨','恋のきらめき','spark'],['💌💓','会いたいな','bob']]}
 ];
 var STICKERS=[],STICKER_NAMES=[];
 STICKER_CATEGORIES.forEach(function(category){ category.items.forEach(function(item){ STICKERS.push(item[0]); STICKER_NAMES.push(item[1]); }); });
 var stickerPicker=null,stickerPickerScope='';
+var stickerMotionMap=new Map();
+STICKER_CATEGORIES[6].items.forEach(function(item){ stickerMotionMap.set(item[0],item[2]); });
+var stickerMotionSeen=new Set(),stickerMotionScope='';
 function isSticker(value){ return typeof value==='string'&&STICKERS.indexOf(value)>=0; }
+function stickerMotion(value){ return typeof value==='string'?stickerMotionMap.get(value)||'':''; }
+function playStickerMotion(emoji){
+  if(!emoji||!emoji.isConnected||!emoji.dataset.motion) return;
+  emoji.classList.remove('is-playing');
+  if(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  void emoji.offsetWidth;
+  emoji.classList.add('is-playing');
+}
+function prepareStickerMotion(emoji,value){
+  var motion=stickerMotion(value); if(!motion) return false;
+  emoji.classList.add('sticker-motion'); emoji.dataset.motion=motion;
+  emoji.addEventListener('animationend',function(e){ if(e.target===emoji) emoji.classList.remove('is-playing'); });
+  return true;
+}
+function decorateStickerMotion(row,bubble,m){
+  if(!stickerMotion(m.text)) return;
+  var emoji=document.createElement('span'); emoji.textContent=m.text; emoji.setAttribute('aria-hidden','true');
+  prepareStickerMotion(emoji,m.text); bubble.replaceChildren(emoji); bubble.classList.add('sticker-animated');
+  var replay=document.createElement('button'); replay.type='button'; replay.className='sticker-replay'; replay.textContent='再生';
+  replay.setAttribute('aria-label',STICKER_NAMES[STICKERS.indexOf(m.text)]+'の動きを再生');
+  replay.addEventListener('click',function(e){ e.preventDefault(); e.stopPropagation(); playStickerMotion(emoji); });
+  bubble.parentElement.appendChild(replay);
+  /* 描画し直しや既読更新では自動再生しない。送信内容・識別子は変えない。 */
+  var scope=deletionScope(); if(stickerMotionScope!==scope){ stickerMotionSeen.clear(); stickerMotionScope=scope; }
+  var key=JSON.stringify([m.from,messageId(m)]);
+  if(!stickerMotionSeen.has(key)){ stickerMotionSeen.add(key); playStickerMotion(emoji); }
+}
 function closeStickerPicker(restoreFocus){
   if(!stickerPicker) return;
   stickerPicker.remove(); stickerPicker=null; stickerPickerScope='';
@@ -6730,7 +6777,7 @@ function openStickerPicker(){
     STICKER_CATEGORIES[index].items.forEach(function(item){
       var value=item[0],name=item[1];
       var b=document.createElement('button'); b.type='button'; b.className='sticker-choice'; b.setAttribute('aria-label',name+'のスタンプを送信');
-      var emoji=document.createElement('span'); emoji.textContent=value; emoji.setAttribute('aria-hidden','true'); b.appendChild(emoji);
+      var emoji=document.createElement('span'); emoji.textContent=value; emoji.setAttribute('aria-hidden','true'); prepareStickerMotion(emoji,value); b.appendChild(emoji);
       var label=document.createElement('small'); label.textContent=name; b.appendChild(label);
       b.addEventListener('click',function(){
         /* 閉じた欄・切替前の古いボタンや二重クリックでは再送しない。 */
@@ -6739,6 +6786,7 @@ function openStickerPicker(){
         if(scope===deletionScope()) sendSticker(value);
       }); grid.appendChild(b);
     });
+    grid.querySelectorAll('.sticker-motion').forEach(playStickerMotion);
     p.scrollTop=0;
     if(focusTab) tabs.children[index].focus({preventScroll:true});
   }
