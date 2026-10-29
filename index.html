@@ -897,7 +897,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v226</b>｜ビルド 2026-10-29（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v228</b>｜ビルド 2026-10-29（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -971,7 +971,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v226</b>｜ビルド 2026-10-29（アプリが 裏でも スマホに 直接とどく）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v228</b>｜ビルド 2026-10-29（アプリが 裏でも スマホに 直接とどく）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -3238,7 +3238,7 @@ var QBANK=[
  {q:'人間の 歯は おとなで なん本？',c:['32本','28本','30本','36本'],a:0,e:'32本（親知らずを ふくむ）。'},
  {q:'「三日月」の 月は どんな 形？',c:['細く 弓なり','まん丸','半分','見えない'],a:0,e:'細く 弓なりの 形。'}
 ];
-function qzCorrect(n){ var q=QBANK[((n||0)*7)%QBANK.length]; return q?a:-1; }
+function qzCorrect(n){ var q=QBANK[((n||0)*7)%QBANK.length]; return q?q.a:-1; }
 function qzStart(n){
   n=n||0;
   var keepMy=(S.qz&&S.qz.my)||0, keepPeer=(S.qz&&S.qz.peer)||0;
@@ -5433,7 +5433,7 @@ function sqRender(){
     res.className='qz-result'; res.innerHTML='';
     if(SQ.answered){
       var ok=SQ.opts[SQ.pick]&&SQ.opts[SQ.pick].ok;
-      res.appendChild(profHTML(ok, (q.b>=2)));
+      res.appendChild(profHTML(ok, (it.b>=2)));
       if(ok) confettiBurst();
       var v=document.createElement('div');
       v.className='qz-verdict '+(ok?'ok':'ng');
@@ -5475,6 +5475,7 @@ if($('#flt-psycho')) $('#flt-psycho').addEventListener('click',function(){ setFi
 if($('#flt-danger')) $('#flt-danger').addEventListener('click',function(){ setFilter('danger'); });
 if($('#sq-next')) $('#sq-next').addEventListener('click',function(){
   if(SQ.pos>=SQ.deck.length){ sqStart(SQ.filter); return; }
+  if(!SQ.answered) return;
   SQ.pos++; SQ.answered=false; SQ.pick=null; sqLoad(); sqRender();
 });
 if($('#sq-back')) $('#sq-back').addEventListener('click',function(){ show('lobby'); });
@@ -6720,7 +6721,19 @@ var STICKERS=[],STICKER_NAMES=[];
 STICKER_CATEGORIES.forEach(function(category){ category.items.forEach(function(item){ STICKERS.push(item[0]); STICKER_NAMES.push(item[1]); }); });
 var stickerPicker=null,stickerPickerScope='';
 var stickerMotionMap=new Map(),stickerFullscreenMap=new Map();
-STICKER_CATEGORIES.slice(6).forEach(function(category){ category.items.forEach(function(item){ stickerMotionMap.set(item[0],item[2]); }); });
+/* v227: 従来の七十二種も既存の穏やかな動きで自動再生。値・名前・並びは変えない。 */
+var stickerGentleMotions=[
+  'pulse bob pulse sway pulse bob sway pulse sway sway pulse bob',
+  'bob sway bob sway bob bob sway bob sway pulse bob bob',
+  'bob bob pulse sway bob bob sway pulse sway pulse sway pulse',
+  'pulse pulse sway bob sway pulse bob sway sway sway pulse bob',
+  'sway bob bob pulse sway sway bob sway bob sway sway sway',
+  'pulse pulse sway sway pulse pulse bob bob pulse pulse sway sway'
+];
+STICKER_CATEGORIES.forEach(function(category,index){
+  var gentle=index<6?stickerGentleMotions[index].split(' '):null;
+  category.items.forEach(function(item,i){ stickerMotionMap.set(item[0],item[2]||gentle[i]); });
+});
 STICKER_CATEGORIES[7].items.forEach(function(item){ stickerFullscreenMap.set(item[0],item[3]); });
 var stickerMotionObserver=null,stickerFullscreenLayer=null,stickerFullscreenTimer=null,stickerFullscreenWatch=null;
 /* 起動前の中継履歴と復元中の受信では全画面を出さない。電文は変更しない。 */
