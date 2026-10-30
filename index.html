@@ -902,7 +902,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v241</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v242</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -976,7 +976,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v241</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v242</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -7072,6 +7072,11 @@ function clearStickerFullscreen(){
   stickerFullscreenWatch=null;
   if(stickerFullscreenLayer) stickerFullscreenLayer.remove();
   stickerFullscreenLayer=null;
+  /* v242: 取り残された 幕が あっても かならず 消す（全画面が のこりつづける 不具合の 対策） */
+  try{
+    var left=document.querySelectorAll('.sticker-fullscreen');
+    for(var i=0;i<left.length;i++){ try{ left[i].parentNode.removeChild(left[i]); }catch(e2){} }
+  }catch(e){}
 }
 function refreshStickerMotion(){
   var active=chatOnScreen()&&!stickerReducedMotion();
@@ -7122,6 +7127,16 @@ function newStickerFullscreen(m,fromOpen){
   }
   document.body.appendChild(layer); stickerFullscreenLayer=layer;
   stickerFullscreenTimer=setTimeout(clearStickerFullscreen,3000);
+  /* v242: かならず 消す。アニメが おわったら すぐ、だめでも 4秒で 幕ごと 取りのぞく */
+  try{
+    var lastP=layer.lastElementChild;
+    if(lastP) lastP.addEventListener('animationend',function(){ setTimeout(clearStickerFullscreen,150); },{once:true});
+  }catch(e){}
+  setTimeout(function(){
+    /* じぶんの 幕が まだ 画面に のこって いたら かならず 消す */
+    if(stickerFullscreenLayer&&document.body.contains(stickerFullscreenLayer)) clearStickerFullscreen();
+    else { try{ var l2=document.querySelectorAll('.sticker-fullscreen'); for(var i2=0;i2<l2.length;i2++){ try{ l2[i2].parentNode.removeChild(l2[i2]); }catch(e3){} } }catch(e4){} }
+  },4200);
   /* DOM更新を伴わない鍵・ペア変更も、動作中だけ短い監視で後始末する。 */
   function watch(){
     stickerFullscreenWatch=null;
@@ -7142,12 +7157,16 @@ function stickerEffectsReady(){
   var q=document.querySelector('#s-play');
   return S.linked&&S.phase==='play'&&!!(q&&q.classList.contains('on'));
 }
+var stickerReplayDone=new Set();   /* v242: 同じ 会話では 1回だけ 再演する */
 function stickerReplayOpen(o){
   o=o||{};
   if(!S.chatLoaded||!stickerEffectsReady()) return;
   if(stickerFullscreenLayer) return;   /* 同じ開き方の散発では一枚を維持する */
   var scope=deletionScope();
   if(!scope) return;
+  if(stickerReplayDone.has(scope)) return;   /* v242: 二度目からは 出さない */
+
+  /* v242: 会話を ひらいた ときの 1回だけ。だした ことを おぼえて おく */
   var m=null,i,p;
   for(i=S.chat.length-1;i>=0;i--){
     p=S.chat[i];
@@ -7159,13 +7178,14 @@ function stickerReplayOpen(o){
   if(stickerFullscreenSeen.size>STICKER_EFFECT_LIMIT) stickerFullscreenSeen.delete(stickerFullscreenSeen.values().next().value);
   if(stickerReducedMotion()) return;
   if(m.from===S.me.id&&m.sent===false) return;   /* まだ中継へ届いていない自分の送信は履歴再演しない */
+  stickerReplayDone.add(scope);
   newStickerFullscreen({mid:m.mid,from:m.from,text:m.text,at:m.at,n:m.n||0,sys:false,file:false,photo:false},true);
 }
 if(stickerMotionPreference){
   if(stickerMotionPreference.addEventListener) stickerMotionPreference.addEventListener('change',stickerMotionChanged);
   else if(stickerMotionPreference.addListener) stickerMotionPreference.addListener(stickerMotionChanged);
 }
-document.addEventListener('visibilitychange',stickerMotionChanged);
+document.addEventListener('visibilitychange',function(){ if(document.hidden) clearStickerFullscreen(); stickerMotionChanged(); });
 window.addEventListener('pagehide',clearStickerFullscreen);
 function closeStickerPicker(restoreFocus){
   if(!stickerPicker) return;
