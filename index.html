@@ -292,6 +292,11 @@ option{background:#12312A;color:#1F2430}
 .line-composer .tools button{flex-shrink:0}
 .photo-b{padding:4px}
 .photo-msg{display:block;max-width:min(62vw,260px);max-height:300px;border-radius:12px}
+/* v231: 画像タップの全画面表示。暗い背景に写真だけを原尺の比率のまま出す。保存などの操作は置かない。 */
+.img-viewer{position:fixed;inset:0;z-index:9000;display:none;background:rgba(6,14,12,.94);touch-action:none;overscroll-behavior:contain}
+.img-viewer.on{display:flex;align-items:center;justify-content:center}
+.img-viewer-img{max-width:100vw;max-height:100dvh;width:auto;height:auto;object-fit:contain;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;transform-origin:center center;will-change:transform}
+.img-viewer-note{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);color:#C7D0BF;font-size:.9rem;background:rgba(14,33,28,.92);border:1px solid rgba(255,255,255,.22);border-radius:12px;padding:10px 14px;pointer-events:none}
 .cam-wrap{display:flex;flex-direction:column;align-items:center;gap:12px;padding:16px}
 #cam-video{width:min(80vw,380px);aspect-ratio:3/4;object-fit:cover;border-radius:14px;background:#000}
 .cam-btns{display:flex;gap:10px}
@@ -897,7 +902,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v230</b>｜ビルド 2026-10-29（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v231</b>｜ビルド 2026-10-29（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -971,7 +976,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v230</b>｜ビルド 2026-10-29（アプリが 裏でも スマホに 直接とどく）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v231</b>｜ビルド 2026-10-29（アプリが 裏でも スマホに 直接とどく）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -2607,6 +2612,7 @@ function nameOf(id){ return id===S.me.id ? meName() : peerName(); }
    ================================================================= */
 function show(which){
   if(which!=='play') clearStickerFullscreen();   /* v229: トーク以外へは即後始末。トークを開くときは最後の再演が置き換える */
+  closeImageViewer();   /* v231: 画面を移るときは全画面表示も閉じる(トークの位置はそのまま) */
   closeStickerPicker(false);
   S.phase=which;
   appNav.changed();
@@ -2637,6 +2643,7 @@ if($('#tab-to-chat')) $('#tab-to-chat').addEventListener('click',function(){ set
 function setTab(which,byUser){
   if(which!=='chat') clearStickerFullscreen();   /* v229: トークを離れたら即後始末。開くときは再演が置き換える */
   closeStickerPicker(false);
+  closeImageViewer();   /* v231: タブを移るときは全画面表示も閉じる */
   S.tab=which;
   appNav.changed();
   if(which==='chat') swClearNotifs();   /* v142: トークを 見たら 通知を 消す */
@@ -6141,6 +6148,7 @@ function renderChat(forceBottom){
         if(renderTicket!==chatRenderTicket || userTicket!==chatScrollUserTicket) return;
         if(stick) scrollChatBottom(); else box.scrollTop=previousTop;
       });
+      bindImageViewerTap(pim);   /* v231: タップで全画面表示 */
       pbub.appendChild(pim);
       var pmeta=document.createElement('div'); pmeta.className='meta';
       pmeta.textContent=metaText(m,mine,at,groupEnd);
@@ -6577,6 +6585,140 @@ bindMessageDeletion($('#chat-log'));
 setInterval(syncDeletions,15000);
 window.addEventListener('online',function(){ deletionAcked.clear(); syncDeletions(); reactionReconnect(); });
 document.addEventListener('visibilitychange',function(){ if(!document.hidden){ deletionAcked.clear(); syncDeletions(); reactionReconnect(); } });
+/* =================================================================
+   v231: 画像タップの全画面表示。
+   トークの写真(送受信どちらも)を短くタップすると、暗い背景に原尺の比率のまま出す。
+   もう一度タップで閉じる。二本指でつまむと拡大し、拡大中は指でずらして動かせる。
+   二度押しでも拡大と戻すができる。保存などの操作は置かない。動画は対象外(今までどおり)。
+   ================================================================= */
+var imgViewer=null,imgViewerImg=null,imgViewerNote=null,imgViewerGesture={scale:1,x:0,y:0};
+var imgViewerLastTap=0,imgViewerLastTapX=0,imgViewerLastTapY=0,imgViewerTapTimer=null,imgViewerLastGesture=0,imgViewerLastTouch=0;
+function imgViewerOpen(){ return !!(imgViewer&&imgViewer.classList.contains('on')); }
+function imgViewerApply(){ imgViewerImg.style.transform='translate('+imgViewerGesture.x+'px,'+imgViewerGesture.y+'px) scale('+imgViewerGesture.scale+')'; }
+function imgViewerResetTransform(){ imgViewerGesture={scale:1,x:0,y:0}; if(imgViewerImg) imgViewerApply(); }
+function ensureImgViewer(){
+  if(imgViewer) return;
+  imgViewer=document.createElement('div'); imgViewer.className='img-viewer'; imgViewer.setAttribute('role','dialog'); imgViewer.setAttribute('aria-modal','true'); imgViewer.setAttribute('aria-label','写真の全画面表示。タップで閉じます');
+  imgViewerImg=document.createElement('img'); imgViewerImg.className='img-viewer-img'; imgViewerImg.alt=''; imgViewerImg.draggable=false;
+  imgViewerNote=document.createElement('div'); imgViewerNote.className='img-viewer-note'; imgViewerNote.hidden=true; imgViewerNote.textContent='画像を表示できません';
+  imgViewer.appendChild(imgViewerImg); imgViewer.appendChild(imgViewerNote);
+  document.body.appendChild(imgViewer);
+  bindImgViewerGestures();
+}
+/* v231: 表示にはチャットと同じURLをそのまま使う。解放は既存の流れのままで、ここでは行わない。 */
+function openImageViewer(img){
+  if(!img||!img.classList||!img.classList.contains('photo-msg')||!img.getAttribute('src')) return;
+  ensureImgViewer();
+  imgViewerNote.hidden=true;
+  imgViewerImg.onerror=function(){ if(imgViewerOpen()) imgViewerNote.hidden=false; };
+  imgViewerImg.src=img.currentSrc||img.src;
+  imgViewerResetTransform();
+  imgViewerLastTap=0; imgViewerLastGesture=0;
+  if(imgViewerTapTimer){ clearTimeout(imgViewerTapTimer); imgViewerTapTimer=null; }
+  imgViewer.classList.add('on');
+  appNav.open('img-viewer',closeImageViewer,function(){ return imgViewerOpen(); });
+}
+function closeImageViewer(){
+  if(!imgViewerOpen()) return;
+  imgViewer.classList.remove('on');
+  imgViewerImg.onerror=null; imgViewerImg.removeAttribute('src');
+  imgViewerNote.hidden=true;   /* v231: 閉じたら案内も戻す(次に開くときは新しい状態) */
+  if(imgViewerTapTimer){ clearTimeout(imgViewerTapTimer); imgViewerTapTimer=null; }
+  appNav.dismiss('img-viewer');
+}
+/* v231: 単一タップは約0.33秒後に閉じる(二度押しを先に見てから)。拡大を終えた直後の指は閉じに数えない。 */
+function imgViewerTap(x,y){
+  var now=Date.now();
+  if(now-imgViewerLastGesture<400) return;
+  if(now-imgViewerLastTap<330&&Math.hypot(x-imgViewerLastTapX,y-imgViewerLastTapY)<48){
+    if(imgViewerTapTimer){ clearTimeout(imgViewerTapTimer); imgViewerTapTimer=null; }
+    imgViewerLastTap=0; imgViewerZoomTo(imgViewerGesture.scale>1.01?1:2.5,x,y);
+    return;
+  }
+  imgViewerLastTap=now; imgViewerLastTapX=x; imgViewerLastTapY=y;
+  if(imgViewerTapTimer) clearTimeout(imgViewerTapTimer);
+  imgViewerTapTimer=setTimeout(function(){ imgViewerTapTimer=null; if(imgViewerOpen()) closeImageViewer(); },330);
+}
+function imgViewerZoomTo(scale,px,py){
+  var cx=(window.innerWidth||390)/2,cy=(window.innerHeight||844)/2,g=imgViewerGesture;
+  g.x+=(px-cx-g.x)*(1-scale/g.scale); g.y+=(py-cy-g.y)*(1-scale/g.scale); g.scale=scale;
+  if(scale<=1.001){ g.scale=1; g.x=0; g.y=0; }
+  imgViewerApply();
+}
+/* v231: 指の操作は変形(transform)だけで扱う。1本=タップか拡大時のずらし、2本=つまみ。 */
+function bindImgViewerGestures(){
+  var seq=null,multi=false;
+  function list(e){ return (e.touches&&e.touches.length)?[].slice.call(e.touches):null; }
+  function dist(a,b){ return Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY)||1; }
+  function mid(t){ return {x:(t[0].clientX+t[1].clientX)/2,y:(t[0].clientY+t[1].clientY)/2}; }
+  function panFrom(t){ seq={kind:'pan',x:t[0].clientX,y:t[0].clientY,gx0:imgViewerGesture.x,gy0:imgViewerGesture.y}; }
+  imgViewer.addEventListener('touchstart',function(e){
+    imgViewerLastTouch=Date.now();
+    var t=list(e); if(!t||!t.length) return;
+    e.preventDefault();   /* 背景のスクロールや画面の広がりを起こさない */
+    if(t.length>=2){ multi=true; seq={kind:'pinch',d0:dist(t[0],t[1]),s0:imgViewerGesture.scale,x0:imgViewerGesture.x,y0:imgViewerGesture.y}; }
+    else if(!seq){ multi=false; seq={kind:'tap',x:t[0].clientX,y:t[0].clientY,t:Date.now(),moved:false}; }
+    else if(seq.kind!=='tap') panFrom(t);
+  },{passive:false});
+  imgViewer.addEventListener('touchmove',function(e){
+    var t=list(e); if(!t||!t.length||!seq) return;
+    e.preventDefault();
+    if(t.length>=2){
+      multi=true; seq.kind='pinch';
+      var s=Math.min(6,Math.max(1,seq.s0*dist(t[0],t[1])/seq.d0)),m=mid(t),cx=(window.innerWidth||390)/2,cy=(window.innerHeight||844)/2;
+      imgViewerGesture.x=seq.x0+(m.x-cx-seq.x0)*(1-s/seq.s0);
+      imgViewerGesture.y=seq.y0+(m.y-cy-seq.y0)*(1-s/seq.s0);
+      imgViewerGesture.scale=s;
+      if(s<=1.001){ imgViewerGesture.x=0; imgViewerGesture.y=0; }
+      imgViewerApply();
+    }else if(seq.kind==='pan'){
+      imgViewerGesture.x=seq.gx0+(t[0].clientX-seq.x); imgViewerGesture.y=seq.gy0+(t[0].clientY-seq.y); imgViewerApply();
+    }else if(Math.hypot(t[0].clientX-seq.x,t[0].clientY-seq.y)>10){
+      if(imgViewerGesture.scale>1.001) panFrom(t); else seq.moved=true;
+    }
+  },{passive:false});
+  imgViewer.addEventListener('touchend',function(e){
+    imgViewerLastTouch=Date.now();
+    var t=list(e);
+    if(t&&t.length===1&&seq&&seq.kind!=='tap'){ panFrom(t); return; }   /* つまみから残った指はずらしへ */
+    if(!seq) return;
+    if(seq.kind==='tap'&&!multi&&!seq.moved&&Date.now()-seq.t<600) imgViewerTap(seq.x,seq.y);
+    else if(seq.kind!=='tap') imgViewerLastGesture=Date.now();
+    seq=null; multi=false;
+  },{passive:true});
+  imgViewer.addEventListener('touchcancel',function(){
+    imgViewerLastTouch=Date.now();
+    if(seq&&seq.kind!=='tap') imgViewerLastGesture=Date.now();
+    seq=null; multi=false;
+  },{passive:true});
+  imgViewer.addEventListener('click',function(e){
+    if(Date.now()-imgViewerLastTouch<600) return;   /* 指で開閉した直後のクリックは二重に数えない */
+    imgViewerTap(e.clientX||0,e.clientY||0);
+  });
+  imgViewer.addEventListener('wheel',function(e){ e.preventDefault(); },{passive:false});
+}
+/* v231: 写真の要素だけに載せる。動画・音声は対象外。長押し(反応欄)のあとは開かない。 */
+function bindImageViewerTap(img){
+  if(!img||!img.classList||img.dataset.viewerTap==='1') return;
+  img.dataset.viewerTap='1';
+  var down=null;
+  img.addEventListener('touchstart',function(e){
+    var t=(e.touches&&e.touches.length===1)?e.touches[0]:null;
+    down=t?{x:t.clientX,y:t.clientY,t:Date.now()}:null;
+  },{passive:true});
+  img.addEventListener('touchmove',function(e){
+    if(down&&e.touches&&e.touches.length===1&&Math.hypot(e.touches[0].clientX-down.x,e.touches[0].clientY-down.y)>10) down=null;
+  },{passive:true});
+  img.addEventListener('click',function(e){
+    if(down){ if(Date.now()-down.t>=600) return; down=null; }   /* 長押しのあとは反応欄のままで開かない */
+    if(reactionPalette) return;
+    openImageViewer(img);
+  });
+}
+document.addEventListener('keydown',function(e){
+  if(e.key!=='Escape'||!imgViewerOpen()) return;
+  e.preventDefault(); e.stopImmediatePropagation(); closeImageViewer();   /* v231: Escでも閉じる */
+},true);
 /* v221: 本文とは別の暗号化領域。取消も保持し、古い電文で復活させない。
    上限では既存記録を捨てず新しい対象を拒否する。本人ごとの論理番号は保存後に送る。 */
 var REACTIONS=['👍','❤️','😂','😮','😢','🙏'], REACTION_NAMES=['いいね','ハート','笑った','びっくり','悲しい','ありがとう'];
@@ -7067,6 +7209,7 @@ function attachmentLink(m,position){
     if(mime.indexOf('image/')===0){
       view=document.createElement('img'); view.alt=m.fileName||'写真'; view.className='photo-msg';
       view.addEventListener('error',function(){ var hint=document.createElement('div'); hint.textContent='この写真形式は端末で表示できません。保存して対応するアプリで開いてください。'; view.hidden=true; wrap.insertBefore(hint,view); });
+      bindImageViewerTap(view);   /* v231: タップで全画面表示 */
     }else if(mime==='text/plain'){
       view=document.createElement('pre'); view.textContent=new TextDecoder('utf-8').decode(bytes.subarray(0,65536))+(bytes.length>65536?'\n（続きは保存して確認できます）':'');
       view.style.cssText='white-space:pre-wrap;overflow-wrap:anywhere;max-height:320px;overflow:auto;font:inherit;margin:0';
