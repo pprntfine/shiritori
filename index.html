@@ -1187,7 +1187,7 @@ body.in-play .leave-row{display:none!important}
   <p id="pf-pres" style="font-size:.78rem;color:#556;margin:6px 0 0;white-space:pre-line"></p>
   <div class="sec">つうちサーバー（アプリを 切っていても とどく）</div>
   <input type="url" id="pf-psrv" placeholder="https://zatsugaku-push.〇〇.workers.dev" style="width:100%;box-sizing:border-box;padding:8px;border-radius:10px;border:1.5px solid #ddd;font-size:.8rem">
-  <p id="pf-pres" style="font-size:.74rem;color:#556;margin:4px 0 0">1人が 入れれば OK（あいてにも じどうで つたわります）</p>
+  <p id="pf-psrvh" style="font-size:.74rem;color:#556;margin:4px 0 0">1人が 入れれば OK（あいてにも じどうで つたわります）</p>
   <div class="acts"><button type="button" class="ng" id="pf-cancel">やめる</button><button type="button" class="ok" id="pf-save">ほぞん</button></div>
 </div></div>
 <script>
@@ -9487,7 +9487,7 @@ function recvProf(m){
     $('#pf-me-nm').value=meName();
     try{
       $('#pf-psrv').value=psrvRaw();
-      $('#pf-pres').textContent = psrvGet() ? 'つうちサーバー：せってい ずみ ✓'
+      $('#pf-psrvh').textContent = psrvGet() ? 'つうちサーバー：せってい ずみ ✓'
         : (psrvRaw() ? 'つうちサーバー：つながりません（いまは 予備の 経路で とどきます。空に して ほぞん すれば もとに もどります）'
                      : '1人が 入れれば OK（あいてにも じどうで つたわります）');
     }catch(e){}
@@ -9516,15 +9516,15 @@ function recvProf(m){
   $('#pf-save').addEventListener('click',async function(){
     var pu=($('#pf-psrv').value||'').trim().replace(/\/+$/,'');
     if(pu!==psrvRaw()){   /* v241: 空に して ほぞん すれば サーバーを やめられる */
-      if(pu&&!psrvOk(pu)){ $('#pf-pres').textContent='アドレスが ちがいます。https:// で はじまり .workers.dev で おわる アドレスを 入れてください。'; return; }
+      if(pu&&!psrvOk(pu)){ $('#pf-psrvh').textContent='アドレスが ちがいます。https:// で はじまり .workers.dev で おわる アドレスを 入れてください。'; return; }
       if(pu){
-        $('#pf-pres').textContent='つうちサーバーを たしかめて います…';
+        $('#pf-psrvh').textContent='つうちサーバーを たしかめて います…';
         try{ var kr=await fetch(pu+'/key',{cache:'no-store'}); var kj=await kr.json(); if(!kj||!kj.key) throw 0; }
-        catch(e){ $('#pf-pres').textContent='つうちサーバーに つながりません。アドレスと「デプロイ」を たしかめてください。'; return; }
+        catch(e){ $('#pf-psrvh').textContent='つうちサーバーに つながりません。アドレスと「デプロイ」を たしかめてください。'; return; }
       }
       psrvSet(pu);
       try{ if(Notification.permission!=='granted') await Notification.requestPermission(); }catch(e){}
-      try{ var ok=await psrvSetup(); $('#pf-pres').textContent = ok ? 'つうちサーバー：せってい ずみ ✓' : 'つうちサーバー：とうろくに しっぱい。「通知:オン」を おして から また ほぞん してください。'; }catch(e){}
+      try{ var ok=await psrvSetup(); $('#pf-psrvh').textContent = ok ? 'つうちサーバー：せってい ずみ ✓' : 'つうちサーバー：とうろくに しっぱい。「通知:オン」を おして から また ほぞん してください。'; }catch(e){}
     }
     var nm=($('#pf-me-nm').value||'').trim().slice(0,12)||'ぶー';
     PROF.me={name:nm,emo:pick,img:img};
