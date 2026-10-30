@@ -902,7 +902,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v239</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v240</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -976,7 +976,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v239</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v240</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -1164,11 +1164,15 @@ body.in-play .leave-row{display:none!important}
   <div class="sec">あいての 名前・アイコンは あいてが きめた ものが でます（v203）</div>
   <div class="sec">つうち</div>
   <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 0 4px">
+    <span style="font-size:.84rem">音（アプリを ひらいている とき）</span>
+    <button type="button" class="ph" id="pf-snd" style="padding:4px 14px">オン</button>
+  </div>
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 0 4px">
     <span style="font-size:.84rem">バイブ（アプリを ひらいている とき）</span>
     <button type="button" class="ph" id="pf-sound" style="padding:4px 14px">オン</button>
   </div>
-  <p style="font-size:.72rem;color:#556;margin:0 0 10px"><b>マナーモード（サイレント）の ときは 音は なりません。バイブだけです。</b>音を ならすか どうかは スマホの 設定（マナーモード／通知 → 雑学王 → 音）で きまります。アプリから 音は だしません。iPhoneは きまりで バイブを うごかせません。</p>
-  <button type="button" class="ph" id="pf-vtest">バイブを テストする</button>
+  <p style="font-size:.72rem;color:#556;margin:0 0 10px"><b>アプリを ひらいている ときは、アプリが じきに ピンポンと 鳴らして バイブします。</b>マナーモード（サイレント）の ときは 端末が 音を けします。アプリを とじている ときは スマホの 通知（設定 → 通知 → 雑学王 → 音／バイブ）で きまります。<b>iPhoneは きまりで バイブを うごかせません。</b></p>
+  <button type="button" class="ph" id="pf-vtest">音と バイブを テストする</button>
   <p id="pf-vres" style="font-size:.78rem;color:#556;margin:6px 0 0;white-space:pre-line"></p>
   <button type="button" class="ph" id="pf-vcopy" style="display:none;margin-top:6px">けっかを コピーする</button>
   <div class="sec">トーク</div>
@@ -6362,43 +6366,96 @@ function buzzNotify(){
     return true;
   }catch(e){ return false; }
 }
-/* v239: バイブが ならない わけを その場で しらべる（端末・ブラウザ・タップ・画面・通知・結果） */
+/* v240: アプリを ひらいている ときの 音（Web Audio）と、バイブ・通知の 診断 */
+var AC = null, sndReady = false;
+function sndOn(){ try{ return localStorage.getItem('mtp_snd_off') !== '1'; }catch(e){ return true; } }
+function acGet(){
+  try{
+    if(!AC){ var C = window.AudioContext || window.webkitAudioContext; if(!C) return null; AC = new C(); }
+    return AC;
+  }catch(e){ return null; }
+}
+function acUnlock(){
+  var c = acGet(); if(!c) return;
+  try{
+    if(c.state === 'suspended'){ var pr = c.resume(); if(pr && pr.catch) pr.catch(function(){}); }
+    if(c.state === 'running') sndReady = true;
+  }catch(e){}
+}
+document.addEventListener('pointerdown', acUnlock, {passive:true});
+document.addEventListener('touchstart', acUnlock, {passive:true});
+document.addEventListener('keydown', acUnlock);
+/* ピンポン（2音）。マナーモードの ときは 端末が 音を けします */
+function playPing(){
+  if(!sndOn()) return false;
+  var c = acGet(); if(!c) return false;
+  try{
+    if(c.state === 'suspended'){ var pr = c.resume(); if(pr && pr.catch) pr.catch(function(){}); }
+    var t0 = c.currentTime + 0.02;
+    var notes = [[880, 0, 0.16], [1245, 0.17, 0.24]];
+    for(var i=0;i<notes.length;i++){
+      var f = notes[i][0], d = notes[i][1], len = notes[i][2];
+      var o = c.createOscillator(), g = c.createGain();
+      o.type = 'sine'; o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, t0 + d);
+      g.gain.exponentialRampToValueAtTime(0.30, t0 + d + 0.015);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + d + len);
+      o.connect(g); g.connect(c.destination);
+      o.start(t0 + d); o.stop(t0 + d + len + 0.02);
+    }
+    sndReady = (c.state === 'running');
+    return true;
+  }catch(e){ return false; }
+}
+function paintSndBtn(){ var b = document.getElementById('pf-snd'); if(b) b.textContent = sndOn() ? 'オン' : 'オフ'; }
+
+/* バイブが ならない わけを その場で しらべる（音・端末・ブラウザ・タップ・画面・通知・結果） */
 function vibeReport(){
-  var ua=navigator.userAgent||'';
-  var ios=/iPhone|iPad|iPod/.test(ua)||(/Macintosh/.test(ua)&&(navigator.maxTouchPoints||0)>1);
-  var and=/Android/.test(ua);
-  var pc=!ios&&!and;
-  var has=(typeof navigator.vibrate==='function');
-  var act=(navigator.userActivation&&typeof navigator.userActivation.hasBeenActive==='boolean')?(navigator.userActivation.hasBeenActive?'あり':'なし'):'しらべられません';
-  var hidden=(document.visibilityState==='hidden');
-  var perm=('Notification' in window)?(Notification.permission==='granted'?'きょか':(Notification.permission==='denied'?'ことわり':'まだ')):'たいおう外';
-  var r=null;
-  if(has){ try{ r=navigator.vibrate(VIBE_PAT); }catch(e){ r=false; } }
-  var L=[];
-  L.push('きかい：'+(ios?'iPhone / iPad':(and?'Android':'パソコン・そのほか')));
-  L.push('バイブの しくみ：'+(has?'あり':'なし'));
-  L.push('タップの 記録：'+act);
-  L.push('画面：'+(hidden?'かくれている（うしろ）':'ひょうじ中'));
-  L.push('通知の ゆるし：'+perm);
-  L.push('ためした 結果：'+(r===null?'ためせない':(r?'うけつけ られた':'うけつけ られなかった')));
+  var ua = navigator.userAgent || '';
+  var ios = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && (navigator.maxTouchPoints || 0) > 1);
+  var and = /Android/.test(ua);
+  var pc = !ios && !and;
+  var hasV = (typeof navigator.vibrate === 'function');
+  var hasA = !!(window.AudioContext || window.webkitAudioContext);
+  var acState = 'つかえない';
+  try{ var c = acGet(); if(c) acState = (c.state === 'running' ? 'できた' : 'タップが ひつよう'); }catch(e){}
+  var act = (navigator.userActivation && typeof navigator.userActivation.hasBeenActive === 'boolean') ? (navigator.userActivation.hasBeenActive ? 'あり' : 'なし') : 'しらべられません';
+  var hidden = (document.visibilityState === 'hidden');
+  var perm = ('Notification' in window) ? (Notification.permission === 'granted' ? 'きょか' : (Notification.permission === 'denied' ? 'ことわり' : 'まだ')) : 'たいおう外';
+  var r = null;
+  if(hasV){ try{ r = navigator.vibrate(VIBE_PAT); }catch(e){ r = false; } }
+  var L = [];
+  L.push('きかい：' + (ios ? 'iPhone / iPad' : (and ? 'Android' : 'パソコン・そのほか')));
+  L.push('音の しくみ：' + (hasA ? 'あり' : 'なし') + ' / じゅんび：' + acState);
+  L.push('音の せってい：' + (sndOn() ? 'オン' : 'オフ'));
+  L.push('バイブの しくみ：' + (hasV ? 'あり' : 'なし'));
+  L.push('タップの 記録：' + act);
+  L.push('画面：' + (hidden ? 'かくれている（うしろ）' : 'ひょうじ中'));
+  L.push('通知の ゆるし：' + perm);
+  L.push('バイブを ためした 結果：' + (r === null ? 'ためせない' : (r ? 'うけつけ られた' : 'うけつけ られなかった')));
   L.push('');
-  if(ios) L.push('▶ iPhone / iPad は、Apple の きまりで Web から バイブを うごかせません。通知の 音と 画面で おしらせ する しくみです。');
-  else if(!has) L.push('▶ この ブラウザには バイブの しくみが ありません。Android の Chrome で ひらいて ください。');
-  else if(pc) L.push('▶ パソコンには バイブが ありません。スマホで おためし ください。');
-  else if(act==='なし') L.push('▶ 画面を 1回 タップしてから、もう一度 おして ください。');
-  else if(hidden) L.push('▶ アプリが うしろに ある あいだは バイブが とまります。通知の バイブで おしらせ します。');
+  if(ios) L.push('▶ iPhone / iPad は、Apple の きまりで Web から バイブを うごかせません。音も、本体の よこがわの スイッチが しずかな モード（オレンジ）だと なりません。');
+  else if(!hasV && pc) L.push('▶ パソコンには バイブが ありません。音で おしらせ します。');
+  else if(!hasV) L.push('▶ この ブラウザには バイブの しくみが ありません。Android の Chrome で ひらいて ください。');
+  else if(act === 'なし') L.push('▶ 画面を 1回 タップしてから、もう一度 おして ください（音も タップの あとから なります）。');
+  else if(hidden) L.push('▶ アプリが うしろに ある あいだは アプリの 音・バイブは とまります。通知で おしらせ します。');
   else if(r) L.push('▶ 命令は とどきました。ふるえない ときは 端末の 設定を 確かめて ください：①「タッチの 振動」②マナーモード／おやすみモードでも バイブ ③設定 → アプリ → Chrome → 通知 → 「バイブ」を オン。');
-  else L.push('▶ 命令が とどきませんでした。ページを ひらき直して、もう一度 タップして おためし ください。');
+  else L.push('▶ バイブの 命令が とどきませんでした。ページを ひらき直して、もう一度 タップして おためし ください。');
+  if(!hasA) L.push('▶ この ブラウザは 音の しくみ（Web Audio）に たいおう して いません。');
+  else if(acState === 'タップが ひつよう') L.push('▶ 音は 画面を 1回 タップした あとから なります（ブラウザの きまり）。');
+  L.push('▶ 音が ならない ときは：①本体の スイッチが しずかな モードか ②メディアの 音量が 0 か ③Chrome の「この サイトの 音」が ミュートか を 確かめて ください。');
   L.push('');
   L.push('—— くわしく（コピーして おくって ください）——');
-  L.push('UA: '+ua);
-  L.push('standalone: '+((window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)?'はい':'いいえ')+' / タッチ点数: '+(navigator.maxTouchPoints||0));
+  L.push('UA: ' + ua);
+  L.push('standalone: ' + ((window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ? 'はい' : 'いいえ') + ' / タッチ点数: ' + (navigator.maxTouchPoints || 0));
+  try{ var cc = acGet(); if(cc) L.push('AudioContext: state=' + cc.state + ' rate=' + cc.sampleRate + ' t=' + Math.round(cc.currentTime * 10) / 10); }catch(e){}
+  L.push('つうちサーバー: ' + (psrvGet() ? 'せってい ずみ' : '未設定（アプリを とじると とどきません）'));
   return L.join(String.fromCharCode(10));
 }
-var vibeLast='';
+var vibeLast = '';
 function notifyAlarm(){
   var now=Date.now(); if(now-notifyAlarmAt<1200) return;   /* まとめて とどいた ときは 1回だけ */
-  notifyAlarmAt=now; buzzNotify();
+  notifyAlarmAt=now; playPing(); buzzNotify();
 }
 try{ localStorage.removeItem('mtp_sound_off'); }catch(e){}
 function notifyHostAccess(txt){
@@ -9406,8 +9463,15 @@ function recvProf(m){
     try{ if(on) localStorage.setItem(VANISH_KEY,'1'); else localStorage.removeItem(VANISH_KEY); }catch(e){}
     paintVanishBtn(); toast(on?'既読から 15分で きえる ように しました。':'15分で きえる のを やめました。'); });
     paintVanishBtn(); }
+  if($('#pf-snd')){ $('#pf-snd').addEventListener('click',function(){
+    var on=!sndOn();
+    try{ if(on) localStorage.removeItem('mtp_snd_off'); else localStorage.setItem('mtp_snd_off','1'); }catch(e){}
+    paintSndBtn(); toast(on?'アプリの 音を オンに しました。':'アプリの 音を オフに しました。');
+    if(on) playPing(); });
+    paintSndBtn(); }
   if($('#pf-vtest')){ $('#pf-vtest').addEventListener('click',function(){
     var r=$('#pf-vres'); if(!r) return;
+    playPing();
     vibeLast=vibeReport();
     r.textContent=(notifyVibeOn()?'':'※ いま バイブは オフです。上の「オン」で つけて ください。\n')+vibeLast;
     var c=$('#pf-vcopy'); if(c) c.style.display='inline-block';
