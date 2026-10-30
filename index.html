@@ -903,7 +903,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v254</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v255</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -977,7 +977,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v254</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v255</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -1058,7 +1058,7 @@ body.in-play .leave-row{display:none!important}
   </div>
 
   <div id="pane-chat" class="pane chatpane on">
-    <div class="lhead"><span class="lh-av" id="lh-av">🐱</span><span class="lh-nm" id="lh-nm">にゃん</span><span class="lh-dot" id="lh-dot"></span><button type="button" id="btn-prof">名前</button><button type="button" id="btn-top2">トップ</button><button type="button" id="btn-unpair">でる</button></div>
+    <div class="lhead"><span class="lh-av" id="lh-av">🐱</span><span class="lh-nm" id="lh-nm">にゃん</span><span class="lh-dot" id="lh-dot"></span><button type="button" id="btn-prof">名前</button><button type="button" id="btn-top2">トップ</button></div>
     <div id="chat-log" class="line-chat" role="log" aria-live="polite"></div>
     <form id="form-chat" class="line-composer" autocomplete="off">
       <div class="chat-tool-menu">
@@ -1189,6 +1189,9 @@ body.in-play .leave-row{display:none!important}
   <div class="sec">つうちサーバー（アプリを 切っていても とどく）</div>
   <input type="url" id="pf-psrv" placeholder="https://zatsugaku-push.〇〇.workers.dev" style="width:100%;box-sizing:border-box;padding:8px;border-radius:10px;border:1.5px solid #ddd;font-size:.8rem">
   <p id="pf-psrvh" style="font-size:.74rem;color:#556;margin:4px 0 0">1人が 入れれば OK（あいてにも じどうで つたわります）</p>
+  <div class="sec">つながり</div>
+  <button type="button" class="ph" id="pf-unpair" style="background:#FFECEC;color:#C62828;border:1px solid #F5C9C9">つながりを とく（でる）</button>
+  <p style="font-size:.72rem;color:#556;margin:4px 0 0">つながりを とくと、あたらしく 部屋を つくって ペアに ならないと つながりません。2回 おすと 解除されます。</p>
   <div class="acts"><button type="button" class="ng" id="pf-cancel">やめる</button><button type="button" class="ok" id="pf-save">ほぞん</button></div>
 </div></div>
 <script>
@@ -9835,7 +9838,10 @@ function recvProf(m){
       },5000);
     }catch(e){ say('しらべられませんでした（'+(e&&e.name||e)+'）'); }
   }); }
-  $('#btn-unpair').addEventListener('click',function(){ unpairBoth(this); });
+  ['btn-unpair','pf-unpair'].forEach(function(id){
+    var b=document.getElementById(id); if(!b) return;
+    b.addEventListener('click',function(){ if(id==='pf-unpair'){ $('#prof-modal').classList.remove('on'); } unpairBoth(b); });
+  });
 })();
 /* ===== インスタ風ライブの 操作 ===== */
 function igName(){
