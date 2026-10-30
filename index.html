@@ -902,7 +902,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v231</b>｜ビルド 2026-10-29（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v232</b>｜ビルド 2026-10-29（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -976,7 +976,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v231</b>｜ビルド 2026-10-29（アプリが 裏でも スマホに 直接とどく）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v232</b>｜ビルド 2026-10-29（アプリが 裏でも スマホに 直接とどく）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -2652,7 +2652,7 @@ function setTab(which,byUser){
   if($('#tab-chat')){ $('#tab-chat').classList.toggle('on',which==='chat'); $('#tab-chat').setAttribute('aria-selected',which==='chat'); }
   if($('#pane-game')) $('#pane-game').classList.toggle('on',which==='game');
   if($('#pane-chat')) $('#pane-chat').classList.toggle('on',which==='chat');
-  if(which==='chat'){ S.unread=0; updateBadge(); updateTalkbackBadges(); try{ if(navigator.serviceWorker&&navigator.serviceWorker.controller) navigator.serviceWorker.controller.postMessage('clear'); }catch(e){} try{ if(swReg&&swReg.getNotifications) swReg.getNotifications({tag:'mtp-chat'}).then(function(a){ a.forEach(function(n){ n.close(); }); }); }catch(e){} S._jump=true; renderChat(true); maybeSendRead(); setTimeout(scrollChatBottom,200); stickerReplayOpen({fresh:true,source:'set-tab-chat'}); }   /* v229: トークを開くたびに最新の全画面を一度だけ */
+  if(which==='chat'){ S.unread=0; updateBadge(); updateTalkbackBadges(); try{ if(navigator.serviceWorker&&navigator.serviceWorker.controller) navigator.serviceWorker.controller.postMessage('clear'); }catch(e){} try{ if(swReg&&swReg.getNotifications) swReg.getNotifications({tag:'mtp-chat'}).then(function(a){ a.forEach(function(n){ n.close(); }); }); }catch(e){} S._jump=true; renderChat(true); maybeSendRead(true); setTimeout(scrollChatBottom,200);   /* v232: トークを 開いたら なくなった 既読も 立て直す */ stickerReplayOpen({fresh:true,source:'set-tab-chat'}); }   /* v229: トークを開くたびに最新の全画面を一度だけ */
   else { renderQuiz(); }
 }
 function updateBadge(){
@@ -5950,7 +5950,7 @@ function peerPresenceTick(){   /* v183: 「つながり中」ランプを あい
     var on=!live||(Date.now()-live<70000);
     try{ if(S.__pWasOn&&!on&&live) plogAdd('off'); S.__pWasOn=!!on; }catch(e){}   /* v185: きえた も 履歴に */
     if(n.classList.contains('on')&&!on){ n.classList.remove('on'); n.classList.add('lost'); $('#net-txt').textContent='あいて きれた'; }
-    else if(!n.classList.contains('on')&&on&&Net.open){ n.classList.remove('lost'); n.classList.add('on'); $('#net-txt').textContent='つながり中'; }
+    else if(!n.classList.contains('on')&&on&&Net.open){ n.classList.remove('lost'); n.classList.add('on'); $('#net-txt').textContent='つながり中'; try{ if(chatOnScreen()) maybeSendRead(true); }catch(e){} }   /* v232: つながった すぐ後に なくなった 既読を 立て直す */
   }catch(e){}
 }
 setInterval(peerPresenceTick,5000);
@@ -6217,10 +6217,9 @@ function chatOnScreen(){
   try{ return S.tab==='chat'&&document.visibilityState==='visible'&&!!(screens.play&&screens.play.classList.contains('on')); }catch(e){ return false; }
 }
 /* 既読：トークを開いていて画面が見えている時だけ「読んだ」と伝える */
-function maybeSendRead(){
+function maybeSendRead(force){   /* v232: force=立て直し。相手に届かず なくなった 既読を 水位を 気にせず もう一度 伝える */
   if(!chatOnScreen()) return;   /* v146: トップ画面・クイズ中は 既読に しない */
-  if(!S.lastPeerN||S.lastPeerN<=S.readSent) return;
-  S.readSent=S.lastPeerN;
+  if(!force&&(!S.lastPeerN||S.lastPeerN<=S.readSent)) return;   /* v232: 既読の 記録は 相手に 届いた あとで 進める（送る前に 進めない） */
   var exp=0;   /* v154: 読んでも けさない */
   unreadSave();   /* v147: 読んだ ものは あずかり箱から 外す */
   /* v115: 既読を あいてに つたえる（すこし まとめてから 1通） */
@@ -6229,7 +6228,8 @@ function maybeSendRead(){
     S.readT=null;
     var up=S.lastPeerN||0; if(!up) return;
     var ns=[]; for(var q=S.chat.length-1;q>=0&&ns.length<60;q--){ var c=S.chat[q]; if(c&&!c.sys&&c.from!==S.me.id&&c.n) ns.push(c.n); }
-    Net.send({t:'read',ns:ns,exp:exp},function(ok){ if(!ok){ S.readSent=0; setTimeout(maybeSendRead,4000); } });
+    if(force&&!ns.length) return;   /* v232: 伝える 相手の 記事が ないなら 送らない（中継所の 回数を 大事に） */
+    Net.send({t:'read',ns:ns,exp:exp},function(ok){ if(ok){ if(!force) S.readSent=up; } else { S.readSent=0; setTimeout(maybeSendRead,4000); } });   /* v232: 届いてから 記録を進める・force は 記録を 動かさない */
   },700);
 }
 /* 消去：期限の来たメッセージを端末内から完全に取り除く(復元不可) */
@@ -8263,7 +8263,7 @@ document.addEventListener('visibilitychange',function(){
   if(document.visibilityState==='hidden'){
     S._hiddenAt=Date.now();
   }
-  if(document.visibilityState==='visible') maybeSendRead();
+  if(document.visibilityState==='visible') maybeSendRead(true);   /* v232: もどってきたら なくなった 既読も 立て直す（見えている時だけは 関数の 中で 確かめる） */
 });
 window.addEventListener('pageshow',function(e){ if(e.persisted) appNav.sync(); });
 $('#btn-quit').addEventListener('click',function(){
