@@ -903,7 +903,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v252</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v253</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -977,7 +977,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v252</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v253</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -5742,7 +5742,7 @@ async function chatRestore(sk){
       if(it.p){ if(String(it.d).slice(0,15)!=='data:image/jpeg') return; m.photo=true; m.data=it.d; m.pid=it.u||''; }
       else if(it.file){ if(!/^data:[^,]*;base64,/.test(String(it.d))) return; m.file=true; m.data=it.d; m.fileName=String(it.fn||'ファイル').slice(0,180); m.fileSize=it.fs||0; m.pid=it.u||''; m.failed=!!it.failed||!it.s; }
       else m.text=String(it.t).slice(0,MAX_CHAT);
-      if(messageDeleted(m)) return;
+      if(messageGone(m)) return;
       if(m.from===S.me.id&&!m.acked&&!m.read&&m.sent) m.acked=true;   /* 前回 「送信済み」の ものは 送りなおさない */
       S.chat.push(m);
       if(m.n&&m.from!==S.me.id) Net.seenN.add(String(m.from)+':'+m.n);
@@ -6121,10 +6121,10 @@ var chatRenderTicket=0,chatScrollUserTicket=0;
 });
 function renderChat(forceBottom){
   try{ stickerSweep(); }catch(e){}   /* v245: えがく たびに のこり物の 幕を かたづける */
-  S.chat=S.chat.filter(function(m){ return m.sys||!messageDeleted(m); });
+  S.chat=S.chat.filter(function(m){ return m.sys||!messageGone(m); });
   try{
     var ai=document.activeElement;
-    if(!forceBottom && (chatComposing || (ai&&ai.id==='in-chat' && (ai.value||'').length>0))){ chatDeferred=true; return; }
+    if(!forceBottom && ai && ai.id==='in-chat' && (ai.value||'').length>0 && (chatComposing||document.activeElement===ai)){ chatDeferred=true; return; }   /* v253: 入力が 空なら 保留しない（かたまって 描き直せなく なるのを 防ぐ） */
   }catch(e){}
   chatDeferred=false;
   persistChat();
@@ -6685,6 +6685,18 @@ async function deletionLoad(){
   deletionLoading={scope:scope,promise:promise};
   try{ return await promise; }finally{ if(deletionLoading&&deletionLoading.promise===promise) deletionLoading=null; }
 }
+/* v253: つながって いない ときでも けした ことを のこす（この 端末の 控え） */
+var TOMB_KEY='zg.tomb1';
+function tombAll(){ try{ return JSON.parse(localStorage.getItem(TOMB_KEY)||'{}')||{}; }catch(e){ return {}; } }
+function tombScope(){ try{ return deletionScope()||((S.me&&S.me.id)||'me')+':local'; }catch(e){ return 'local'; } }
+function tombHas(id){ try{ var t=tombAll(), sc=tombScope(); return !!(id&&t[sc]&&t[sc][id]); }catch(e){ return false; } }
+function tombAdd(ids){ try{
+  var t=tombAll(), sc=tombScope(), m=t[sc]||{};
+  (ids||[]).forEach(function(id){ if(id) m[id]=1; });
+  var keys=Object.keys(m); if(keys.length>4000) keys.slice(0,keys.length-4000).forEach(function(k){ delete m[k]; });
+  t[sc]=m; localStorage.setItem(TOMB_KEY,JSON.stringify(t));
+}catch(e){} }
+function messageGone(m){ return messageDeleted(m)||tombHas(messageId(m)); }
 function messageDeleted(m){ var d=deletionState; return !!(d&&d.scope===deletionScope()&&d.owners[m.from]&&d.owners[m.from].has(messageId(m))); }
 async function deletionRemember(owner,ids){
   if(!Array.isArray(ids)||!ids.length||!ids.every(validDeletionId)||(owner!==S.me.id&&owner!==(S.opp&&S.opp.id))) throw new Error('削除対象を確認できません');
@@ -9786,6 +9798,7 @@ function recvProf(m){
       say('⑧ 予備(ntfy)経由: '+nres);
       say('⑨ しゃしん送信の さいごの 応答: '+(Net.lastFileStatus?('HTTP '+Net.lastFileStatus+'（'+new Date(Net.lastFileAt).toLocaleTimeString('ja-JP')+'）'):'まだ なし'));
       say('⑩ つながり: '+(Net.topic&&Net.key?'あり':'なし')+'／まちの のこり: '+((Net.coolUntil&&Net.coolUntil>Date.now())?Math.ceil((Net.coolUntil-Date.now())/1000)+'秒':'なし'));
+      say('⑫ けした 控え（この 端末）: '+(function(){ try{ var t=tombAll(), sc=tombScope(), m=t[sc]||{}; return Object.keys(m).length+'件'; }catch(e){ return '?'; } })()+'／入力の 保留: '+(chatComposing?'止まって いる':'なし'));
       say('⑪ 既読から15分で きえる: '+(vanishOn()?'オン':'オフ')+'／時計の うごいて いる 記事: '+S.chat.filter(function(m){ return m&&!m.sys&&m.rad; }).length+'件／つぎの 消去まで: '+(function(){ var w=S.chat.filter(function(m){ return m&&!m.sys&&m.rad; }).map(function(m){ return m.rad+VANISH_MS; }).sort(function(a,b){ return a-b; })[0]; return w?Math.max(0,Math.ceil((w-Date.now())/1000))+'秒':'なし'; })()+'／けす 合図の まち: '+purgePending().length+'件');
       say('');
       say('いま ホームがめんに もどって、30秒 待って ください。');
@@ -10174,35 +10187,36 @@ body.selmode #chat-log .msg:after{display:none!important}
   async function selDelete(){
     var ids=Object.keys(pick); if(!ids.length){ return; }
     try{ if(!confirm(['えらんだ '+ids.length+'件を けします。','自分が おくった ものは あいての トークからも、','あいてが おくった ものも あいての 画面から 消えます。','もどせません。'].join('\n'))) return; }catch(e){}
-    /* v252: 行の 識別（data-uid）で トークの 中身から けす。識別の ずれで 消えない ことが ない ように。 */
-    var uids={}, byId=[];
+    /* v253: 選んだ 行を その場で 消し、控えにも のこす（描き直しが 止まっても 画面から 消える ように） */
+    var uids={}, rowsSel=[], allIds=[];
     Array.prototype.forEach.call(rows(),function(r){
       if(!pick[r.dataset.messageId]) return;
       if(r.dataset.uid) uids[r.dataset.uid]=1;
-      byId.push(r.dataset.messageId);
+      allIds.push(r.dataset.messageId); rowsSel.push(r);
     });
-    var mine=[], theirs=[], killed=0, killedMsgs=[];
+    var mine=[], theirs=[];
+    S.chat.forEach(function(m){ if(!m||m.sys) return; if(uids[m.uid]||allIds.indexOf(messageId(m))>=0){ allIds.push(messageId(m)); (m.from===S.me.id?mine:theirs).push(messageId(m)); } });
+    var uniq=[]; allIds.forEach(function(id){ if(id&&uniq.indexOf(id)<0) uniq.push(id); });
+    tombAdd(uniq);   /* この 端末では もう 出さない */
+    try{ if(mine.length) deletionRemember(S.me.id,mine).catch(function(){}); }catch(e){}
+    try{ if(theirs.length&&S.opp&&S.opp.id) deletionRemember(S.opp.id,theirs).catch(function(){}); }catch(e){}
+    var killed=0;
     S.chat=S.chat.filter(function(m){
       if(!m||m.sys) return true;
-      var hit=(uids[m.uid])||(byId.indexOf(messageId(m))>=0);
-      if(!hit) return true;
-      killed++; killedMsgs.push(m);
-      if(m.from===S.me.id) mine.push(messageId(m)); else theirs.push(messageId(m));
-      return false;
+      if(uids[m.uid]||uniq.indexOf(messageId(m))>=0){ killed++; m.cancelled=true; m.text=''; m.data=''; m.env=null; return false; }
+      return true;
     });
-    if(mine.length||theirs.length){   /* 消した ことを おぼえる（よみがえらせない） */
-      try{ if(mine.length) deletionRemember(S.me.id,mine).catch(function(){}); }catch(e){}
-      try{ if(theirs.length&&S.opp&&S.opp.id) deletionRemember(S.opp.id,theirs).catch(function(){}); }catch(e){}
-    }
-    try{ killedMsgs.forEach(function(m){ m.text=''; m.data=''; m.env=null; }); }catch(e){}
+    rowsSel.forEach(function(r){ try{ r.querySelectorAll('video,audio').forEach(function(v){ v.pause(); }); r.remove(); }catch(e){} });
     try{ persistChat(); }catch(e){}
     try{ removeDeletedMessages(); }catch(e){}
     try{ await chatSaveNow(); }catch(e){}
     try{ if(mine.length) syncDeletions(); }catch(e){}
     try{ if(theirs.length) purgeSend(theirs); }catch(e){}
     pick={}; setOn(false);
-    try{ renderChat(); }catch(e){ setTimeout(function(){ try{ renderChat(); }catch(e2){} },120); }
-    try{ toast(killed? (killed+'件 けしました。あいてにも つたえます。') : 'えらんだ メッセージが 見つかりませんでした。もう一度 えらびなおして ください。'); }catch(e){}
+    chatComposing=false; chatDeferred=false;   /* v253: 入力の 保留で 描き直しが 止まって いない ように */
+    try{ renderChat(true); }catch(e){}
+    setTimeout(function(){ chatComposing=false; chatDeferred=false; try{ renderChat(true); }catch(e){} },250);
+    try{ toast(killed? (killed+'件 けしました。あいてにも つたえます。') : 'けしました（この 画面だけ）。'); }catch(e){}
   }
   function boot(){ ensure(); }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot); else boot();
