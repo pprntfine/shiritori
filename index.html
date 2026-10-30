@@ -903,7 +903,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v250</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v251</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -977,7 +977,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v250</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v251</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -6260,7 +6260,11 @@ function metaText(m,mine,at,groupEnd){
   if(!mine) return groupEnd?tm:'';
   if(m.failed) return '送信できませんでした';
   if(m.sent===false||!m.n) return '送信中…';
-  if(m.read) return '既読 '+tm;
+  if(m.read){
+    var vs='';
+    try{ if(m.rad&&vanishOn()){ var lf2=m.rad+VANISH_MS-Date.now(); vs=lf2>0?('・あと'+Math.max(1,Math.ceil(lf2/60000))+'分で きえる'):'・まもなく きえる'; } }catch(e){}
+    return '既読 '+tm+vs;
+  }
   if(m.acked) return '未読 '+tm;
   return '送信済み '+tm;   /* v152: 中継所まで とどいた（相手の スマホが 受けとると「未読」に かわる） */
 }
@@ -6300,7 +6304,7 @@ function maybeSendRead(force){   /* v232: force=立て直し。相手に届か�
 }
 /* v237: 既読から 15分で きえる（じぶんの スマホからも あいての スマホからも 消す。もどせない） */
 var VANISH_MS=15*60*1000, VANISH_KEY='mtp_vanish15';
-function vanishOn(){ try{ return localStorage.getItem(VANISH_KEY)==='1'; }catch(e){ return false; } }
+function vanishOn(){ try{ return localStorage.getItem(VANISH_KEY)!=='0'; }catch(e){ return true; } }   /* v251: 初期値オン */
 function paintVanishBtn(){ try{ var b=$('#pf-vanish'); if(b) b.textContent=vanishOn()?'オン':'オフ'; }catch(e){} }
 /* 既読に なった 時刻を 1度だけ 記録する（設定オフ・番号なし・システム行は たいしょう外） */
 function markReadAt(m,now){
@@ -6311,7 +6315,10 @@ function markReadAt(m,now){
 /* 15分 たった ものを けす。けしたら true（画面を 作り直す 合図） */
 function vanishSweep(){
   if(!vanishOn()) return false;
-  var cut=Date.now()-VANISH_MS, gone=[];
+  var cut=Date.now()-VANISH_MS, gone=[], fresh=false;
+  /* v251: 時計の ない 記事（設定オフの あいだに 既読に なった ぶん）には いまから 時計を 入れる */
+  S.chat.forEach(function(m){ if(m&&!m.sys&&(m.text||m.data)&&!m.rad&&(m.read||m.from!==S.me.id)){ m.rad=Date.now(); fresh=true; } });
+  if(fresh){ try{ persistChat(); }catch(e){} }
   S.chat.forEach(function(m){ if(m&&!m.sys&&m.rad&&m.rad<=cut) gone.push(m); });
   if(!gone.length) return false;
   var mine=[],theirs=[];
@@ -6336,6 +6343,8 @@ function sweepChat(){
   if(gone||(S.tab==='chat'&&document.visibilityState==='visible')) renderChat(gone);
 }
 setInterval(sweepChat,5000);
+try{ document.addEventListener('visibilitychange',function(){ if(document.visibilityState==='visible') setTimeout(sweepChat,300); }); }catch(e){}
+try{ window.addEventListener('focus',function(){ setTimeout(sweepChat,300); }); }catch(e){}
 /* 通知：あいてからの着信をバッジだけで知らせる(内容は表示しない) */
 var notifyOn=false;
 function updateNotifyBtns(){
@@ -10069,83 +10078,111 @@ body.bgdark .line-chat .msg .nm{color:#AFC2D8!important}
   setTimeout(boot,1200);
 })();
 </script>
-<!-- v250: えらんで まとめて けす（あいての 画面からも けす） -->
+<!-- v251: えらんで まとめて けす（入り口は 上部、操作は 下部） -->
 <style>
-#sel-bar{display:flex;gap:8px;align-items:center;padding:8px 10px calc(8px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid #EDEFF3;z-index:60;font-family:inherit}
-#sel-bar .grow{flex:1;font-size:.8rem;color:#5A6472;font-weight:800}
-#sel-bar button{border:0;border-radius:999px;padding:9px 15px;font-weight:900;font-size:.86rem;font-family:inherit}
-#sel-bar #sel-toggle{background:#EEF1F5;color:#2B3542}
-#sel-bar #sel-del{background:#E5484D;color:#fff;display:none}
-#sel-bar #sel-cancel{background:#F4F6F9;color:#5A6472;display:none}
-body.selmode #sel-bar #sel-toggle{display:none}
-body.selmode #sel-bar #sel-del,body.selmode #sel-bar #sel-cancel{display:block}
-body.selmode #form-chat{opacity:.35;pointer-events:none}
-body.selmode .msg{position:relative;border-radius:14px}
-body.selmode .msg .bubble{cursor:pointer}
-body.selmode .msg.sel-pick{background:rgba(229,72,77,.10)}
-body.selmode .msg.sel-pick .bubble{outline:3px solid #E5484D!important;outline-offset:2px}
-body.selmode .msg.sel-pick:after{content:'✓';position:absolute;top:2px;right:2px;width:20px;height:20px;border-radius:50%;background:#E5484D;color:#fff;font:900 13px/20px sans-serif;text-align:center}
+#btn-sel{display:inline-flex;align-items:center;gap:5px;background:#fff!important;border:1px solid #E3E7EE!important;color:#3A4553!important;border-radius:999px!important;padding:5px 10px 5px 8px;font:800 .72rem/1 inherit;box-shadow:0 1px 2px rgba(16,24,40,.06)}
+#btn-sel svg{width:14px;height:14px;flex:none}
+#btn-sel:active{transform:scale(.96)}
+#sel-top{display:none;align-items:center;gap:8px;padding:9px 10px;margin:0 -14px 6px;background:linear-gradient(180deg,#FFF5F7,#FFE9EF);border-bottom:1px solid #FFD3DF}
+body.selmode #sel-top{display:flex}
+#sel-top .cnt{flex:1;font:900 .84rem/1.3 inherit;color:#B4234A}
+#sel-top .cnt small{display:block;font-weight:700;color:#9A6A78;font-size:.64rem;margin-top:2px}
+#sel-top button{border:0;background:rgba(255,255,255,.85);color:#7A3348;border-radius:999px;padding:7px 12px;font:800 .74rem/1 inherit}
+#sel-top button.all{background:#fff;box-shadow:0 1px 2px rgba(180,35,74,.12)}
+#sel-bottom{display:none;align-items:center;gap:10px;padding:10px 10px calc(10px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid #F0E3E8}
+body.selmode #sel-bottom{display:flex}
+body.selmode #form-chat{display:none!important}
+#sel-bottom .hint2{flex:1;font:700 .7rem/1.45 inherit;color:#7A8796}
+#sel-bottom .hint2 b{color:#B4234A}
+#sel-ok{position:relative;width:58px;height:58px;border-radius:50%;border:0;flex:none;background:radial-gradient(circle at 32% 26%,#FF8FA8 0%,#F4436A 55%,#D31E48 100%);color:#fff;box-shadow:0 6px 14px rgba(211,30,72,.35),inset 0 2px 0 rgba(255,255,255,.5);display:grid;place-items:center;transition:transform .12s}
+#sel-ok svg{width:26px;height:26px}
+#sel-ok:active{transform:scale(.92)}
+#sel-ok[disabled]{filter:grayscale(.65);opacity:.55;box-shadow:none}
+#sel-ok .badge-n{position:absolute;top:-3px;right:-3px;min-width:22px;height:22px;border-radius:11px;background:#15181C;color:#fff;font:900 12px/22px inherit;text-align:center;padding:0 5px}
+body.selmode #chat-log .msg{padding-left:26px}
+body.selmode #chat-log .msg:before{content:'';position:absolute;left:2px;top:50%;width:18px;height:18px;margin-top:-9px;border-radius:6px;border:2px solid #D9DFE8;background:#fff;box-sizing:border-box}
+body.selmode #chat-log .msg.sel-pick:before{border-color:#F4436A;background:#F4436A url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6L9 17l-5-5'/%3E%3C/svg%3E") center/12px no-repeat}
+body.selmode #chat-log .msg.sel-pick{background:rgba(244,67,106,.07);border-radius:12px}
+body.selmode #chat-log .msg.sel-pick .bubble{box-shadow:0 0 0 2px rgba(244,67,106,.55)!important}
+body.selmode #chat-log .msg:after{display:none!important}
 </style>
 <script>
-/* v250: えらんで まとめて けす */
+/* v251: えらんで まとめて けす。入り口は 上部の 見出し行、決定は 下部の まるい ボタン。 */
 (function(){
-  var pick={}, on=false;
+  var pick={}, on=false, obs=null;
+  var TRASH='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>';
+  var LIST='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8" stroke="#D6336C"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9" stroke="#3A4553"/></svg>';
   function rows(){ return document.querySelectorAll('#chat-log .msg'); }
   function paint(){
-    var n=0;
+    var n=0, tot=0;
     Array.prototype.forEach.call(rows(),function(row){
-      var id=row.dataset.messageId||''; var sel=!!(id&&pick[id]);
-      row.classList.toggle('sel-pick',sel); if(sel) n++;
+      var id=row.dataset.messageId||''; if(id) tot++;
+      var sel=!!(id&&pick[id]); row.classList.toggle('sel-pick',sel); if(sel) n++;
     });
-    var c=document.getElementById('sel-count'); if(c) c.textContent=on?(n?n+'件 えらんだ':'えらんで ください'):'まとめて けす';
-    var d=document.getElementById('sel-del'); if(d) d.style.opacity=n?1:.45;
+    var c=document.getElementById('sel-count'); if(c) c.innerHTML=(n?n+'件 えらんだ':'えらんで ください')+'<small>'+(tot?('タップで えらぶ／もう一度 タップで はずす'):'まだ メッセージが ありません')+'</small>';
+    var b=document.getElementById('sel-ok'); if(b){ b.disabled=!n; var bd=b.querySelector('.badge-n'); if(bd) bd.textContent=n?String(n):''; if(bd) bd.style.display=n?'block':'none'; }
+    var a=document.getElementById('sel-all'); if(a) a.textContent=(n&&n===tot)?'ぜんぶ はずす':'ぜんぶ えらぶ';
     return n;
   }
   function setOn(v){
     on=!!v; document.body.classList.toggle('selmode',on);
     if(!on) pick={};
     paint();
+    if(on){ try{ var log=document.getElementById('chat-log'); log.scrollTop=log.scrollHeight; }catch(e){} }
   }
   function ensure(){
-    if(document.getElementById('sel-bar')) return true;
-    var form=document.getElementById('form-chat'); if(!form||!form.parentNode) return false;
-    var bar=document.createElement('div'); bar.id='sel-bar';
-    bar.innerHTML='<span class="grow" id="sel-count">まとめて けす</span>'+
-      '<button type="button" id="sel-toggle">☑ えらぶ</button>'+
-      '<button type="button" id="sel-cancel">やめる</button>'+
-      '<button type="button" id="sel-del">けす</button>';
-    form.parentNode.insertBefore(bar,form);
-    bar.querySelector('#sel-toggle').addEventListener('click',function(){ setOn(true); });
-    bar.querySelector('#sel-cancel').addEventListener('click',function(){ setOn(false); });
-    bar.querySelector('#sel-del').addEventListener('click',function(){ selDelete(); });
-    return true;
+    if(!document.getElementById('sel-bottom')){
+      var lh=document.querySelector('#pane-chat .lhead');
+      if(lh&&!document.getElementById('btn-sel')){
+        var btn=document.createElement('button'); btn.type='button'; btn.id='btn-sel'; btn.title='えらんで けす';
+        btn.innerHTML=LIST+'<span>選択</span>';
+        btn.addEventListener('click',function(){ setOn(true); });
+        lh.appendChild(btn);
+      }
+      var form=document.getElementById('form-chat');
+      if(form&&form.parentNode){
+        var top=document.createElement('div'); top.id='sel-top';
+        top.innerHTML='<span class="cnt" id="sel-count">えらんで ください<small>タップで えらぶ</small></span>'+
+          '<button type="button" class="all" id="sel-all">ぜんぶ えらぶ</button>'+
+          '<button type="button" id="sel-cancel">やめる</button>';
+        lh.parentNode.insertBefore(top,lh.nextSibling);
+        var bot=document.createElement('div'); bot.id='sel-bottom';
+        bot.innerHTML='<span class="hint2"><b>あいての 画面からも 消えます</b><br>つながって いない ときは、あとで 反映されます</span>'+
+          '<button type="button" id="sel-ok" aria-label="えらんだ メッセージを けす">'+TRASH+'<span class="badge-n" style="display:none"></span></button>';
+        form.parentNode.insertBefore(bot,form.nextSibling);
+        bot.querySelector('#sel-ok').addEventListener('click',selDelete);
+        top.querySelector('#sel-cancel').addEventListener('click',function(){ setOn(false); });
+        top.querySelector('#sel-all').addEventListener('click',function(){
+          var ids=[]; Array.prototype.forEach.call(rows(),function(r){ if(r.dataset.messageId) ids.push(r.dataset.messageId); });
+          var all=ids.length&&ids.every(function(id){ return pick[id]; });
+          pick={}; if(!all) ids.forEach(function(id){ pick[id]=1; });
+          paint();
+        });
+      }
+    }
+    if(!obs){ var log=document.getElementById('chat-log'); if(log){ obs=new MutationObserver(function(){ if(on) paint(); }); obs.observe(log,{childList:true}); } }
   }
   document.addEventListener('click',function(e){
-    if(!on) return;
-    var log=document.getElementById('chat-log'); if(!log||!e.target.closest) return;
+    if(!on||!e.target.closest) return;
     var row=e.target.closest('#chat-log .msg'); if(!row) return;
     var id=row.dataset.messageId; if(!id) return;
     e.preventDefault(); e.stopPropagation();
     if(pick[id]) delete pick[id]; else pick[id]=1;
+    if(navigator.vibrate) try{ navigator.vibrate(8); }catch(err){}
     paint();
   },true);
-  /* 描き直しで 印が 消えない ように 見はる */
-  try{
-    var log=document.getElementById('chat-log');
-    if(log) new MutationObserver(function(){ if(on) paint(); }).observe(log,{childList:true});
-  }catch(e){}
   async function selDelete(){
-    var ids=Object.keys(pick); if(!ids.length){ return; }
-    if(!confirm('えらんだ '+ids.length+'件を けします。\nじぶんの メッセージは あいての トークからも 消えます。\nあいての メッセージも あいての 画面から 消えます（あいてが つながって いない ときは、つながった あとで 反映）。\nもどせません。')) return;
+    var ids=Object.keys(pick); if(!ids.length) return;
+    try{ if(!confirm('えらんだ '+ids.length+'件を けします。\n自分が おくった ものは あいての トークからも、\nあいてが おくった ものも あいての 画面から 消えます。\nもどせません。')) return; }catch(e){}
     var mine=[],theirs=[];
-    S.chat.forEach(function(m){ var id=messageId(m); if(pick[id]){ (m.from===S.me.id?mine:theirs).push(id); } });
+    S.chat.forEach(function(m){ var id=messageId(m); if(pick[id]) (m.from===S.me.id?mine:theirs).push(id); });
     var okLocal=false;
     try{
       if(mine.length) await deletionRemember(S.me.id,mine);
       if(theirs.length&&S.opp&&S.opp.id) await deletionRemember(S.opp.id,theirs);
       okLocal=true;
     }catch(e){ okLocal=false; }
-    if(!okLocal){   /* つながって いなくても この 画面からは けす */
+    if(!okLocal){
       var gone={}; mine.concat(theirs).forEach(function(id){ gone[id]=1; });
       S.chat=S.chat.filter(function(m){ return m.sys||!gone[messageId(m)]; });
       try{ persistChat(); }catch(e){}
@@ -10157,14 +10194,9 @@ body.selmode .msg.sel-pick:after{content:'✓';position:absolute;top:2px;right:2
     pick={}; setOn(false); try{ renderChat(); }catch(e){}
     try{ toast(okLocal?'けしました。あいてにも つたえます。':'けしました（この 画面だけ）。'); }catch(e){}
   }
-  function boot(){
-    ensure();
-    var log=document.getElementById('chat-log');
-    if(log&&!log.__selObs){ log.__selObs=1; }
-    setInterval(ensure,3000);
-  }
+  function boot(){ ensure(); }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot); else boot();
-  setTimeout(boot,1500);
+  setTimeout(boot,1500); setInterval(ensure,4000);
 })();
 </script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"08b344934bdd416db94053d34eb889d8","spa":2}' crossorigin="anonymous"></script>
