@@ -902,7 +902,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v238</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v239</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -976,7 +976,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v238</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v239</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -1169,7 +1169,8 @@ body.in-play .leave-row{display:none!important}
   </div>
   <p style="font-size:.72rem;color:#556;margin:0 0 10px"><b>マナーモード（サイレント）の ときは 音は なりません。バイブだけです。</b>音を ならすか どうかは スマホの 設定（マナーモード／通知 → 雑学王 → 音）で きまります。アプリから 音は だしません。iPhoneは きまりで バイブを うごかせません。</p>
   <button type="button" class="ph" id="pf-vtest">バイブを テストする</button>
-  <p id="pf-vres" style="font-size:.78rem;color:#556;margin:6px 0 0"></p>
+  <p id="pf-vres" style="font-size:.78rem;color:#556;margin:6px 0 0;white-space:pre-line"></p>
+  <button type="button" class="ph" id="pf-vcopy" style="display:none;margin-top:6px">けっかを コピーする</button>
   <div class="sec">トーク</div>
   <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 0 4px">
     <span style="font-size:.84rem">既読から 15分で きえる</span>
@@ -6349,7 +6350,7 @@ function beepHost(){
 var notifyAlarmAt=0;
 function notifyVibeOn(){ try{ return localStorage.getItem('mtp_vibe_off')!=='1'; }catch(e){ return true; } }
 function paintSoundBtn(){ try{ var b=$('#pf-sound'); if(b) b.textContent=notifyVibeOn()?'オン':'オフ'; }catch(e){} }
-function notifExtra(){ var o={silent:false}; if(notifyVibeOn()) o.vibrate=[110,70,110]; return o; }   /* silent:false＝端末の マナー/サイレントに したがう */
+function notifExtra(){ var o={silent:false}; if(notifyVibeOn()) o.vibrate=VIBE_PAT; return o; }   /* silent:false＝端末の マナー/サイレントに したがう */
 /* v238: バイブを つよくして、うけつけ られたかを かえす（だめなら 1回 だけ やりなおす） */
 var VIBE_PAT=[180,90,180];
 function buzzNotify(){
@@ -6361,21 +6362,40 @@ function buzzNotify(){
     return true;
   }catch(e){ return false; }
 }
-/* v238: バイブが ならない わけを その場で しらべる */
-function vibrateDiag(){
-  var ua=navigator.userAgent||'', out=[];
-  var ios=/iPhone|iPad|iPod/.test(ua);
+/* v239: バイブが ならない わけを その場で しらべる（端末・ブラウザ・タップ・画面・通知・結果） */
+function vibeReport(){
+  var ua=navigator.userAgent||'';
+  var ios=/iPhone|iPad|iPod/.test(ua)||(/Macintosh/.test(ua)&&(navigator.maxTouchPoints||0)>1);
+  var and=/Android/.test(ua);
+  var pc=!ios&&!and;
   var has=(typeof navigator.vibrate==='function');
   var act=(navigator.userActivation&&typeof navigator.userActivation.hasBeenActive==='boolean')?(navigator.userActivation.hasBeenActive?'あり':'なし'):'しらべられません';
-  if(ios){ out.push('この 端末（iPhone）は、Webの アプリから バイブを うごかす ことが できません（Appleの きまり）。'); return out.join('\n'); }
-  if(!has){ out.push('この ブラウザは バイブ（Vibration API）に たいおう して いません。Androidの Chrome で おためし ください。'); return out.join('\n'); }
-  var r=false;
-  try{ r=navigator.vibrate(VIBE_PAT); }catch(e){ r=false; }
-  out.push('バイブの 命令：'+(r?'うけつけ ました':'うけつけ られませんでした'));
-  out.push('タップの 記録：'+act+(act==='なし'?'（画面を 1回 タップしてから もう一度 おためし ください）':''));
-  if(r) out.push('ふるえない ときは、スマホの 設定で「タッチの 振動」や「マナーモードでも バイブ」が 切れて いないか 確かめて ください。');
-  return out.join('\n');
+  var hidden=(document.visibilityState==='hidden');
+  var perm=('Notification' in window)?(Notification.permission==='granted'?'きょか':(Notification.permission==='denied'?'ことわり':'まだ')):'たいおう外';
+  var r=null;
+  if(has){ try{ r=navigator.vibrate(VIBE_PAT); }catch(e){ r=false; } }
+  var L=[];
+  L.push('きかい：'+(ios?'iPhone / iPad':(and?'Android':'パソコン・そのほか')));
+  L.push('バイブの しくみ：'+(has?'あり':'なし'));
+  L.push('タップの 記録：'+act);
+  L.push('画面：'+(hidden?'かくれている（うしろ）':'ひょうじ中'));
+  L.push('通知の ゆるし：'+perm);
+  L.push('ためした 結果：'+(r===null?'ためせない':(r?'うけつけ られた':'うけつけ られなかった')));
+  L.push('');
+  if(ios) L.push('▶ iPhone / iPad は、Apple の きまりで Web から バイブを うごかせません。通知の 音と 画面で おしらせ する しくみです。');
+  else if(!has) L.push('▶ この ブラウザには バイブの しくみが ありません。Android の Chrome で ひらいて ください。');
+  else if(pc) L.push('▶ パソコンには バイブが ありません。スマホで おためし ください。');
+  else if(act==='なし') L.push('▶ 画面を 1回 タップしてから、もう一度 おして ください。');
+  else if(hidden) L.push('▶ アプリが うしろに ある あいだは バイブが とまります。通知の バイブで おしらせ します。');
+  else if(r) L.push('▶ 命令は とどきました。ふるえない ときは 端末の 設定を 確かめて ください：①「タッチの 振動」②マナーモード／おやすみモードでも バイブ ③設定 → アプリ → Chrome → 通知 → 「バイブ」を オン。');
+  else L.push('▶ 命令が とどきませんでした。ページを ひらき直して、もう一度 タップして おためし ください。');
+  L.push('');
+  L.push('—— くわしく（コピーして おくって ください）——');
+  L.push('UA: '+ua);
+  L.push('standalone: '+((window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)?'はい':'いいえ')+' / タッチ点数: '+(navigator.maxTouchPoints||0));
+  return L.join(String.fromCharCode(10));
 }
+var vibeLast='';
 function notifyAlarm(){
   var now=Date.now(); if(now-notifyAlarmAt<1200) return;   /* まとめて とどいた ときは 1回だけ */
   notifyAlarmAt=now; buzzNotify();
@@ -9388,8 +9408,14 @@ function recvProf(m){
     paintVanishBtn(); }
   if($('#pf-vtest')){ $('#pf-vtest').addEventListener('click',function(){
     var r=$('#pf-vres'); if(!r) return;
-    r.style.whiteSpace='pre-line';
-    r.textContent=(notifyVibeOn()?'':'※ いま バイブは オフです。\n')+vibrateDiag();
+    vibeLast=vibeReport();
+    r.textContent=(notifyVibeOn()?'':'※ いま バイブは オフです。上の「オン」で つけて ください。\n')+vibeLast;
+    var c=$('#pf-vcopy'); if(c) c.style.display='inline-block';
+  }); }
+  if($('#pf-vcopy')){ $('#pf-vcopy').addEventListener('click',function(){
+    if(!vibeLast) return;
+    try{ if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(vibeLast).then(function(){ toast('コピー しました。トークに はりつけて おくって ください。'); },function(){ toast('コピー できませんでした。画面を 長おしして えらんで ください。'); }); return; } }catch(e){}
+    toast('コピー できませんでした。画面を 長おしして えらんで ください。');
   }); }
   $('#pf-ntest').addEventListener('click',async function(){
     var r=$('#pf-nres');
@@ -9409,7 +9435,7 @@ function recvProf(m){
           if(nr) nr.textContent = (j&&j.ok) ? ('テストを おくりました（とどけさき '+(j.sent||0)+'台）。'+((j.sent||0)?'ホームがめんで 待っていてください。':'スマホの とうろくが ありません。「通知:オン」を おして 10秒後に もう一度。')) : 'つうちサーバーへ とどけられませんでした。アドレスを たしかめて ください。';
         });
         else if(mine){ if(nr) nr.textContent='つうちサーバーが まだ せっていされて いないので 以前の 経路（回数せいげんあり）で 送ります。'; fetch('https://ntfy.sh/'+mine,{method:'POST',headers:{'Content-Type':'text/plain'},body:'zg-test'}); }
-        else swReg.showNotification('雑学王',{body:'テスト通知です',tag:'mtp-test',icon:'./icon-192.png'});
+        else swReg.showNotification('雑学王',{body:'テスト通知です',tag:'mtp-test',icon:'./icon-192.png',silent:false,vibrate:VIBE_PAT});
       },10000);
     }catch(e){ r.textContent='テストに 失敗しました（'+(e&&e.name||e)+'）'; }
   });
