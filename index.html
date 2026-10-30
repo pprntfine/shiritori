@@ -902,7 +902,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v245</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v246</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -976,7 +976,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v245</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v246</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -7123,6 +7123,8 @@ function newStickerFullscreen(m,fromOpen){
   if(!particles||!m.from) return;
   var scope=deletionScope(),id=m.mid;
   if(!scope||typeof id!=='string'||!/^M[0-9a-f]{32}$/.test(id)) return;
+  /* v246: ひとつの 通は、なんど 画面を 開きなおしても 1回しか 出さない（端末に のこる） */
+  if(stickerOnceDone(scope,id)) return;
   var key=JSON.stringify([scope,m.from,id]);
   if(!fromOpen&&(stickerFullscreenSeen.has(key)||stickerFullscreenSeen.size>=STICKER_EFFECT_LIMIT)) return;
   /* v244: 中継の とりこぼしで 同じ 通が なんども とどいても、幕は 1回だけ */
@@ -7143,6 +7145,7 @@ function newStickerFullscreen(m,fromOpen){
   }
   layer.dataset.made=String(Date.now());
   document.body.appendChild(layer); stickerFullscreenLayer=layer;
+  stickerOnceSet(scope,id);   /* v246: 出した ことを 端末に のこす */
   stickerFullscreenTimer=setTimeout(clearStickerFullscreen,3000);
   /* v242: かならず 消す。アニメが おわったら すぐ、だめでも 4秒で 幕ごと 取りのぞく */
   try{
@@ -7177,11 +7180,25 @@ function stickerEffectsReady(){
 var stickerReplayDone=new Set();   /* v242: 同じ 会話では 1回だけ 再演する */
 /* v244: 端末に おぼえる。アプリを 開き直しても 二度と 再演しない（会話ごとに 1回だけ） */
 var STK_ONCE_KEY='zg_stk_once';
-function stickerOnceGet(){ try{ return localStorage.getItem(STK_ONCE_KEY)||''; }catch(e){ return ''; } }
-function stickerOnceSet(scope,mid){ try{ localStorage.setItem(STK_ONCE_KEY,JSON.stringify([scope,mid])); }catch(e){} }
+/* v246: ひとつ だけ ではなく、さいきん 20通まで おぼえる（どの 通も 二度と 出さない） */
+function stickerOnceAll(){
+  try{
+    var a=JSON.parse(localStorage.getItem(STK_ONCE_KEY)||'[]');
+    if(!Array.isArray(a)) return [];
+    return a.filter(function(x){ return typeof x==='string'; });
+  }catch(e){ return []; }
+}
+function stickerOnceGet(){ var a=stickerOnceAll(); return a.length?a[a.length-1]:''; }
+function stickerOnceSet(scope,mid){
+  try{
+    var a=stickerOnceAll(), k=scope+'|'+mid;
+    if(a.indexOf(k)<0) a.push(k);
+    if(a.length>20) a=a.slice(a.length-20);
+    localStorage.setItem(STK_ONCE_KEY,JSON.stringify(a));
+  }catch(e){}
+}
 function stickerOnceDone(scope,mid){
-  var t=stickerOnceGet(); if(!t) return false;
-  try{ var a=JSON.parse(t); return a&&a[0]===scope&&a[1]===mid; }catch(e){ return false; }
+  try{ return stickerOnceAll().indexOf(scope+'|'+mid)>=0; }catch(e){ return false; }
 }
 function stickerReplayOpen(o){
   return;   /* v245: 開き直しの 再演は しない（ひとつの スタンプに つき 1回だけ） */
@@ -9078,7 +9095,7 @@ case 'ack':
           var incoming={mid:validDeletionId(it.mid)?it.mid:'',from:m.from,text:tx,at:(typeof it.at==='number'?it.at:Date.now()),sent:true,n:m.n||0};
           if(messageDeleted(incoming)||S.chat.some(function(c){ return !c.sys&&c.from===incoming.from&&messageId(c)===messageId(incoming); })) continue;
           S.chat.push(incoming);
-          newStickerFullscreen(incoming);
+          /* v246: とじて いた あいだに とどいた ぶんは、あとから 開いた ときに 全画面を 出さない */
           added++;
         }
         try{ if(m.n){ Net.send({t:'ack',n1:m.n}); setTimeout(function(){ try{ Net.send({t:'ack',n1:m.n}); }catch(e){} },1500); } }catch(e){}
@@ -9620,26 +9637,62 @@ function recvProf(m){
   });
   if($('#pf-ptest')){ $('#pf-ptest').addEventListener('click',async function(){
     var r=$('#pf-pres'); if(!r) return;
-    r.textContent='じゅんび ちゅう…';
+    var out=[]; var say=function(t){ out.push(t); r.textContent=out.join('\n'); };
+    r.textContent='しらべて います…';
     try{
-      if(!('Notification' in window)){ r.textContent='この ブラウザは 通知に たいおう していません。'; return; }
-      var p=await Notification.requestPermission();
-      if(p!=='granted'){ r.textContent='通知が ゆるされていません。スマホの 設定 → アプリ → Chrome → 通知 を オンに して ください。'; return; }
+      var perm=('Notification' in window)?Notification.permission:'なし';
+      if(perm!=='granted'){
+        try{ perm=await Notification.requestPermission(); }catch(e){ perm='error'; }
+      }
+      say('① 通知の ゆるし: '+perm);
+      if(perm!=='granted'){ say('→ スマホの 設定 → アプリ → Chrome(または 雑学王) → 通知 を オンに して ください。'); return; }
       try{ localStorage.removeItem('mtp_notify_off'); }catch(e){} notifyOn=true;
+
+      if(!swReg&&navigator.serviceWorker){
+        try{ swReg=await navigator.serviceWorker.register('./sw.js'); await navigator.serviceWorker.ready; }catch(e){}
+      }
+      say('② うけとり係(sw.js): '+(swReg?'あり':'なし'));
+      if(!swReg){ say('→ sw.js が 見つかりません。GitHub に sw.js を アップロード して ください。'); return; }
+
+      var sub=null; try{ sub=await swReg.pushManager.getSubscription(); }catch(e){}
+      say('③ この端末の とうろく: '+(sub?('あり（…'+String(sub.endpoint||'').slice(-10)+'）'):'なし'));
+
+      try{
+        await swReg.showNotification('雑学王（てんけん）',{body:'この 通知が 見えれば、スマホの 通知設定は だいじょうぶ です。',tag:'mtp-diag',icon:'./icon-192.png',silent:false,vibrate:(typeof VIBE_PAT!=='undefined'?VIBE_PAT:[110,70,110])});
+        say('④ その場の 通知: だした（見えなければ 端末の 通知設定）');
+      }catch(e){ say('④ その場の 通知: だせない（'+(e&&e.name||'エラー')+'）'); }
+
       await bgPushSetup();
+      say('⑤ とどけ せってい: '+pushStateText());
+
       var mine=await myBellTopic();
-      if(!mine){ r.textContent='まだ あいてと つながって いません（ペアに なってから おしてください）。'; return; }
-      /* 30秒の あいだ 6回 おくる。アプリを うしろに まわしても どれかが ひっかかる */
-      var n=0;
-      var fire=function(){
-        n++;
+      if(!mine){ say('⑥ まだ あいてと つながって いません（ペアに なってから おして ください）'); return; }
+      var u=psrvGet();
+      say('⑥ つうちサーバー: '+(u||'せってい なし'));
+
+      var j=null;
+      if(u){ try{ j=await psrvPush(mine,'zg-test'); }catch(e){ j=null; } }
+      if(!u) say('⑦ サーバー経由: ためして いません（サーバー せってい なし）');
+      else if(j&&j.ok) say('⑦ サーバー経由: おくれた（'+(j.sent|0)+'台）');
+      else say('⑦ サーバー経由: だめ（'+String((j&&(j.err||j.error))||'こたえ なし')+'）');
+
+      var nres='';
+      try{
+        var rr=await fetch('https://ntfy.sh/'+mine,{method:'POST',headers:{'Content-Type':'text/plain','Priority':'high'},body:'zg-test'});
+        nres=rr.ok?'おくれた（'+rr.status+'）':'だめ（'+rr.status+'）';
+      }catch(e){ nres='だめ（'+(e&&e.name||'エラー')+'）'; }
+      say('⑧ 予備(ntfy)経由: '+nres);
+      say('');
+      say('いま ホームがめんに もどって、30秒 待って ください。');
+      say('④が 見えない → 端末の 通知設定。④は 見えるのに 来ない → ⑤⑦⑧ の けっかを おしえて ください。');
+
+      var k=0;
+      var iv=setInterval(function(){
+        k++; if(k>6){ clearInterval(iv); return; }
+        try{ if(u) psrvPush(mine,'zg-test'); }catch(e){}
         try{ fetch('https://ntfy.sh/'+mine,{method:'POST',headers:{'Content-Type':'text/plain','Priority':'high'},body:'zg-test'}); }catch(e){}
-      };
-      fire();
-      var iv=setInterval(fire,5000);
-      setTimeout(function(){ clearInterval(iv); },26000);
-      r.textContent='いま すぐ ホームに もどって（アプリを うしろに）、30秒 待って ください。\n通知が くれば、とじた ときも とどきます。\nとどけ せってい: '+pushStateText();
-    }catch(e){ r.textContent='てんけんに しっぱい しました（'+(e&&e.name||e)+'）'; }
+      },5000);
+    }catch(e){ say('しらべられませんでした（'+(e&&e.name||e)+'）'); }
   }); }
   $('#btn-unpair').addEventListener('click',function(){ unpairBoth(this); });
 })();
