@@ -903,7 +903,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v253</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v254</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -977,7 +977,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v253</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v254</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -6696,7 +6696,30 @@ function tombAdd(ids){ try{
   var keys=Object.keys(m); if(keys.length>4000) keys.slice(0,keys.length-4000).forEach(function(k){ delete m[k]; });
   t[sc]=m; localStorage.setItem(TOMB_KEY,JSON.stringify(t));
 }catch(e){} }
-function messageGone(m){ return messageDeleted(m)||tombHas(messageId(m)); }
+function messageGone(m){ return messageDeleted(m)||tombHas(messageId(m))||(m&&m.uid&&tombHas('u:'+m.uid)); }
+/* v254: 控えに ある 行は、どの 経路で 描き直されても 画面から 取り除く（見はり番） */
+function tombRowGone(row){
+  if(!row||!row.dataset) return false;
+  return tombHas(row.dataset.messageId)||(row.dataset.uid&&tombHas('u:'+row.dataset.uid));
+}
+function tombEnforce(){
+  try{
+    var box=document.getElementById('chat-log'); if(!box) return 0;
+    var n=0;
+    box.querySelectorAll('.msg').forEach(function(r){ if(tombRowGone(r)){ r.querySelectorAll('video,audio').forEach(function(v){ try{ v.pause(); }catch(e){} }); r.remove(); n++; } });
+    return n;
+  }catch(e){ return 0; }
+}
+try{ setInterval(tombEnforce,900); }catch(e){}
+try{
+  var __tb=setInterval(function(){
+    var box=document.getElementById('chat-log');
+    if(!box) return;
+    clearInterval(__tb);
+    try{ new MutationObserver(function(){ tombEnforce(); }).observe(box,{childList:true}); }catch(e){}
+    tombEnforce();
+  },700);
+}catch(e){}
 function messageDeleted(m){ var d=deletionState; return !!(d&&d.scope===deletionScope()&&d.owners[m.from]&&d.owners[m.from].has(messageId(m))); }
 async function deletionRemember(owner,ids){
   if(!Array.isArray(ids)||!ids.length||!ids.every(validDeletionId)||(owner!==S.me.id&&owner!==(S.opp&&S.opp.id))) throw new Error('削除対象を確認できません');
@@ -9798,7 +9821,7 @@ function recvProf(m){
       say('⑧ 予備(ntfy)経由: '+nres);
       say('⑨ しゃしん送信の さいごの 応答: '+(Net.lastFileStatus?('HTTP '+Net.lastFileStatus+'（'+new Date(Net.lastFileAt).toLocaleTimeString('ja-JP')+'）'):'まだ なし'));
       say('⑩ つながり: '+(Net.topic&&Net.key?'あり':'なし')+'／まちの のこり: '+((Net.coolUntil&&Net.coolUntil>Date.now())?Math.ceil((Net.coolUntil-Date.now())/1000)+'秒':'なし'));
-      say('⑫ けした 控え（この 端末）: '+(function(){ try{ var t=tombAll(), sc=tombScope(), m=t[sc]||{}; return Object.keys(m).length+'件'; }catch(e){ return '?'; } })()+'／入力の 保留: '+(chatComposing?'止まって いる':'なし'));
+      say('⑫ けした 控え（この 端末）: '+(function(){ try{ var t=tombAll(), sc=tombScope(), m=t[sc]||{}; return Object.keys(m).length+'件'; }catch(e){ return '?'; } })()+'／入力の 保留: '+(chatComposing?'止まって いる':'なし')+'／画面の 残り: '+(function(){ try{ var b=document.getElementById('chat-log'); var k=0; b.querySelectorAll('.msg').forEach(function(r){ if(tombRowGone(r)) k++; }); return k+'件'; }catch(e){ return '?'; } })());
       say('⑪ 既読から15分で きえる: '+(vanishOn()?'オン':'オフ')+'／時計の うごいて いる 記事: '+S.chat.filter(function(m){ return m&&!m.sys&&m.rad; }).length+'件／つぎの 消去まで: '+(function(){ var w=S.chat.filter(function(m){ return m&&!m.sys&&m.rad; }).map(function(m){ return m.rad+VANISH_MS; }).sort(function(a,b){ return a-b; })[0]; return w?Math.max(0,Math.ceil((w-Date.now())/1000))+'秒':'なし'; })()+'／けす 合図の まち: '+purgePending().length+'件');
       say('');
       say('いま ホームがめんに もどって、30秒 待って ください。');
@@ -10149,6 +10172,8 @@ body.selmode #chat-log .msg:after{display:none!important}
       if(lh&&!document.getElementById('btn-sel')){
         var btn=document.createElement('button'); btn.type='button'; btn.id='btn-sel'; btn.title='えらんで けす';
         btn.innerHTML=LIST+'<span>選択</span>';
+        var vc=document.getElementById('verchip');
+        if(!vc){ vc=document.createElement('span'); vc.id='verchip'; vc.style.cssText='margin-left:auto;font:800 .62rem/1 ui-monospace,monospace;color:#8A94A3;background:#F1F3F7;border-radius:999px;padding:4px 7px'; var src=document.getElementById('ver'); vc.textContent=(src&&src.textContent)||'v?'; lh.appendChild(vc); }
         btn.addEventListener('click',function(){ setOn(true); });
         lh.appendChild(btn);
       }
@@ -10197,7 +10222,8 @@ body.selmode #chat-log .msg:after{display:none!important}
     var mine=[], theirs=[];
     S.chat.forEach(function(m){ if(!m||m.sys) return; if(uids[m.uid]||allIds.indexOf(messageId(m))>=0){ allIds.push(messageId(m)); (m.from===S.me.id?mine:theirs).push(messageId(m)); } });
     var uniq=[]; allIds.forEach(function(id){ if(id&&uniq.indexOf(id)<0) uniq.push(id); });
-    tombAdd(uniq);   /* この 端末では もう 出さない */
+    var uidsArr=Object.keys(uids).map(function(u){ return 'u:'+u; });
+    tombAdd(uniq.concat(uidsArr));   /* この 端末では もう 出さない（番号と 行の 両方で） */
     try{ if(mine.length) deletionRemember(S.me.id,mine).catch(function(){}); }catch(e){}
     try{ if(theirs.length&&S.opp&&S.opp.id) deletionRemember(S.opp.id,theirs).catch(function(){}); }catch(e){}
     var killed=0;
@@ -10215,7 +10241,8 @@ body.selmode #chat-log .msg:after{display:none!important}
     pick={}; setOn(false);
     chatComposing=false; chatDeferred=false;   /* v253: 入力の 保留で 描き直しが 止まって いない ように */
     try{ renderChat(true); }catch(e){}
-    setTimeout(function(){ chatComposing=false; chatDeferred=false; try{ renderChat(true); }catch(e){} },250);
+    setTimeout(function(){ chatComposing=false; chatDeferred=false; try{ renderChat(true); }catch(e){} try{ tombEnforce(); }catch(e){} },250);
+    try{ tombEnforce(); }catch(e){}
     try{ toast(killed? (killed+'件 けしました。あいてにも つたえます。') : 'けしました（この 画面だけ）。'); }catch(e){}
   }
   function boot(){ ensure(); }
