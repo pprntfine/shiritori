@@ -902,7 +902,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v243</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v244</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -976,7 +976,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v243</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v244</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -7112,7 +7112,9 @@ function newStickerFullscreen(m,fromOpen){
   var scope=deletionScope(),id=m.mid;
   if(!scope||typeof id!=='string'||!/^M[0-9a-f]{32}$/.test(id)) return;
   var key=JSON.stringify([scope,m.from,id]);
-  if(!fromOpen&&(stickerFullscreenSeen.has(key)||stickerFullscreenSeen.size>=STICKER_EFFECT_LIMIT)) return;   /* v229: 開き直しの再演は直前に記録した鍵なので、新規経路だけここで止める */
+  if(!fromOpen&&(stickerFullscreenSeen.has(key)||stickerFullscreenSeen.size>=STICKER_EFFECT_LIMIT)) return;
+  /* v244: 中継の とりこぼしで 同じ 通が なんども とどいても、幕は 1回だけ */
+  if(!fromOpen&&stickerOnceDone(scope,id)) return;   /* v229: 開き直しの再演は直前に記録した鍵なので、新規経路だけここで止める */
   stickerFullscreenSeen.add(key);
   if(!S.chatLoaded||!chatOnScreen()||stickerReducedMotion()||messageDeleted(m)||typeof m.at!=='number') return;
   if(!fromOpen&&m.at<stickerEffectsStartedAt) return;   /* v229: 会話を開いたときの再演は起動前の履歴も対象 */
@@ -7160,6 +7162,14 @@ function stickerEffectsReady(){
   return S.linked&&S.phase==='play'&&!!(q&&q.classList.contains('on'));
 }
 var stickerReplayDone=new Set();   /* v242: 同じ 会話では 1回だけ 再演する */
+/* v244: 端末に おぼえる。アプリを 開き直しても 二度と 再演しない（会話ごとに 1回だけ） */
+var STK_ONCE_KEY='zg_stk_once';
+function stickerOnceGet(){ try{ return localStorage.getItem(STK_ONCE_KEY)||''; }catch(e){ return ''; } }
+function stickerOnceSet(scope,mid){ try{ localStorage.setItem(STK_ONCE_KEY,JSON.stringify([scope,mid])); }catch(e){} }
+function stickerOnceDone(scope,mid){
+  var t=stickerOnceGet(); if(!t) return false;
+  try{ var a=JSON.parse(t); return a&&a[0]===scope&&a[1]===mid; }catch(e){ return false; }
+}
 function stickerReplayOpen(o){
   o=o||{};
   if(!S.chatLoaded||!stickerEffectsReady()) return;
@@ -7167,6 +7177,7 @@ function stickerReplayOpen(o){
   var scope=deletionScope();
   if(!scope) return;
   if(stickerReplayDone.has(scope)) return;   /* v242: 二度目からは 出さない */
+  var onceKey=stickerOnceGet();
 
   /* v242: 会話を ひらいた ときの 1回だけ。だした ことを おぼえて おく */
   var m=null,i,p;
@@ -7176,11 +7187,14 @@ function stickerReplayOpen(o){
   }
   if(!m||messageDeleted(m)||typeof m.at!=='number') return;
   if(chatOnScreen()&&!o.fresh) return;   /* 見えている間の通常再描画・バッチ処理では再演しない */
+  /* v244: この 会話で もう 一度 出して いたら、開き直しても 出さない（端末に のこる） */
+  if(stickerOnceDone(scope,m.mid)){ stickerReplayDone.add(scope); return; }
   stickerFullscreenSeen.add(JSON.stringify([scope,m.from,m.mid]));
   if(stickerFullscreenSeen.size>STICKER_EFFECT_LIMIT) stickerFullscreenSeen.delete(stickerFullscreenSeen.values().next().value);
   if(stickerReducedMotion()) return;
   if(m.from===S.me.id&&m.sent===false) return;   /* まだ中継へ届いていない自分の送信は履歴再演しない */
   stickerReplayDone.add(scope);
+  stickerOnceSet(scope,m.mid);
   newStickerFullscreen({mid:m.mid,from:m.from,text:m.text,at:m.at,n:m.n||0,sys:false,file:false,photo:false},true);
 }
 if(stickerMotionPreference){
