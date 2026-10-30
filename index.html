@@ -902,7 +902,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v242</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v243</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -976,7 +976,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v242</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v243</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -1183,6 +1183,8 @@ body.in-play .leave-row{display:none!important}
   <p style="font-size:.72rem;color:#556;margin:0 0 10px">あいてが 読んでから 15分で、じぶんの スマホからも あいての スマホからも きえます。<b>もとに もどせません。</b>オンに した あとで 既読に なった ものだけが たいしょうです。あいてが つながって いない 間に 読んだ ときは、つながった ときに 15分が はじまります。スマホの 時計の ずれで 数十秒 ちがう ことが あります。スクショは ふせげません。</p>
   <button type="button" class="ph" id="pf-ntest">通知を テストする（10秒後に とどきます。その間に ホーム画面へ）</button>
   <p id="pf-nres" style="font-size:.78rem;color:#556;margin:6px 0 0"></p>
+  <button type="button" class="ph" id="pf-ptest">とどけ てんけん（アプリを うしろに まわして 30秒 待つ）</button>
+  <p id="pf-pres" style="font-size:.78rem;color:#556;margin:6px 0 0;white-space:pre-line"></p>
   <div class="sec">つうちサーバー（アプリを 切っていても とどく）</div>
   <input type="url" id="pf-psrv" placeholder="https://zatsugaku-push.〇〇.workers.dev" style="width:100%;box-sizing:border-box;padding:8px;border-radius:10px;border:1.5px solid #ddd;font-size:.8rem">
   <p id="pf-pres" style="font-size:.74rem;color:#556;margin:4px 0 0">1人が 入れれば OK（あいてにも じどうで つたわります）</p>
@@ -9328,6 +9330,14 @@ async function psrvPush(topic,payload){
   try{ var r=await fetch(u+'/push',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topic:topic,msg:payload})}); return await r.json(); }catch(e){ return null; }
 }
 var bgPushDone=false, bgPushFail=0;
+/* v243: 「とどけ せってい」が できた かどうかを おぼえて 画面に だす（とじた ときの 通知の てがかり） */
+var pushState={ok:null,at:0,why:''};
+function pushStateSet(ok,why){ pushState={ok:ok,at:Date.now(),why:why||''}; try{ localStorage.setItem('zg_push_state',JSON.stringify(pushState)); }catch(e){} }
+function pushStateText(){
+  if(pushState.ok===true) return 'できた（'+new Date(pushState.at).toLocaleTimeString('ja-JP')+'）';
+  if(pushState.ok===false) return 'できなかった（'+pushState.why+'）';
+  return 'まだ たしかめて いません';
+}
 async function bgPushSetup(){
   /* v132: つうちサーバーが あれば そちらを つかう（ntfy の 回数せいげんが ない） */
   if(psrvGet()){ var ok=await psrvSetup(); if(ok) return; }
@@ -9348,8 +9358,12 @@ async function bgPushSetup(){
     var j=sub.toJSON();
     var r=await fetch('https://ntfy.sh/v1/webpush',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({endpoint:j.endpoint,auth:j.keys.auth,p256dh:j.keys.p256dh,topics:[mine]})});
-    if(r&&r.ok){ bgPushDone=true; bgPushFail=0; } else { bgPushFail++; }
-  }catch(e){ bgPushFail++; }
+    if(r&&r.ok){
+      bgPushDone=true; bgPushFail=0; pushStateSet(true,'');
+      /* v243: SWが 1人で とうろくを やりなおせる ように、トピックを しまって おく */
+      try{ caches.open('zg-count').then(function(c){ return c.put('pt',new Response(JSON.stringify([mine]))); }); }catch(e2){}
+    } else { bgPushFail++; pushStateSet(false,'サーバーが うけつけませんでした'); }
+  }catch(e){ bgPushFail++; pushStateSet(false,'とうろく できません（'+(e&&e.name||'エラー')+'）'); }
 }
 var bellLast=0, bellCount=0, bellT=null;
 async function ringBell(){
@@ -9574,6 +9588,29 @@ function recvProf(m){
       },10000);
     }catch(e){ r.textContent='テストに 失敗しました（'+(e&&e.name||e)+'）'; }
   });
+  if($('#pf-ptest')){ $('#pf-ptest').addEventListener('click',async function(){
+    var r=$('#pf-pres'); if(!r) return;
+    r.textContent='じゅんび ちゅう…';
+    try{
+      if(!('Notification' in window)){ r.textContent='この ブラウザは 通知に たいおう していません。'; return; }
+      var p=await Notification.requestPermission();
+      if(p!=='granted'){ r.textContent='通知が ゆるされていません。スマホの 設定 → アプリ → Chrome → 通知 を オンに して ください。'; return; }
+      try{ localStorage.removeItem('mtp_notify_off'); }catch(e){} notifyOn=true;
+      await bgPushSetup();
+      var mine=await myBellTopic();
+      if(!mine){ r.textContent='まだ あいてと つながって いません（ペアに なってから おしてください）。'; return; }
+      /* 30秒の あいだ 6回 おくる。アプリを うしろに まわしても どれかが ひっかかる */
+      var n=0;
+      var fire=function(){
+        n++;
+        try{ fetch('https://ntfy.sh/'+mine,{method:'POST',headers:{'Content-Type':'text/plain','Priority':'high'},body:'zg-test'}); }catch(e){}
+      };
+      fire();
+      var iv=setInterval(fire,5000);
+      setTimeout(function(){ clearInterval(iv); },26000);
+      r.textContent='いま すぐ ホームに もどって（アプリを うしろに）、30秒 待って ください。\n通知が くれば、とじた ときも とどきます。\nとどけ せってい: '+pushStateText();
+    }catch(e){ r.textContent='てんけんに しっぱい しました（'+(e&&e.name||e)+'）'; }
+  }); }
   $('#btn-unpair').addEventListener('click',function(){ unpairBoth(this); });
 })();
 /* ===== インスタ風ライブの 操作 ===== */
