@@ -902,7 +902,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v244</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v245</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -976,7 +976,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v244</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v245</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -2641,7 +2641,7 @@ function show(which){
   $('#btn-quit').hidden = (which!=='play');
   updateTalkbackBadges(); updateTitleBadge();
   window.scrollTo(0,0);
-  if(which==='play'&&S.tab==='chat') stickerReplayOpen({fresh:true,source:'show-play'});   /* v229: トーク画面を開くたびに最新の全画面を一度だけ（タブ移動は setTab 側で） */
+  /* v245: トークを 開いた ときに 全画面スタンプを 出す しくみは やめた（新しい スタンプが とどいた ときだけ 出す） */
 }
 /* ペア成立後は 部屋を でても トークだけ つづく */
 function updateTalkbackBadges(){
@@ -6112,6 +6112,7 @@ var chatRenderTicket=0,chatScrollUserTicket=0;
   $('#chat-log').addEventListener(type,function(){ chatScrollUserTicket++; },{passive:true});
 });
 function renderChat(forceBottom){
+  try{ stickerSweep(); }catch(e){}   /* v245: えがく たびに のこり物の 幕を かたづける */
   S.chat=S.chat.filter(function(m){ return m.sys||!messageDeleted(m); });
   try{
     var ai=document.activeElement;
@@ -7067,6 +7068,17 @@ var stickerMotionPreference=window.matchMedia?window.matchMedia('(prefers-reduce
 function isSticker(value){ return typeof value==='string'&&STICKERS.indexOf(value)>=0; }
 function stickerMotion(value){ return typeof value==='string'?stickerMotionMap.get(value)||'':''; }
 function stickerReducedMotion(){ return !!(stickerMotionPreference&&stickerMotionPreference.matches); }
+function stickerSweep(){   /* v245: のこり物の 幕は、えがく たびに かならず 取りのぞく */
+  try{
+    var l=document.querySelectorAll('.sticker-fullscreen');
+    if(!l.length) return;
+    for(var i=0;i<l.length;i++){
+      var made=parseInt(l[i].dataset.made||'0',10);
+      if(l[i]===stickerFullscreenLayer){ if(made&&Date.now()-made>5000) clearStickerFullscreen(); continue; }
+      try{ l[i].parentNode.removeChild(l[i]); }catch(e){}
+    }
+  }catch(e){}
+}
 function clearStickerFullscreen(){
   if(stickerFullscreenTimer!==null) clearTimeout(stickerFullscreenTimer);
   stickerFullscreenTimer=null;
@@ -7129,6 +7141,7 @@ function newStickerFullscreen(m,fromOpen){
     particle.style.setProperty('--turn',(i%2?18:-18)+'deg');
     particle.style.setProperty('--delay',(i%4)*80+'ms'); layer.appendChild(particle);
   }
+  layer.dataset.made=String(Date.now());
   document.body.appendChild(layer); stickerFullscreenLayer=layer;
   stickerFullscreenTimer=setTimeout(clearStickerFullscreen,3000);
   /* v242: かならず 消す。アニメが おわったら すぐ、だめでも 4秒で 幕ごと 取りのぞく */
@@ -7171,6 +7184,9 @@ function stickerOnceDone(scope,mid){
   try{ var a=JSON.parse(t); return a&&a[0]===scope&&a[1]===mid; }catch(e){ return false; }
 }
 function stickerReplayOpen(o){
+  return;   /* v245: 開き直しの 再演は しない（ひとつの スタンプに つき 1回だけ） */
+}
+function stickerReplayOpenOld(o){
   o=o||{};
   if(!S.chatLoaded||!stickerEffectsReady()) return;
   if(stickerFullscreenLayer) return;   /* 同じ開き方の散発では一枚を維持する */
