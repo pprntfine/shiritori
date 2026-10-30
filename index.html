@@ -902,7 +902,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v236</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v238</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -976,7 +976,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v236</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v238</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -1168,6 +1168,14 @@ body.in-play .leave-row{display:none!important}
     <button type="button" class="ph" id="pf-sound" style="padding:4px 14px">オン</button>
   </div>
   <p style="font-size:.72rem;color:#556;margin:0 0 10px"><b>マナーモード（サイレント）の ときは 音は なりません。バイブだけです。</b>音を ならすか どうかは スマホの 設定（マナーモード／通知 → 雑学王 → 音）で きまります。アプリから 音は だしません。iPhoneは きまりで バイブを うごかせません。</p>
+  <button type="button" class="ph" id="pf-vtest">バイブを テストする</button>
+  <p id="pf-vres" style="font-size:.78rem;color:#556;margin:6px 0 0"></p>
+  <div class="sec">トーク</div>
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 0 4px">
+    <span style="font-size:.84rem">既読から 15分で きえる</span>
+    <button type="button" class="ph" id="pf-vanish" style="padding:4px 14px">オフ</button>
+  </div>
+  <p style="font-size:.72rem;color:#556;margin:0 0 10px">あいてが 読んでから 15分で、じぶんの スマホからも あいての スマホからも きえます。<b>もとに もどせません。</b>オンに した あとで 既読に なった ものだけが たいしょうです。あいてが つながって いない 間に 読んだ ときは、つながった ときに 15分が はじまります。スマホの 時計の ずれで 数十秒 ちがう ことが あります。スクショは ふせげません。</p>
   <button type="button" class="ph" id="pf-ntest">通知を テストする（10秒後に とどきます。その間に ホーム画面へ）</button>
   <p id="pf-nres" style="font-size:.78rem;color:#556;margin:6px 0 0"></p>
   <div class="sec">つうちサーバー（アプリを 切っていても とどく）</div>
@@ -5684,7 +5692,7 @@ async function chatSaveNow(){
   chatSaving=true;
   try{
     var list=S.chat.filter(function(m){ return m&&!m.sys&&!messageDeleted(m)&&(m.text||m.data); }).map(function(m){
-      return {mid:m.mid||'',f:m.from,t:m.text||'',p:m.photo?1:0,d:(m.photo||m.file)?(m.data||''):'',file:m.file?1:0,fn:m.fileName||'',fs:m.fileSize||0,failed:m.failed?1:0,a:m.at||0,n:m.n||0,s:m.sent===false?0:1,k:m.acked?1:0,r:m.read?1:0,u:m.pid||''};
+      return {mid:m.mid||'',f:m.from,t:m.text||'',p:m.photo?1:0,d:(m.photo||m.file)?(m.data||''):'',file:m.file?1:0,fn:m.fileName||'',fs:m.fileSize||0,failed:m.failed?1:0,a:m.at||0,n:m.n||0,s:m.sent===false?0:1,k:m.acked?1:0,r:m.read?1:0,ra:m.rad||0,u:m.pid||''};
     });
     if(!list.length){ await chatDbPut(null); }
     else{
@@ -5715,7 +5723,7 @@ async function chatRestore(sk){
       if(!it||!(it.t||it.d)) return;
       var key=it.mid ? it.f+':mid:'+it.mid : it.f+':'+(it.n||0)+':'+(it.t||it.u||'');
       if(have[key]) return; have[key]=1;
-      var m={mid:it.mid||'',from:it.f,at:it.a||Date.now(),n:it.n||0,sent:!!it.s,acked:!!it.k,read:!!it.r,uid:String(++UID)};
+      var m={mid:it.mid||'',from:it.f,at:it.a||Date.now(),n:it.n||0,sent:!!it.s,acked:!!it.k,read:!!it.r,rad:it.ra||0,uid:String(++UID)};
       if(it.p){ if(String(it.d).slice(0,15)!=='data:image/jpeg') return; m.photo=true; m.data=it.d; m.pid=it.u||''; }
       else if(it.file){ if(!/^data:[^,]*;base64,/.test(String(it.d))) return; m.file=true; m.data=it.d; m.fileName=String(it.fn||'ファイル').slice(0,180); m.fileSize=it.fs||0; m.pid=it.u||''; m.failed=!!it.failed||!it.s; }
       else m.text=String(it.t).slice(0,MAX_CHAT);
@@ -6256,13 +6264,39 @@ function maybeSendRead(force){   /* v232: force=立て直し。相手に届か�
     var up=S.lastPeerN||0; if(!up) return;
     var ns=[]; for(var q=S.chat.length-1;q>=0&&ns.length<60;q--){ var c=S.chat[q]; if(c&&!c.sys&&c.from!==S.me.id&&c.n) ns.push(c.n); }
     if(force&&!ns.length) return;   /* v232: 伝える 相手の 記事が ないなら 送らない（中継所の 回数を 大事に） */
+    if(vanishOn()){   /* v237: 読んだ 時刻を この 端末でも 記録（15分後に ここからも 消す） */
+      var vt=Date.now(), vc=false, want={}; ns.forEach(function(n){ want[n]=1; });
+      for(var q2=S.chat.length-1;q2>=0;q2--){ var c2=S.chat[q2]; if(c2&&!c2.sys&&c2.from!==S.me.id&&c2.n&&want[c2.n]&&markReadAt(c2,vt)) vc=true; }
+      if(vc) persistChat();
+    }
     Net.send({t:'read',ns:ns,exp:exp},function(ok){ if(ok){ if(!force) S.readSent=up; } else { S.readSent=0; setTimeout(maybeSendRead,4000); } });   /* v232: 届いてから 記録を進める・force は 記録を 動かさない */
   },700);
+}
+/* v237: 既読から 15分で きえる（じぶんの スマホからも あいての スマホからも 消す。もどせない） */
+var VANISH_MS=15*60*1000, VANISH_KEY='mtp_vanish15';
+function vanishOn(){ try{ return localStorage.getItem(VANISH_KEY)==='1'; }catch(e){ return false; } }
+function paintVanishBtn(){ try{ var b=$('#pf-vanish'); if(b) b.textContent=vanishOn()?'オン':'オフ'; }catch(e){} }
+/* 既読に なった 時刻を 1度だけ 記録する（設定オフ・番号なし・システム行は たいしょう外） */
+function markReadAt(m,now){
+  if(!vanishOn()||!m||m.sys||!m.n||m.rad) return false;
+  m.rad=now||Date.now();
+  return true;
+}
+/* 15分 たった ものを けす。けしたら true（画面を 作り直す 合図） */
+function vanishSweep(){
+  if(!vanishOn()) return false;
+  var cut=Date.now()-VANISH_MS, hit=false;
+  for(var i=0;i<S.chat.length;i++){ var m=S.chat[i]; if(m&&!m.sys&&m.rad&&m.rad<=cut){ hit=true; break; } }
+  if(!hit) return false;
+  S.chat=S.chat.filter(function(m){ return m.sys||!m.rad||m.rad>cut; });
+  try{ persistChat(); }catch(e){}
+  return true;
 }
 /* 消去：期限の来たメッセージを端末内から完全に取り除く(復元不可) */
 function sweepChat(){
   var now=Date.now(), gone=false, i;
   for(i=0;i<S.chat.length;i++){ var mm=S.chat[i]; if(mm&&mm.exp) mm.exp=0; }   /* v154: 自動削除は しない */
+  if(vanishSweep()) gone=true;   /* v237: 既読から 15分 */
   if(gone){
     S.chat=S.chat.filter(function(mm){ return mm.sys||!mm.exp; });
   }
@@ -6316,9 +6350,31 @@ var notifyAlarmAt=0;
 function notifyVibeOn(){ try{ return localStorage.getItem('mtp_vibe_off')!=='1'; }catch(e){ return true; } }
 function paintSoundBtn(){ try{ var b=$('#pf-sound'); if(b) b.textContent=notifyVibeOn()?'オン':'オフ'; }catch(e){} }
 function notifExtra(){ var o={silent:false}; if(notifyVibeOn()) o.vibrate=[110,70,110]; return o; }   /* silent:false＝端末の マナー/サイレントに したがう */
+/* v238: バイブを つよくして、うけつけ られたかを かえす（だめなら 1回 だけ やりなおす） */
+var VIBE_PAT=[180,90,180];
 function buzzNotify(){
-  if(!notifyVibeOn()) return;
-  try{ if(navigator.vibrate) navigator.vibrate([110,70,110]); }catch(e){}
+  if(!notifyVibeOn()) return false;
+  try{
+    if(typeof navigator.vibrate!=='function') return false;
+    var r=navigator.vibrate(VIBE_PAT);
+    if(r===false){ setTimeout(function(){ try{ navigator.vibrate(VIBE_PAT); }catch(e){} },250); return false; }
+    return true;
+  }catch(e){ return false; }
+}
+/* v238: バイブが ならない わけを その場で しらべる */
+function vibrateDiag(){
+  var ua=navigator.userAgent||'', out=[];
+  var ios=/iPhone|iPad|iPod/.test(ua);
+  var has=(typeof navigator.vibrate==='function');
+  var act=(navigator.userActivation&&typeof navigator.userActivation.hasBeenActive==='boolean')?(navigator.userActivation.hasBeenActive?'あり':'なし'):'しらべられません';
+  if(ios){ out.push('この 端末（iPhone）は、Webの アプリから バイブを うごかす ことが できません（Appleの きまり）。'); return out.join('\n'); }
+  if(!has){ out.push('この ブラウザは バイブ（Vibration API）に たいおう して いません。Androidの Chrome で おためし ください。'); return out.join('\n'); }
+  var r=false;
+  try{ r=navigator.vibrate(VIBE_PAT); }catch(e){ r=false; }
+  out.push('バイブの 命令：'+(r?'うけつけ ました':'うけつけ られませんでした'));
+  out.push('タップの 記録：'+act+(act==='なし'?'（画面を 1回 タップしてから もう一度 おためし ください）':''));
+  if(r) out.push('ふるえない ときは、スマホの 設定で「タッチの 振動」や「マナーモードでも バイブ」が 切れて いないか 確かめて ください。');
+  return out.join('\n');
 }
 function notifyAlarm(){
   var now=Date.now(); if(now-notifyAlarmAt<1200) return;   /* まとめて とどいた ときは 1回だけ */
@@ -6336,7 +6392,7 @@ function swClearNotifs(){ try{ if(navigator.clearAppBadge){ var cb=navigator.cle
 /* メッセージ着信：中身は 出さない。短い通知だけ */
 function notifyIncoming(){
   var viewing=chatOnScreen();
-  if(viewing){ swClearNotifs(); return; }   /* v142: 見ている ときは 通知を 出さず、でている 通知も 消す */
+  if(viewing){ swClearNotifs(); notifyAlarm(); return; }   /* v142: 見ている ときは 通知を 出さない。v238: バイブだけは ならす */
   updateBadge(); updateTalkbackBadges(); updateTitleBadge();
   setAppBadgeCount(S.unread||1);
   /* v236: アプリを ひらいている ときの バイブ */
@@ -8659,7 +8715,7 @@ Net.onMsg=function(m){
         if(!Array.isArray(ns)) return;
         var set={}; ns.forEach(function(n){ set[n]=1; });
         var touched=[];
-        for(var i=0;i<S.chat.length;i++){ var x=S.chat[i]; if(x&&!x.sys&&x.from===S.me.id&&x.n&&set[x.n]&&!(x.read&&x.acked)){ x.read=true; x.acked=true; touched.push(x.n); } }
+        for(var i=0;i<S.chat.length;i++){ var x=S.chat[i]; if(x&&!x.sys&&x.from===S.me.id&&x.n&&set[x.n]&&!(x.read&&x.acked)){ x.read=true; x.acked=true; markReadAt(x); touched.push(x.n); } }
         /* v233: じぶんの 行の 時刻らんだけ かきかえる（長い 履歴の 作り直しを さける）。行が ないときは 作り直す */
         if(touched.length){ persistChat(); if(S.tab==='chat'&&!updateMsgMeta(touched)) renderChat(); }
       })(m.ns);
@@ -9326,6 +9382,15 @@ function recvProf(m){
     try{ if(on) localStorage.removeItem('mtp_vibe_off'); else localStorage.setItem('mtp_vibe_off','1'); }catch(e){}
     paintSoundBtn(); if(on) buzzNotify(); });
     paintSoundBtn(); }
+  if($('#pf-vanish')){ $('#pf-vanish').addEventListener('click',function(){ var on=!vanishOn();
+    try{ if(on) localStorage.setItem(VANISH_KEY,'1'); else localStorage.removeItem(VANISH_KEY); }catch(e){}
+    paintVanishBtn(); toast(on?'既読から 15分で きえる ように しました。':'15分で きえる のを やめました。'); });
+    paintVanishBtn(); }
+  if($('#pf-vtest')){ $('#pf-vtest').addEventListener('click',function(){
+    var r=$('#pf-vres'); if(!r) return;
+    r.style.whiteSpace='pre-line';
+    r.textContent=(notifyVibeOn()?'':'※ いま バイブは オフです。\n')+vibrateDiag();
+  }); }
   $('#pf-ntest').addEventListener('click',async function(){
     var r=$('#pf-nres');
     try{
