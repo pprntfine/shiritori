@@ -903,7 +903,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v248</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v249</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -977,7 +977,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v248</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v249</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -9949,6 +9949,83 @@ try{ window.__zgsPeerLive=+(sessionStorage.getItem('zg_peer_live')||0)||0; }catc
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"08b344934bdd416db94053d34eb889d8","spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"08b344934bdd416db94053d34eb889d8","spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"08b344934bdd416db94053d34eb889d8","spa":2}' crossorigin="anonymous"></script>
+<!-- v249: トークの 背面（がいへき）を 18しゅるいから えらべる -->
+<style>
+html body{background-color:var(--bgc,#F1F2F4)!important;background-image:var(--bgi,none)!important;background-size:var(--bgz,auto)!important;background-position:var(--bgp,0 0)!important}
+html body .line-chat{background-color:var(--bgc2,#F7F8FA)!important;background-image:var(--bgi2,none)!important;background-size:var(--bgz2,auto)!important;background-position:var(--bgp2,0 0)!important;border-color:rgba(0,0,0,.06)!important}
+html body #chat{background-color:var(--bgc2,#F7F8FA)!important;background-image:var(--bgi2,none)!important;background-size:var(--bgz2,auto)!important;background-position:var(--bgp2,0 0)!important}
+body.bgdark .line-chat{color:#E9EFF8!important}
+body.bgdark .line-chat .msg .nm{color:#AFC2D8!important}
+#pf-bg{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin:6px 0 4px}
+#pf-bg button{padding:0;border:2px solid #E3E7ED;border-radius:11px;background:#fff;overflow:hidden;display:flex;flex-direction:column;cursor:pointer;line-height:1}
+#pf-bg button .sw{display:block;height:42px;width:100%}
+#pf-bg button .nmm{font-size:.58rem;color:#556;padding:4px 2px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
+#pf-bg button.sel{border-color:#06C755;box-shadow:0 0 0 3px #DDF6E6}
+#pf-bg button.sel .nmm{color:#06A046}
+</style>
+<script>
+/* v249: 背面（がいへき）の えらびかた。CSSの へんすうを かえるだけで だす。 */
+(function(){
+  var T=[
+    {n:'しろ',     c:'#FAFBFC', i:'none', z:'auto'},
+    {n:'クリーム', c:'#FDF6E7', i:'radial-gradient(circle,#F1E3C4 1.1px,transparent 1.3px)', z:'14px 14px'},
+    {n:'ミント',   c:'#E9F7F0', i:'linear-gradient(180deg,#EFFAF4,#DBF1E6)', z:'auto'},
+    {n:'ソラ',     c:'#E7F1FF', i:'linear-gradient(180deg,#EDF5FF,#D9E8FF)', z:'auto'},
+    {n:'ラベンダー',c:'#F1ECFF', i:'linear-gradient(180deg,#F5F0FF,#E5DBFF)', z:'auto'},
+    {n:'もも',     c:'#FFF0F5', i:'linear-gradient(180deg,#FFF5F8,#FFE1EC)', z:'auto'},
+    {n:'れもん',   c:'#FFFBEB', i:'repeating-linear-gradient(45deg,#FFFBEB 0 10px,#FDF3C9 10px 20px)', z:'auto'},
+    {n:'わかば',   c:'#EFF7E9', i:'repeating-linear-gradient(90deg,#EFF7E9 0 12px,#E4F1D9 12px 24px)', z:'auto'},
+    {n:'みずたま', c:'#FFF7FA', i:'radial-gradient(circle,#FFC9DB 2px,transparent 2.4px)', z:'18px 18px'},
+    {n:'チェック', c:'#FFFFFF', i:'linear-gradient(45deg,#EEF2FF 25%,transparent 25%,transparent 75%,#EEF2FF 75%),linear-gradient(45deg,#EEF2FF 25%,transparent 25%,transparent 75%,#EEF2FF 75%)', z:'22px 22px', p:'0 0,11px 11px'},
+    {n:'ななめ',   c:'#FFF6F9', i:'repeating-linear-gradient(-45deg,#FFF6F9 0 9px,#FFE7EF 9px 18px)', z:'auto'},
+    {n:'ほしぞら', c:'#F3F6FF', i:'radial-gradient(circle,#CFD9FF 1.6px,transparent 2px),radial-gradient(circle,#E7D9FF 1.2px,transparent 1.6px)', z:'26px 26px,17px 17px', p:'0 0,9px 11px'},
+    {n:'わし',     c:'#FBF7EF', i:'radial-gradient(120% 90% at 0% 0%,#F6EEDC 0%,transparent 60%),radial-gradient(100% 80% at 100% 100%,#F1E6D2 0%,transparent 55%)', z:'auto'},
+    {n:'ほうがんし',c:'#FFFFFF', i:'linear-gradient(#EDF1F7 1px,transparent 1px),linear-gradient(90deg,#EDF1F7 1px,transparent 1px)', z:'20px 20px'},
+    {n:'グレー',   c:'#F2F4F7', i:'linear-gradient(180deg,#F7F9FB,#E9EDF2)', z:'auto'},
+    {n:'よる',     c:'#101A2E', i:'radial-gradient(circle,#26375A 1.4px,transparent 1.8px)', z:'24px 24px', dark:1},
+    {n:'すみ',     c:'#1B1D22', i:'linear-gradient(180deg,#22252C,#171A1F)', z:'auto', dark:1},
+    {n:'こんぺき', c:'#12233F', i:'repeating-linear-gradient(45deg,#12233F 0 10px,#15294A 10px 20px)', z:'auto', dark:1}
+  ];
+  var KEY='zg.bgv1';
+  function apply(k){
+    var t=T[k]||T[0], r=document.documentElement.style;
+    r.setProperty('--bgc',t.c); r.setProperty('--bgi',t.i); r.setProperty('--bgz',t.z); r.setProperty('--bgp',t.p||'0 0');
+    r.setProperty('--bgc2',t.c); r.setProperty('--bgi2',t.i); r.setProperty('--bgz2',t.z); r.setProperty('--bgp2',t.p||'0 0');
+    document.body.classList.toggle('bgdark',!!t.dark);
+    var g=document.getElementById('pf-bg');
+    if(g){ var bs=g.querySelectorAll('button'); for(var j=0;j<bs.length;j++){ bs[j].classList.toggle('sel',+bs[j].dataset.k===k); } }
+  }
+  function saved(){ var v=parseInt(localStorage.getItem(KEY),10); return (v>=0&&v<T.length)?v:0; }
+  function save(k){ try{ localStorage.setItem(KEY,String(k)); }catch(e){} }
+  function build(){
+    var pm=document.querySelector('#prof-modal .pm'); if(!pm||document.getElementById('pf-bg')) return;
+    var sec=document.createElement('div'); sec.className='sec'; sec.style.marginTop='16px'; sec.textContent='トークの 背面（がいへき）';
+    var note=document.createElement('div'); note.style.cssText='font-size:.7rem;color:#667;margin:2px 0 6px;font-weight:700';
+    note.textContent='タップすると すぐ かわります。この きかいに おぼえます。';
+    var g=document.createElement('div'); g.id='pf-bg';
+    for(var k=0;k<T.length;k++){
+      (function(k){
+        var b=document.createElement('button'); b.type='button'; b.dataset.k=String(k); b.title=T[k].n;
+        var sw=document.createElement('span'); sw.className='sw';
+        sw.style.backgroundColor=T[k].c; sw.style.backgroundImage=T[k].i; sw.style.backgroundSize=T[k].z; sw.style.backgroundPosition=T[k].p||'0 0';
+        var nm=document.createElement('span'); nm.className='nmm'; nm.textContent=T[k].n;
+        b.appendChild(sw); b.appendChild(nm);
+        b.addEventListener('click',function(){ save(k); apply(k); });
+        g.appendChild(b);
+      })(k);
+    }
+    var anchor=document.getElementById('pf-snd'); var holder=anchor?(anchor.closest('.row')||anchor):null;
+    if(holder&&holder.parentNode===pm&&holder!==pm){ pm.insertBefore(sec,holder); pm.insertBefore(note,holder); pm.insertBefore(g,holder); }
+    else { pm.appendChild(sec); pm.appendChild(note); pm.appendChild(g); }
+  }
+  function boot(){ apply(saved()); build();
+    var pm=document.querySelector('#prof-modal');
+    if(pm){ pm.addEventListener('click',function(){ setTimeout(build,0); }); }
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot); else boot();
+  setTimeout(boot,1200);
+})();
+</script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"08b344934bdd416db94053d34eb889d8","spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
