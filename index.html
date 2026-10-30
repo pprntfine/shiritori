@@ -903,7 +903,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v251</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v252</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -977,7 +977,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v251</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v252</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -10172,27 +10172,37 @@ body.selmode #chat-log .msg:after{display:none!important}
     paint();
   },true);
   async function selDelete(){
-    var ids=Object.keys(pick); if(!ids.length) return;
-    try{ if(!confirm('えらんだ '+ids.length+'件を けします。\n自分が おくった ものは あいての トークからも、\nあいてが おくった ものも あいての 画面から 消えます。\nもどせません。')) return; }catch(e){}
-    var mine=[],theirs=[];
-    S.chat.forEach(function(m){ var id=messageId(m); if(pick[id]) (m.from===S.me.id?mine:theirs).push(id); });
-    var okLocal=false;
-    try{
-      if(mine.length) await deletionRemember(S.me.id,mine);
-      if(theirs.length&&S.opp&&S.opp.id) await deletionRemember(S.opp.id,theirs);
-      okLocal=true;
-    }catch(e){ okLocal=false; }
-    if(!okLocal){
-      var gone={}; mine.concat(theirs).forEach(function(id){ gone[id]=1; });
-      S.chat=S.chat.filter(function(m){ return m.sys||!gone[messageId(m)]; });
-      try{ persistChat(); }catch(e){}
+    var ids=Object.keys(pick); if(!ids.length){ return; }
+    try{ if(!confirm(['えらんだ '+ids.length+'件を けします。','自分が おくった ものは あいての トークからも、','あいてが おくった ものも あいての 画面から 消えます。','もどせません。'].join('\n'))) return; }catch(e){}
+    /* v252: 行の 識別（data-uid）で トークの 中身から けす。識別の ずれで 消えない ことが ない ように。 */
+    var uids={}, byId=[];
+    Array.prototype.forEach.call(rows(),function(r){
+      if(!pick[r.dataset.messageId]) return;
+      if(r.dataset.uid) uids[r.dataset.uid]=1;
+      byId.push(r.dataset.messageId);
+    });
+    var mine=[], theirs=[], killed=0, killedMsgs=[];
+    S.chat=S.chat.filter(function(m){
+      if(!m||m.sys) return true;
+      var hit=(uids[m.uid])||(byId.indexOf(messageId(m))>=0);
+      if(!hit) return true;
+      killed++; killedMsgs.push(m);
+      if(m.from===S.me.id) mine.push(messageId(m)); else theirs.push(messageId(m));
+      return false;
+    });
+    if(mine.length||theirs.length){   /* 消した ことを おぼえる（よみがえらせない） */
+      try{ if(mine.length) deletionRemember(S.me.id,mine).catch(function(){}); }catch(e){}
+      try{ if(theirs.length&&S.opp&&S.opp.id) deletionRemember(S.opp.id,theirs).catch(function(){}); }catch(e){}
     }
+    try{ killedMsgs.forEach(function(m){ m.text=''; m.data=''; m.env=null; }); }catch(e){}
+    try{ persistChat(); }catch(e){}
     try{ removeDeletedMessages(); }catch(e){}
     try{ await chatSaveNow(); }catch(e){}
     try{ if(mine.length) syncDeletions(); }catch(e){}
     try{ if(theirs.length) purgeSend(theirs); }catch(e){}
-    pick={}; setOn(false); try{ renderChat(); }catch(e){}
-    try{ toast(okLocal?'けしました。あいてにも つたえます。':'けしました（この 画面だけ）。'); }catch(e){}
+    pick={}; setOn(false);
+    try{ renderChat(); }catch(e){ setTimeout(function(){ try{ renderChat(); }catch(e2){} },120); }
+    try{ toast(killed? (killed+'件 けしました。あいてにも つたえます。') : 'えらんだ メッセージが 見つかりませんでした。もう一度 えらびなおして ください。'); }catch(e){}
   }
   function boot(){ ensure(); }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot); else boot();
