@@ -902,7 +902,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v234</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v236</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -976,7 +976,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v234</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v236</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -1163,6 +1163,11 @@ body.in-play .leave-row{display:none!important}
   <input type="file" id="pf-file" accept="image/*" hidden>
   <div class="sec">あいての 名前・アイコンは あいてが きめた ものが でます（v203）</div>
   <div class="sec">つうち</div>
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 0 4px">
+    <span style="font-size:.84rem">バイブ（アプリを ひらいている とき）</span>
+    <button type="button" class="ph" id="pf-sound" style="padding:4px 14px">オン</button>
+  </div>
+  <p style="font-size:.72rem;color:#556;margin:0 0 10px"><b>マナーモード（サイレント）の ときは 音は なりません。バイブだけです。</b>音を ならすか どうかは スマホの 設定（マナーモード／通知 → 雑学王 → 音）で きまります。アプリから 音は だしません。iPhoneは きまりで バイブを うごかせません。</p>
   <button type="button" class="ph" id="pf-ntest">通知を テストする（10秒後に とどきます。その間に ホーム画面へ）</button>
   <p id="pf-nres" style="font-size:.78rem;color:#556;margin:6px 0 0"></p>
   <div class="sec">つうちサーバー（アプリを 切っていても とどく）</div>
@@ -6305,10 +6310,25 @@ function beepHost(){
     ping(); setTimeout(ping,450);
   }catch(e){}
 }
+/* v235: おと・バイブ（アプリを ひらいている とき）。v122 の 無音指定を やめた */
+/* v236: マナーモードでは 音を ならさない。アプリから 音は ださず、音・バイブは 端末の 設定に したがわせる */
+var notifyAlarmAt=0;
+function notifyVibeOn(){ try{ return localStorage.getItem('mtp_vibe_off')!=='1'; }catch(e){ return true; } }
+function paintSoundBtn(){ try{ var b=$('#pf-sound'); if(b) b.textContent=notifyVibeOn()?'オン':'オフ'; }catch(e){} }
+function notifExtra(){ var o={silent:false}; if(notifyVibeOn()) o.vibrate=[110,70,110]; return o; }   /* silent:false＝端末の マナー/サイレントに したがう */
+function buzzNotify(){
+  if(!notifyVibeOn()) return;
+  try{ if(navigator.vibrate) navigator.vibrate([110,70,110]); }catch(e){}
+}
+function notifyAlarm(){
+  var now=Date.now(); if(now-notifyAlarmAt<1200) return;   /* まとめて とどいた ときは 1回だけ */
+  notifyAlarmAt=now; buzzNotify();
+}
+try{ localStorage.removeItem('mtp_sound_off'); }catch(e){}
 function notifyHostAccess(txt){
   if(!S.isHost||S.roomClosed) return;
   S.hostAlert=true; updateTitleBadge();
-  try{ if('Notification' in window&&Notification.permission==='granted') new Notification('雑学王',{body:txt,silent:true}); }catch(e){}
+  try{ if('Notification' in window&&Notification.permission==='granted') new Notification('雑学王',Object.assign({body:txt},notifExtra())); }catch(e){}
 }
 var ZG_PAW='data:image/png;base64,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';
 /* v142: トークを 見た ことを うけとり側に つたえる（通知を 消して 件数を 0 に） */
@@ -6319,13 +6339,14 @@ function notifyIncoming(){
   if(viewing){ swClearNotifs(); return; }   /* v142: 見ている ときは 通知を 出さず、でている 通知も 消す */
   updateBadge(); updateTalkbackBadges(); updateTitleBadge();
   setAppBadgeCount(S.unread||1);
-  /* v122: 音・振動は 出さない（マナーモードでも 鳴っていた ため） */
+  /* v236: アプリを ひらいている ときの バイブ */
+  notifyAlarm();
   if(!('Notification' in window)||Notification.permission!=='granted') return;
   if(localStorage.getItem('mtp_notify_off')==='1') return;
   var cnt=S.unread||1;
   var body='新しい問題が追加されたよ🐾';   /* v145: みじかく ぎじつく（件数・名前なし） */
 
-  var opt={body:body,tag:'mtp-chat',renotify:true,silent:true,badge:'./icon-paw-192.png',icon:'./icon-paw-192.png',data:{app:'zg',n:cnt}};
+  var opt=Object.assign({body:body,tag:'mtp-chat',renotify:true,badge:'./icon-paw-192.png',icon:'./icon-paw-192.png',data:{app:'zg',n:cnt}},notifExtra());
   /* スマホ(とくに Android)は サービスワーカー 経由で ないと 通知が でない */
   try{
     if(navigator.serviceWorker&&swReg){ swReg.showNotification('雑学王',opt); return; }
@@ -9258,7 +9279,7 @@ function recvProf(m){
     pick=(PROF.me&&PROF.me.emo)||'🐷'; img=(PROF.me&&PROF.me.img)||'';
     $('#pf-me-nm').value=meName();
     try{ $('#pf-psrv').value=psrvGet(); $('#pf-pres').textContent=psrvGet()?'つうちサーバー：せってい ずみ ✓':'1人が 入れれば OK（あいてにも じどうで つたわります）'; }catch(e){}
-    draw(); $('#prof-modal').classList.add('on');
+    draw(); paintSoundBtn(); $('#prof-modal').classList.add('on');
   }
   window.openProf=open;
   var bp=$('#btn-prof'); if(bp) bp.addEventListener('click',open); var bp2=$('#btn-prof2'); if(bp2) bp2.addEventListener('click',open);
@@ -9301,6 +9322,10 @@ function recvProf(m){
     toast('ほぞん しました。');
   });
   $('#btn-top2').addEventListener('click',function(){ show('lobby'); });
+  if($('#pf-sound')){ $('#pf-sound').addEventListener('click',function(){ var on=!notifyVibeOn();
+    try{ if(on) localStorage.removeItem('mtp_vibe_off'); else localStorage.setItem('mtp_vibe_off','1'); }catch(e){}
+    paintSoundBtn(); if(on) buzzNotify(); });
+    paintSoundBtn(); }
   $('#pf-ntest').addEventListener('click',async function(){
     var r=$('#pf-nres');
     try{
@@ -9522,6 +9547,7 @@ try{ window.__zgsPeerChatOpen=+(localStorage.getItem('zg_peer_chat_open')||0)||0
 try{ window.__zgsPeerLive=+(sessionStorage.getItem('zg_peer_live')||0)||0; }catch(e){}   /* v183: いきてる しるし（その せッションだけ） */
 })();
 </script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"08b344934bdd416db94053d34eb889d8","spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"08b344934bdd416db94053d34eb889d8","spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"08b344934bdd416db94053d34eb889d8","spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"08b344934bdd416db94053d34eb889d8","spa":2}' crossorigin="anonymous"></script>
