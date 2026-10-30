@@ -902,7 +902,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v232</b>｜ビルド 2026-10-29（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v234</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -976,7 +976,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v232</b>｜ビルド 2026-10-29（アプリが 裏でも スマホに 直接とどく）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v234</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -6143,7 +6143,7 @@ function renderChat(forceBottom){
       var prow=document.createElement('div');
       prow.className='msg '+(mine?'out':'in')+(cont?' cont':'');
       var pbub=document.createElement('div'); pbub.className='bubble photo-b';
-      var pim=document.createElement('img'); pim.className='photo-msg'; pim.src=m.data; pim.alt='しゃしん';
+      var pim=document.createElement('img'); pim.className='photo-msg'; pim.src=m.data; pim.alt='しゃしん'; pim.setAttribute('decoding','async');   /* v233: しゃしんの prepare は 裏で（画面の ふりおろしを やわらげる） */
       pim.addEventListener('load',function(){
         if(renderTicket!==chatRenderTicket || userTicket!==chatScrollUserTicket) return;
         if(stick) scrollChatBottom(); else box.scrollTop=previousTop;
@@ -6153,7 +6153,7 @@ function renderChat(forceBottom){
       var pmeta=document.createElement('div'); pmeta.className='meta';
       pmeta.textContent=metaText(m,mine,at,groupEnd);
       markDeletable(prow,pbub,m,mine);
-      if(mine){ prow.appendChild(pmeta); prow.appendChild(pbub); }
+      if(mine){ if(m.n) prow.dataset.n=String(m.n);   /* v233: 既読・受領を この行だけ かきかえる ための 目印 */ prow.appendChild(pmeta); prow.appendChild(pbub); }
       else{
         var pav=document.createElement('div'); pav.className='av'+(cont?' blank':'');
         if(!cont) fillAv(pav,PROF.peer,'🐱');
@@ -6176,7 +6176,7 @@ function renderChat(forceBottom){
       bub.classList.add('sticker-b');
       bub.setAttribute('aria-label',(mine?'送信した':'受信した')+'スタンプ「'+STICKER_NAMES[STICKERS.indexOf(m.text)]+'」。長押し、または操作ボタンで反応を選ぶ');
     }
-    if(mine){ row.dataset.uid=m.uid||''; row.appendChild(meta); row.appendChild(bub); }
+    if(mine){ row.dataset.uid=m.uid||''; if(m.n) row.dataset.n=String(m.n); row.appendChild(meta); row.appendChild(bub); }
     else{
       var av=document.createElement('div');
       av.className='av'+(cont?' blank':'');
@@ -6192,6 +6192,28 @@ function renderChat(forceBottom){
   }
   observeStickerMotion();
   if(stick) scrollChatBottom(); else box.scrollTop=previousTop;
+}
+/* v233: 既読・受領の とき、じぶんの 行の 時刻らんだけ 書きかえる（ふきだしは そのまま）。行が みつからなければ false — よびだした ほうが 画面を 作り直す */
+function updateMsgMeta(nsList){
+  try{
+    var box=$('#chat-log'); if(!box||!Array.isArray(nsList)||!nsList.length) return false;
+    var set={}; nsList.forEach(function(n){ set[n]=1; });
+    var rows={};
+    box.querySelectorAll('.msg[data-n]').forEach(function(r){ rows[r.getAttribute('data-n')]=r; });
+    var found=0;
+    for(var i=0;i<S.chat.length;i++){
+      var m=S.chat[i];
+      if(!m||m.sys||m.from!==S.me.id||!m.n||!set[m.n]) continue;
+      var row=rows[String(m.n)]; if(!row) return false;
+      var meta=row.querySelector('.meta'); if(!meta) return false;
+      var nx=S.chat[i+1];
+      var at=(typeof m.at==='number'?m.at:Date.now());
+      var gEnd=!(nx&&!nx.sys&&nx.from===m.from&&sameDay(nx.at||at,at)&&(((nx.at||at)-at)<LINE_GROUP_MS));
+      meta.textContent=metaText(m,true,at,gEnd);
+      found++;
+    }
+    return found===nsList.length;
+  }catch(e){ return false; }
 }
 /* v115: 1つの ふきだしに 表示は 1つだけ（送信中 → 未読 → 既読） */
 function metaText(m,mine,at,groupEnd){
@@ -6956,11 +6978,7 @@ function stickerMotionChanged(){
   refreshStickerMotion();
   if(!chatOnScreen()||stickerReducedMotion()||(stickerFullscreenLayer&&stickerFullscreenLayer.dataset.scope!==deletionScope())) clearStickerFullscreen();
 }
-/* v229: 非表示から表示へ戻ったときも「開いた」扱い。低減設定の切替など他の事象では再演しない。 */
-document.addEventListener('visibilitychange',function(){
-  if(document.hidden||stickerFullscreenLayer||!chatOnScreen()||stickerReducedMotion()) return;
-  stickerReplayOpen({fresh:true,source:'visibility-return'});
-});
+/* v234: 非表示から表示へ戻っただけでは再演しない。トークを 開いた とき(setTab・演目の画面へ出たとき)だけ 再演する。 */
 /* v229: 会話を開く・表示へ戻るごとに、この会話の最新の全画面スタンプを一度だけ再生する。
    描画や既読・反応・スクロールでは呼ばない。削除済み・固定識別子なし・未送信の自分・低減設定は対象外。
    起動前の履歴（stickerEffectsStartedAt 以前）も開き直しの対象にする。 */
@@ -8619,11 +8637,12 @@ Net.onMsg=function(m){
       (function(ns){
         if(!Array.isArray(ns)) return;
         var set={}; ns.forEach(function(n){ set[n]=1; });
-        for(var i=0;i<S.chat.length;i++){ var x=S.chat[i]; if(x&&!x.sys&&x.from===S.me.id&&x.n&&set[x.n]){ x.read=true; x.acked=true; } }
+        var touched=[];
+        for(var i=0;i<S.chat.length;i++){ var x=S.chat[i]; if(x&&!x.sys&&x.from===S.me.id&&x.n&&set[x.n]&&!(x.read&&x.acked)){ x.read=true; x.acked=true; touched.push(x.n); } }
+        /* v233: じぶんの 行の 時刻らんだけ かきかえる（長い 履歴の 作り直しを さける）。行が ないときは 作り直す */
+        if(touched.length){ persistChat(); if(S.tab==='chat'&&!updateMsgMeta(touched)) renderChat(); }
       })(m.ns);
       /* v154: 既読に なっても けさない（けすのは「🗑 けす」だけ） */
-      persistChat();
-      if(S.tab==='chat') renderChat();
       break;
 
     /* しゃしんチャンク：あんごうされた かけらを あつめて もとに もどす */
@@ -8765,11 +8784,13 @@ case 'ack':
       if(m.from===S.me.id) break;
       /* v123: 受領は その番号 だけ */
       (function(n){
+        var touched=[];
         for(var ai=0;ai<S.chat.length;ai++){
           var am=S.chat[ai];
-          if(am&&!am.sys&&am.from===S.me.id&&am.n&&am.n===n){ am.acked=true; am.delivered=true; }
+          if(am&&!am.sys&&am.from===S.me.id&&am.n&&am.n===n&&!am.acked){ am.acked=true; am.delivered=true; touched.push(am.n); }
         }
-        if(S.tab==='chat') renderChat(true);
+        /* v233: 受領も 行の 表示だけ かきかえる（作り直しを さける） */
+        if(touched.length){ persistChat(); if(S.tab==='chat'&&!updateMsgMeta(touched)) renderChat(true); }
       })(m.n1||0);
       break;
 
