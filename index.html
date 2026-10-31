@@ -903,7 +903,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v264</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v265</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -977,7 +977,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v264</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v265</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -5922,7 +5922,7 @@ function sendAppOpen(){
   try{ Net.send({t:'chat-open',at:Date.now()}); }catch(e){}   /* v183: とき刻印つき（ふるいためこみを はじくため） */
   /* v263: アプリを とじて いても 鳴る ように、あいての「ベル用とおりみち」へ 1通だけ おくる。
      この とおりみちは あいてだけが うけとる（こちらには もどらない）。中身は 時刻だけ。 */
-  try{ if(peerOpenOn()) pushPeerOpen(Date.now()); }catch(e){}
+  try{ if(peerOpenOn()&&peerKeepOn()) pushPeerOpen(Date.now()); }catch(e){}
 }
 /* v263: あいての スマホへ「ひらいた」1通。アプリが とじて いても スマホが うけとって 鳴らす */
 var lastOpenPush=0;
@@ -6004,7 +6004,7 @@ function peerKeepOn(){ try{ return localStorage.getItem(PEERKEEP_KEY)!=='1'; }ca
 function paintPeerKeepBtn(){ try{ var b=document.getElementById('pf-peerkeep'); if(b) b.textContent=peerKeepOn()?'オン':'オフ'; }catch(e){} }
 function ntfyKeep(t){
   if(!t) return false;
-  if(t==='chat-open') return peerKeepOn();          /* v262: とじている 間の 分も のこす 設定 */
+  if(t==='chat-open') return false;   /* v265: 「ひらいた」は スマホの 控え('po')に のこるので 中継所には のこさない（1日250通を 節約） */
   var K={chats:1,recall:1,purge:1,unpair:1,prof:1,join:1,ok:1,eject:1,bye:1,full:1,hi2:1};
   return K[t]===1;
 }
@@ -9889,7 +9889,7 @@ function recvProf(m){
       if(!swReg){ r.textContent='sw.js が 見つかりません。GitHub に sw.js も アップロード してください。'; return; }
       await bgPushSetup();
       var mine=await myBellTopic();
-      r.textContent='10秒後に テスト通知を おくります。いまのうちに ホーム画面に もどってください。';
+      r.textContent='10秒後に テスト通知を おくります。アプリを ひらいた ままでも とどきます（v265〜）。とどかない ときは この 下の「とどけ てんけん」で ⑧ の けっかを 見て ください。';
       setTimeout(function(){
         var nr=$('#pf-nres');
         var testNtfy=function(why){
@@ -9958,10 +9958,10 @@ function recvProf(m){
       say('⑫ けした 控え（この 端末）: '+(function(){ try{ var t=tombAll(), sc=tombScope(), m=t[sc]||{}; return Object.keys(m).length+'件'; }catch(e){ return '?'; } })()+'／入力の 保留: '+(chatComposing?'止まって いる':'なし')+'／画面の 残り: '+(function(){ try{ var b=document.getElementById('chat-log'); var k=0; b.querySelectorAll('.msg').forEach(function(r){ if(tombRowGone(r)) k++; }); return k+'件'; }catch(e){ return '?'; } })());
       say('⑬ あいての 画面から 消す 合図: '+(function(){ try{ return purgePending().length+'件 まだ おくって いない'; }catch(e){ return '?'; } })()+'／この 画面で まだ けせて いない 合図: '+(function(){ try{ return purgeInAll().length+'件'; }catch(e){ return '?'; } })()+'／あいてから とどいた 合図: '+(function(){ try{ return (window.__purgeIn||0)+'件'+(window.__purgeAt?('（'+new Date(window.__purgeAt).toLocaleTimeString('ja-JP')+'）'):''); }catch(e){ return '?'; } })());
       say('⑪ 既読から15分で きえる: '+(vanishOn()?'オン':'オフ')+'／時計の うごいて いる 記事: '+S.chat.filter(function(m){ return m&&!m.sys&&m.rad; }).length+'件／つぎの 消去まで: '+(function(){ var w=S.chat.filter(function(m){ return m&&!m.sys&&m.rad; }).map(function(m){ return m.rad+VANISH_MS; }).sort(function(a,b){ return a-b; })[0]; return w?Math.max(0,Math.ceil((w-Date.now())/1000))+'秒':'なし'; })()+'／けす 合図の まち: '+purgePending().length+'件');
-      say('⑭ この 端末の 役: '+(S.isHost===true?'ホスト（部屋を ひらいた側）':(S.isHost===false?'あいて（入室した側）':'まだ わからない'))+'／しらせの 設定の 行: '+(function(){ try{ var b=document.getElementById('pf-peeropen-box'); if(!b) return 'なし'; return (b.style.display==='none'?'かくして ある':'だして ある'); }catch(e){ return '?'; } })()+'／しらせ: '+(peerOpenOn()?'オン':'オフ')+'／とじている 間の 分: '+(peerKeepOn()?'のこす（12時間）':'のこさない')+'／この 端末には 音・バイブの 設定が '+(function(){ try{ return document.getElementById('pf-peeropen')?'あり':'なし'; }catch(e){ return '?'; } })());
+      say('⑭ この 端末の 役: '+(S.isHost===true?'ホスト（部屋を ひらいた側）':(S.isHost===false?'あいて（入室した側）':'まだ わからない'))+'／しらせの 設定の 行: '+(function(){ try{ var b=document.getElementById('pf-peeropen-box'); if(!b) return 'なし'; return (b.style.display==='none'?'かくして ある':'だして ある'); }catch(e){ return '?'; } })()+'／しらせ: '+(peerOpenOn()?'オン':'オフ')+'／とじている 間の 分: '+(peerKeepOn()?'のこす（12時間）':'のこさない')+'／あいての スマホへ おくる 間隔: 30分に 1回'+'／この 端末には 音・バイブの 設定が '+(function(){ try{ return document.getElementById('pf-peeropen')?'あり':'なし'; }catch(e){ return '?'; } })());
       say('　※ しらせの 項目は ホストの 端末だけに 出ます。あいての 端末の 設定には 行 そのものが ありません（相手には みえません）。');
       say('');
-      say('いま ホームがめんに もどって、30秒 待って ください。');
+      say(''); say('アプリは ひらいた ままで だいじょうぶです（v265〜 テスト通知は ひらいた ままでも とどきます）。30秒 待って ください。');
       say('④が 見えない → 端末の 通知設定。④は 見えるのに 来ない → ⑤⑦⑧ の けっかを おしえて ください。');
 
       var k=0;
