@@ -903,7 +903,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v262</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v264</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -977,7 +977,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v262</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v264</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -1178,7 +1178,7 @@ body.in-play .leave-row{display:none!important}
     <span style="font-size:.84rem">あいてが アプリを ひらいたら しらせる</span>
     <button type="button" class="ph" id="pf-peeropen" style="padding:4px 14px">オン</button>
   </div>
-  <p style="font-size:.72rem;color:#556;margin:0 0 10px">あいてが トークを ひらいた ときに、<b>この 端末の 中だけ</b>で 音・バイブ・しらせを だします。<b>あいての 端末には なにも おくりません（通信 0回）。あいての 画面にも なにも でません</b>ので、しらせが あること 自体を あいては 知れません。60秒に 1回までです。</p>
+  <p style="font-size:.72rem;color:#556;margin:0 0 10px">あいてが トークを ひらいた ときに、音・バイブ・しらせを だします。<b>アプリを とじて いても 鳴ります</b>（スマホの 通知として とどきます）。<b>あいての 画面には なにも でません</b>ので、しらせが あること 自体は 知れません。ただし リアルタイムで 鳴らす ため、<b>あいての 端末の ベル用とおりみちへ「ひらいた 時刻」だけを 1通 おくります</b>（30分に 1回まで・最長12時間 中継所に のこる・とおりみちの 名前は 2人の 鍵から 作る 合言葉）。オフに すると 1通も おくらず、アプリを ひらいて いる ときだけ 鳴ります。</p>
   <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 0 4px">
     <span style="font-size:.84rem">アプリを とじて いる 間の 分も あとで 分かる</span>
     <button type="button" class="ph" id="pf-peerkeep" style="padding:4px 14px">オン</button>
@@ -2718,7 +2718,7 @@ function setAppBadgeCount(n){
 /* v128: アプリを ひらいた ときに まちがった バッジを かならず けす（けす 仕事を 誰も していなかった ため） */
 function appBadgeSync(){ try{ setAppBadgeCount(S.unread||0); }catch(e){} }
 [300,1500,5000].forEach(function(ms){ setTimeout(appBadgeSync,ms); });
-document.addEventListener('visibilitychange',function(){ if(!document.hidden){ setTimeout(appBadgeSync,150); if(S.tab==='chat') swClearNotifs(); try{ sendAppOpen(); }catch(e){} } });   /* v142: もどった ときも 消す */
+document.addEventListener('visibilitychange',function(){ if(!document.hidden){ setTimeout(appBadgeSync,150); try{ peerOpenSweep(); }catch(e){} if(S.tab==='chat') swClearNotifs(); try{ sendAppOpen(); }catch(e){} } });   /* v142: もどった ときも 消す */
 /* v178: 画面を もどした ときは ためた 分を すぐ とりにいく（さいだい 20秒 の まちを なくす） */
 document.addEventListener('visibilitychange',function(){
   if(document.hidden) return;
@@ -5863,6 +5863,7 @@ if($('#btn-wipe')) $('#btn-wipe').addEventListener('click',function(){
 (function(){ try{ if(pairLoad()) window.__hasPair=true; }catch(e){} })();
 function startPlay(){
   stopAnnounce();
+  setTimeout(function(){ try{ peerOpenSweep(); }catch(e){} },600);
   setTimeout(function(){ try{ sendAppOpen(); }catch(e){} },800);
   S.words=[]; usedMap(); S.req=null; S.rendered=0; S.over=null; S.pending=null;
   S.turn = S.isHost ? S.me.id : S.opp.id;
@@ -5919,6 +5920,42 @@ function sendAppOpen(){
   var t=Date.now(); if(t-lastChatOpenSent<30000) return;   /* 連発よけ:30秒に1回 */
   lastChatOpenSent=t;
   try{ Net.send({t:'chat-open',at:Date.now()}); }catch(e){}   /* v183: とき刻印つき（ふるいためこみを はじくため） */
+  /* v263: アプリを とじて いても 鳴る ように、あいての「ベル用とおりみち」へ 1通だけ おくる。
+     この とおりみちは あいてだけが うけとる（こちらには もどらない）。中身は 時刻だけ。 */
+  try{ if(peerOpenOn()) pushPeerOpen(Date.now()); }catch(e){}
+}
+/* v263: あいての スマホへ「ひらいた」1通。アプリが とじて いても スマホが うけとって 鳴らす */
+var lastOpenPush=0;
+async function pushPeerOpen(at){
+  try{
+    if(Date.now()-lastOpenPush<30*60*1000) return false;   /* v264: 30分に 1回まで（中継所の 回数 1日250 を つかいきらない ため） */
+    var t=await bellTopic(); if(!t) return false;
+    lastOpenPush=Date.now();
+    var payload='zgo:'+at;
+    if(psrvGet()){
+      var j=await psrvPush(t,payload);
+      if(j&&j.ok&&j.send>0) return true;
+      if(j&&j.ok&&j.sent>0) return true;
+    }
+    var r=await fetch('https://ntfy.sh/'+t,{method:'POST',headers:{'Content-Type':'text/plain','Priority':'high'},body:payload});
+    return !!(r&&r.ok);
+  }catch(e){ return false; }
+}
+/* v263: スマホが あずかった「ひらいた」記録を とりだして 履歴に のこす（とじている 間の 分） */
+var peerSweepT=0;
+async function peerOpenSweep(){
+  if(!(S.paired||S.linked)) return;
+  if(Date.now()-peerSweepT<3000) return;
+  peerSweepT=Date.now();
+  try{
+    var c=await caches.open('zg-count');
+    var r=await c.match('po'); if(!r) return;
+    var at=parseInt(await r.text(),10);
+    if(!at||at<=0) return;
+    if(Date.now()-at>12*3600*1000) return;
+    if(S.peerChatT&&at<=S.peerChatT+1000) return;
+    peerChatOpen(at,true);
+  }catch(e){}
 }
 function peerLine(){
   var ts=+(window.__zgsPeerLast||0)||0;   /* v166: 相手からの 受信だけ。v183: あいてが アプリを ひらいた 記録だけに */
@@ -9716,7 +9753,7 @@ async function drainInbox(){
 }
 setTimeout(drainInbox,1500);
 document.addEventListener('visibilitychange',function(){ if(!document.hidden){ setTimeout(drainInbox,100); try{ if(Date.now()-(window.__bgLast||0)>3600000){ window.__bgLast=Date.now(); bgPushSetup(); } }catch(e){} } });
-try{ navigator.serviceWorker&&navigator.serviceWorker.addEventListener('message',function(e){ if(e.data==='zg-new') drainInbox(); else if(e.data&&typeof e.data==='object'&&e.data.swver){ var sv=document.getElementById('swver'); if(sv) sv.textContent=e.data.swver; } }); }catch(e){}
+try{ navigator.serviceWorker&&navigator.serviceWorker.addEventListener('message',function(e){ if(e.data==='zg-new'){ drainInbox(); try{ peerOpenSweep(); }catch(_e){} } else if(e.data&&typeof e.data==='object'&&e.data.swver){ var sv=document.getElementById('swver'); if(sv) sv.textContent=e.data.swver; } }); }catch(e){}
 async function ringBellOld(){
   /* あいての 端末が とじて いても 通知が とどく ように「ベル」だけ ならす（1分に 1回まで） */
   if(Date.now()-bellLast<5000) return;
