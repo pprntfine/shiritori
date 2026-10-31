@@ -903,7 +903,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline">バージョン <b id="ver">v255</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
+      <p class="verline">バージョン <b id="ver">v257</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）｜SW <b id="swver">?</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -977,7 +977,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v255</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）</p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v257</b>｜ビルド 2026-10-30（アプリが 裏でも スマホに 直接とどく）</p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -2049,7 +2049,7 @@ var Net={
     /* v131: ntfy は 1日250回（同じ Wi-Fi の 2台で 合計）まで。既読・受領・ping などで つかいきると
        アプリを 切った ときの 通知（ベル）が とまる → 大事な ものだけ ntfy に のせる */
     /* v181: recall（とりけし）を 追加 — 相手が 閉じて いても とりけしが とどくように */
-    var NTFY_KEEP={chats:1,recall:1,unpair:1,prof:1,join:1,ok:1,eject:1,bye:1,full:1,hi2:1};
+    var NTFY_KEEP={chats:1,recall:1,purge:1,unpair:1,prof:1,join:1,ok:1,eject:1,bye:1,full:1,hi2:1};
     if(!(env&&NTFY_KEEP[env.t])&&fastOk) return true;
     /* v152: 受領証・ping は 即時路が きれて いる ときも 行列を 待たせない（うしろで 保存路へ）。
        以前は 1通ごとに 最大7秒 待って いたので、うしろの トークが「送信中」の まま つまっていた */
@@ -5598,7 +5598,7 @@ async function savePairState(){
     try{ skb=b64(await crypto.subtle.exportKey('raw',S.sessKey)); }catch(e){ return false; }
     pairSave({peerId:(S.opp&&S.opp.id)||'',peerName:(S.opp&&S.opp.name)||'あいて',
       isHost:S.isHost,topic:Net.topic,rk:rkb,sk:skb});
-    S.chatLoaded=true; persistChat(); syncDeletions(); reactionReconnect();   /* v219: 新規ペアでも削除同期を初期化 */
+    S.chatLoaded=true; persistChat(); syncDeletions(); try{ purgeInDrain(); }catch(e){} reactionReconnect();   /* v219: 新規ペアでも削除同期を初期化 */
     return true;
   }catch(e){ return false; }
 }
@@ -5792,7 +5792,7 @@ async function resumeConnect(silent){
       });
       S.chat.sort(function(a,b){ return (a.at||0)-(b.at||0); });
     }catch(e){}
-    S.chatLoaded=true; removeDeletedMessages(); persistChat(); syncDeletions();
+    S.chatLoaded=true; removeDeletedMessages(); persistChat(); syncDeletions(); try{ purgeInDrain(); }catch(e){}
     if(S.outbox&&S.outbox.length) setTimeout(flushOutbox,1500);
     if($('#p-me')) $('#p-me').textContent=meName();
     if($('#p-opp')) $('#p-opp').textContent=peerName();
@@ -6691,13 +6691,24 @@ async function deletionLoad(){
 /* v253: つながって いない ときでも けした ことを のこす（この 端末の 控え） */
 var TOMB_KEY='zg.tomb1';
 function tombAll(){ try{ return JSON.parse(localStorage.getItem(TOMB_KEY)||'{}')||{}; }catch(e){ return {}; } }
-function tombScope(){ try{ return deletionScope()||((S.me&&S.me.id)||'me')+':local'; }catch(e){ return 'local'; } }
-function tombHas(id){ try{ var t=tombAll(), sc=tombScope(); return !!(id&&t[sc]&&t[sc][id]); }catch(e){ return false; } }
+function tombScope(){ try{ return deletionScope()||('me:'+((S.me&&S.me.id)||'me')); }catch(e){ return 'local'; } }
+/* v256: つながって いない ときに けした ぶんも 見つかる よう、いくつかの 場所に 書く */
+function tombScopes(){ var out=[]; try{ var d=deletionScope(); if(d) out.push(d); }catch(e){} try{ out.push('me:'+((S.me&&S.me.id)||'me')); }catch(e){} out.push('local'); return out; }
+function tombHas(id){ try{
+  if(!id) return false;
+  var t=tombAll(), scs=tombScopes();
+  for(var i=0;i<scs.length;i++){ var m=t[scs[i]]; if(m&&m[id]) return true; }
+  return false;
+}catch(e){ return false; } }
 function tombAdd(ids){ try{
-  var t=tombAll(), sc=tombScope(), m=t[sc]||{};
-  (ids||[]).forEach(function(id){ if(id) m[id]=1; });
-  var keys=Object.keys(m); if(keys.length>4000) keys.slice(0,keys.length-4000).forEach(function(k){ delete m[k]; });
-  t[sc]=m; localStorage.setItem(TOMB_KEY,JSON.stringify(t));
+  var t=tombAll(), scs=tombScopes();
+  scs.forEach(function(sc){
+    var m=t[sc]||{};
+    (ids||[]).forEach(function(id){ if(id) m[id]=1; });
+    var keys=Object.keys(m); if(keys.length>4000) keys.slice(0,keys.length-4000).forEach(function(k){ delete m[k]; });
+    t[sc]=m;
+  });
+  localStorage.setItem(TOMB_KEY,JSON.stringify(t));
 }catch(e){} }
 function messageGone(m){ return messageDeleted(m)||tombHas(messageId(m))||(m&&m.uid&&tombHas('u:'+m.uid)); }
 /* v254: 控えに ある 行は、どの 経路で 描き直されても 画面から 取り除く（見はり番） */
@@ -6761,12 +6772,22 @@ function removeDeletedMessages(){
   }
   document.querySelectorAll('#ig-comments [data-message-id]').forEach(function(row){ if(messageDeleted({from:row.dataset.author,mid:row.dataset.messageId})) row.remove(); });
   if(typeof attachmentPlayback!=='undefined') Object.keys(attachmentPlayback).forEach(function(k){ if(!S.chat.some(function(m){ return k===String(m.from)+':'+String(m.pid||m.n||m.at); })) delete attachmentPlayback[k]; });
+  /* v256: けした あとに 画面を 作り直す（描き直しが 止まって いても 消える ように） */
+  if(!removeDeletedRendering){
+    removeDeletedRendering=true;
+    try{ chatComposing=false; chatDeferred=false; }catch(e){}
+    try{ renderChat(true); }catch(e){}
+    try{ tombEnforce(); }catch(e){}
+    removeDeletedRendering=false;
+  }
 }
+var removeDeletedRendering=false;
 async function receiveDeletion(m){
   if(!S.sealed||m.__legacy||!S.opp||m.from!==S.opp.id||m.from===S.me.id) return;
   /* n は封筒番号。削除対象には使わない。旧版の曖昧な recall は拒否する。 */
   if(!Array.isArray(m.ids)||!m.ids.length||m.ids.length>32||!m.ids.every(validDeletionId)) return;
   try{ var d=await deletionRemember(m.from,m.ids); if(deletionScope()!==d.scope) return;
+    try{ tombAdd(m.ids); }catch(e){}
     removeDeletedMessages(); await chatSaveNow();
     if(deletionScope()===d.scope) Net.send({t:'recall-ack',ids:m.ids});
   }catch(e){ /* 保存できなければ受領を返さず、送信側の再試行に任せる。 */ }
@@ -6786,17 +6807,34 @@ function purgeFlush(){
   for(var i=0;i<all.length;i+=16){ Net.send({t:'purge',ids:all.slice(i,i+16)}); }
 }
 setInterval(function(){ try{ purgeFlush(); }catch(e){} },45000);
+/* v257: とどいた 合図は、まず 端末に 控える。トークを よみこむ 前でも 失わない */
+var PURGE_IN='zg.purgein1';
+function purgeInAll(){ try{ return JSON.parse(localStorage.getItem(PURGE_IN)||'[]').filter(validDeletionId); }catch(e){ return []; } }
+function purgeInStore(l){ try{ localStorage.setItem(PURGE_IN,JSON.stringify((l||[]).slice(-300))); }catch(e){} }
+function purgeInAdd(ids){
+  var all=purgeInAll(); (ids||[]).filter(validDeletionId).forEach(function(id){ if(all.indexOf(id)<0) all.push(id); });
+  purgeInStore(all);
+}
+async function purgeInDrain(){
+  if(!S.sealed||!S.opp||!S.chatLoaded) return;   /* トークを よみこんでから はんてい */
+  var ids=purgeInAll(); if(!ids.length) return;
+  var owns={}; S.chat.forEach(function(x){ if(x&&!x.sys&&x.from===S.me.id) owns[messageId(x)]=1; });
+  var ok=[], no=[];
+  ids.forEach(function(id){ (owns[id]?ok:no).push(id); });
+  if(ok.length){
+    try{ window.__purgeIn=(window.__purgeIn||0)+ok.length; window.__purgeAt=Date.now(); }catch(e){}
+    try{ tombAdd(ok); }catch(e){}
+    try{ await deletionRemember(S.me.id,ok); removeDeletedMessages(); await chatSaveNow(); Net.send({t:'recall-ack',ids:ok}); }
+    catch(e){ return; }   /* 保存できなければ 控えを のこして やりなおす */
+  }
+  /* トークに もう ない ものは 控えから 外す */
+  purgeInStore(purgeInAll().filter(function(id){ return ok.indexOf(id)<0 && no.indexOf(id)<0; }));
+}
 async function receivePurge(m){
   if(!S.sealed||m.__legacy||!S.opp||m.from!==S.opp.id||m.from===S.me.id) return;
   if(!Array.isArray(m.ids)||!m.ids.length||m.ids.length>32||!m.ids.every(validDeletionId)) return;
-  /* じぶんが 出した 記事だけ を けす（なりすましで 相手の 記事を 消せない ように） */
-  var owns={}; S.chat.forEach(function(x){ if(x&&!x.sys&&x.from===S.me.id) owns[messageId(x)]=1; });
-  var ok=m.ids.filter(function(id){ return owns[id]; });
-  if(!ok.length) return;
-  try{ await deletionRemember(S.me.id,ok); removeDeletedMessages(); await chatSaveNow();
-    var left=purgePending().filter(function(id){ return ok.indexOf(id)<0; }); purgeStore(left);
-    Net.send({t:'recall-ack',ids:ok});
-  }catch(e){}
+  purgeInAdd(m.ids);
+  await purgeInDrain();
 }
 async function syncDeletions(){
   if(!S.linked||!S.chatLoaded||!Net.topic||!Net.key||navigator.onLine===false) return;
@@ -6863,8 +6901,8 @@ function markDeletable(row,bubble,m,mine){
 }
 bindMessageDeletion($('#chat-log'));
 setInterval(syncDeletions,15000);
-window.addEventListener('online',function(){ deletionAcked.clear(); syncDeletions(); reactionReconnect(); });
-document.addEventListener('visibilitychange',function(){ if(!document.hidden){ deletionAcked.clear(); syncDeletions(); reactionReconnect(); } });
+window.addEventListener('online',function(){ deletionAcked.clear(); syncDeletions(); try{ purgeFlush(); }catch(e){} reactionReconnect(); });
+document.addEventListener('visibilitychange',function(){ if(!document.hidden){ deletionAcked.clear(); syncDeletions(); try{ purgeFlush(); }catch(e){} reactionReconnect(); } });
 /* =================================================================
    v231: 画像タップの全画面表示。
    トークの写真(送受信どちらも)を短くタップすると、暗い背景に原尺の比率のまま出す。
@@ -8758,7 +8796,7 @@ var fwLast=0;
 function stopFullWatch(){ if(S.fwTimer){ clearInterval(S.fwTimer); S.fwTimer=null; } }
 function startFullWatch(){ /* v111: 定期チェックは 廃止（回数制限の 最大の 原因） */ }
 async function fullWatchTick(){ }
-Net.onState=function(state){ setNet(state); if(state==='open'){ deletionAcked.clear(); syncDeletions(); reactionReconnect(); } };
+Net.onState=function(state){ setNet(state); if(state==='open'){ deletionAcked.clear(); syncDeletions(); try{ purgeFlush(); }catch(e){} reactionReconnect(); } };
 /* 制限で 送れなかった トークを、復帰したら 順に 送りなおす */
 setInterval(function(){
   try{
@@ -9125,7 +9163,11 @@ Net.onMsg=function(m){
       receiveDeletion(m);
       break;
     case 'recall-ack':
-      if(m.from===S.opp.id&&Array.isArray(m.ids)&&m.ids.length<=32) m.ids.filter(validDeletionId).forEach(function(id){ deletionAcked.add(id); });
+      if(m.from===S.opp.id&&Array.isArray(m.ids)&&m.ids.length<=32){
+        var ackIds=m.ids.filter(validDeletionId);
+        ackIds.forEach(function(id){ deletionAcked.add(id); });
+        try{ var rest=purgePending().filter(function(id){ return ackIds.indexOf(id)<0; }); if(rest.length!==purgePending().length) purgeStore(rest); }catch(e){}
+      }
       break;
 
     /* 受領証：相手の端末に届いた */
@@ -9825,6 +9867,7 @@ function recvProf(m){
       say('⑨ しゃしん送信の さいごの 応答: '+(Net.lastFileStatus?('HTTP '+Net.lastFileStatus+'（'+new Date(Net.lastFileAt).toLocaleTimeString('ja-JP')+'）'):'まだ なし'));
       say('⑩ つながり: '+(Net.topic&&Net.key?'あり':'なし')+'／まちの のこり: '+((Net.coolUntil&&Net.coolUntil>Date.now())?Math.ceil((Net.coolUntil-Date.now())/1000)+'秒':'なし'));
       say('⑫ けした 控え（この 端末）: '+(function(){ try{ var t=tombAll(), sc=tombScope(), m=t[sc]||{}; return Object.keys(m).length+'件'; }catch(e){ return '?'; } })()+'／入力の 保留: '+(chatComposing?'止まって いる':'なし')+'／画面の 残り: '+(function(){ try{ var b=document.getElementById('chat-log'); var k=0; b.querySelectorAll('.msg').forEach(function(r){ if(tombRowGone(r)) k++; }); return k+'件'; }catch(e){ return '?'; } })());
+      say('⑬ あいての 画面から 消す 合図: '+(function(){ try{ return purgePending().length+'件 まだ おくって いない'; }catch(e){ return '?'; } })()+'／この 画面で まだ けせて いない 合図: '+(function(){ try{ return purgeInAll().length+'件'; }catch(e){ return '?'; } })()+'／あいてから とどいた 合図: '+(function(){ try{ return (window.__purgeIn||0)+'件'+(window.__purgeAt?('（'+new Date(window.__purgeAt).toLocaleTimeString('ja-JP')+'）'):''); }catch(e){ return '?'; } })());
       say('⑪ 既読から15分で きえる: '+(vanishOn()?'オン':'オフ')+'／時計の うごいて いる 記事: '+S.chat.filter(function(m){ return m&&!m.sys&&m.rad; }).length+'件／つぎの 消去まで: '+(function(){ var w=S.chat.filter(function(m){ return m&&!m.sys&&m.rad; }).map(function(m){ return m.rad+VANISH_MS; }).sort(function(a,b){ return a-b; })[0]; return w?Math.max(0,Math.ceil((w-Date.now())/1000))+'秒':'なし'; })()+'／けす 合図の まち: '+purgePending().length+'件');
       say('');
       say('いま ホームがめんに もどって、30秒 待って ください。');
