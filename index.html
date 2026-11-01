@@ -903,7 +903,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-01">バージョン <b id="ver">v270</b></p>
+      <p class="verline" title="ビルド 2026-11-01">バージョン <b id="ver">v272</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -977,7 +977,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v270</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v272</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -5949,6 +5949,10 @@ function openProofLabel(p){
 }
 function sendAppOpen(reason){
   if(!(S.paired||S.linked)) return;
+  /* v271: 「ひらいた」合図は あいて→ホスト の 1方向だけ。
+     ホストが ひらいた ことは あいての 端末・通知に いっさい ださない。 */
+  try{ openLogGuard(); }catch(e){}
+  if(S.isHost!==false) return;
   var __r=reason||'resume';
   var t=Date.now();
   /* v268: 理由ごとに 間引く。「起動」「もどった」は 本物の 開封なので 消さない */
@@ -5961,7 +5965,7 @@ function sendAppOpen(reason){
   var __fg=(typeof document!=='undefined'&&document.visibilityState==='visible')?1:0;
   var __g=gestAgeSec();
   /* v268: 理由(r)と 自分の 版(pv)も のせる。あいては「なぜ 増えたか」を 時刻つきで 見られる */
-  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v270'}); }catch(e){}
+  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v272'}); }catch(e){}
   /* v263: アプリを とじて いても 鳴る ように、あいての「ベル用とおりみち」へ 1通だけ おくる。
      この とおりみちは あいてだけが うけとる（こちらには もどらない）。中身は 時刻だけ。 */
   try{ if(peerOpenOn()&&peerKeepOn()&&__r!=='conn') pushPeerOpen(t,__fg); }catch(e){}   /* v267/v268: 本物の 開封だけ スマホの ベルへ */
@@ -5972,6 +5976,7 @@ try{ setTimeout(function(){ try{ if(document.visibilityState==='visible') sendAp
 var lastOpenPush=0;
 async function pushPeerOpen(at,fg){
   try{
+    if(S.isHost!==false) return false;   /* v271: ホストの 開封は あいての スマホへ おくらない */
     /* v267: 「開いた」の 押しこみは 本物（画面が 見えて いた）だけ。10分に 1回・端末に おぼえる */
     if(fg!==1) return false;
     try{ lastOpenPush=Math.max(lastOpenPush, +(localStorage.getItem('zg_openpush_at')||0)||0); }catch(e){}
@@ -5993,6 +5998,7 @@ async function pushPeerOpen(at,fg){
 var peerSweepT=0;
 async function peerOpenSweep(){
   if(!(S.paired||S.linked)) return;
+  if(S.isHost!==true) return;   /* v271: ホストの 端末だけ */
   if(Date.now()-peerSweepT<3000) return;
   peerSweepT=Date.now();
   try{
@@ -6057,6 +6063,28 @@ function plogClean(){
     if(o.length!==l.length){ plogSave(o); }
     return o;
   }catch(e){ return plogLoad(); }
+}
+/* v271: ホストが ひらいた ことを あいてに のこさない ための 後始末。
+   入室した側の 端末に のこって いた「ホストが ひらいた」記録は、ひらいた 瞬間に けす。
+   SW(sw154) も 同じ 役を 見て、入室側では ベルを 鳴らさない。 */
+function openLogGuard(){
+  try{ swRoleSync(); }catch(e){}
+  if(S.isHost===true){ window.__guestPurged=0; return; }
+  if(window.__guestPurged) return;
+  window.__guestPurged=1;
+  try{
+    localStorage.removeItem('zg_peer_log');
+    localStorage.removeItem('zg_peer_chat_open');
+    localStorage.removeItem('zg_openpush_at');
+  }catch(e){}
+  try{ window.__zgsPeerLast=0; window.__zgsPeerLive=0; window.__zgsPeerProof=''; S.peerChatT=0; }catch(e){}
+  try{ if(!window.__poCleared){ window.__poCleared=1; caches.open('zg-count').then(function(c){ return c.delete('po'); }).catch(function(){}); } }catch(e){}
+}
+function swRoleSync(){
+  var r=(S.isHost===true?'h':(S.isHost===false?'g':''));
+  if(!r||r===window.__swRole) return;
+  window.__swRole=r;
+  try{ caches.open('zg-count').then(function(c){ return c.put('role',new Response(r)); }).catch(function(){}); }catch(e){}
 }
 function plogSave(l){ try{ localStorage.setItem('zg_peer_log',JSON.stringify(l.slice(-100))); }catch(e){} }
 try{ if(!S.peerVer) S.peerVer=localStorage.getItem('zg_peer_ver')||''; }catch(e){}   /* v268: あいての 版を おぼえて おく */
@@ -6137,6 +6165,7 @@ function plogHM(ts){ var d=new Date(ts); return ('0'+d.getHours()).slice(-2)+':'
 /* v269: 回数に 数えるのは「ひらいた」だけ（つながり直し・きれたは 数えない） */
 function __countable(e){ return !!(e&&(e.k==='open'||e.k==='late')); }   /* v186: びょう単位まで くわしく */
 function plogRender(){
+  try{ openLogGuard(); }catch(e){}
   try{
     var b=$('#mem-plog-list'); if(!b) return;   /* v186: プロフからは けした。裏画面（▶めも の 窓）だけに 表示する */
     var l=plogClean(),h='';
@@ -6188,6 +6217,7 @@ setInterval(function(){ try{ if(memBox) plogRender(); }catch(e){} },3000);   /* 
 var lastLiveSent=0;
 function sendLive(){   /* v183: あいてに「いきてる」しるしを はなす（25秒に 1かい） */
   if(!(S.paired||S.linked)) return;
+  if(S.isHost!==false) return;   /* v272: ホストの 在席も 相手に わたさない（開いて いる ことが 分かって しまう） */
   var t=Date.now(); if(t-lastLiveSent<25000) return;
   lastLiveSent=t;
   try{ Net.send({t:'app-live',at:t}); }catch(e){}
@@ -9272,6 +9302,7 @@ Net.onMsg=function(m){
     /* v162: あいてが トーク画面を ひらいた きろく（v183: あいての 分だけ・ふるいためこみは かぞえない） */
     case 'chat-open':
       /* v269: 「じぶんの 接続」を あいての 記録に しない ための 4重の かき（ここを 通った ものだけ 記録） */
+      if(S.isHost!==true) break;                /* v271: 入室した側は 記録も 通知も しない（ホストが ひらいた ことを 知らせない） */
       if(!m.from) break;                        /* 1) 出し手 不明は すてる */
       if(m.from===S.me.id) break;               /* 2) この 端末が 出した 合図は すてる */
       if(!S.opp||!S.opp.id) break;              /* 3) あいてが 特定 できて いなければ すてる */
@@ -9300,7 +9331,7 @@ Net.onMsg=function(m){
       var wasLive=+(window.__zgsPeerLive||0)||0;   /* v185 */
       window.__zgsPeerLive=Date.now();
       try{ sessionStorage.setItem('zg_peer_live',String(window.__zgsPeerLive)); }catch(e){}
-      try{ if(Date.now()-wasLive>90000) peerChatOpen(m.at,false,'guess'); }catch(e){}   /* v185/v266/v267: しばらく とだえていた あとの あたらしい いきは「推定」として 記録だけ（通知は しない） */
+      try{ if(S.isHost===true&&Date.now()-wasLive>90000) peerChatOpen(m.at,false,'guess'); }catch(e){}   /* v271: ホストだけ */   /* v185/v266/v267: しばらく とだえていた あとの あたらしい いきは「推定」として 記録だけ（通知は しない） */
       break;
 
     /* v250: あいてが「これも けして」と いった 記事 */
