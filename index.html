@@ -903,7 +903,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v277</b></p>
+      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v278</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -977,7 +977,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v277</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v278</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -1975,7 +1975,7 @@ var Net={
       } else return;
     }
     if(!env||env.v!==V||typeof env.t!=='string') return;
-    if(({chats:1,chat:1,photo:1,attachment:1,'photo-chunk':1,recall:1,'recall-ack':1,reaction:1,'reaction-ack':1}[env.t])&&(!S.sealed||legacy||!S.opp||env.from!==S.opp.id)) return;
+    if(({chats:1,chat:1,photo:1,attachment:1,'photo-chunk':1,'photo-ref':1,'photo-again':1,recall:1,'recall-ack':1,reaction:1,'reaction-ack':1}[env.t])&&(!S.sealed||legacy||!S.opp||env.from!==S.opp.id)) return;
     env.__legacy=legacy;
     env.__att=(att&&att.url)?String(att.url):'';
     /* v115: 番号は「同じものを 2回 うけとらない」ためだけに つかう。
@@ -2158,6 +2158,16 @@ var Net={
         {method:'PUT',headers:{'Content-Type':'application/octet-stream'},body:all,signal:ac2?ac2.signal:undefined}); }
       finally{ clearTimeout(tmo2); }
       this.lastPostStatus=r.status; this.lastFileStatus=r.status; this.lastFileAt=Date.now();
+      /* v278: ファイルの ばしょを 本文の とおりみちで もう 1本 つたえる
+         （中継所の 添付が うけとり側で 見えない ときに、ここから 取りに いける） */
+      try{
+        if(r.ok){
+          var tj=await r.json();
+          var au=(tj&&tj.attachment&&tj.attachment.url)?String(tj.attachment.url):'';
+          if(au){ photoURL[env.id]=au; try{ Net.send({t:'photo-ref',id:String(env.id),url:au}); }catch(e){} }
+          else { try{ photoDiagPush('おくり','ばしょが わからない'); }catch(e){} }
+        }
+      }catch(e){}
       if(r.status===429||r.status===503){ this.hit429(45000); return false; }
       if(r.status===413){ try{ note('しゃしんが 大きすぎて おくれません。','#note2'); }catch(e){} return false; }
       return !!r.ok;
@@ -5965,7 +5975,7 @@ function sendAppOpen(reason){
   var __fg=(typeof document!=='undefined'&&document.visibilityState==='visible')?1:0;
   var __g=gestAgeSec();
   /* v268: 理由(r)と 自分の 版(pv)も のせる。あいては「なぜ 増えたか」を 時刻つきで 見られる */
-  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v277'}); }catch(e){}
+  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v278'}); }catch(e){}
   /* v263: アプリを とじて いても 鳴る ように、あいての「ベル用とおりみち」へ 1通だけ おくる。
      この とおりみちは あいてだけが うけとる（こちらには もどらない）。中身は 時刻だけ。 */
   try{ if(peerOpenOn()&&peerKeepOn()&&__r!=='conn') pushPeerOpen(t,__fg); }catch(e){}   /* v267/v268: 本物の 開封だけ スマホの ベルへ */
@@ -6804,7 +6814,7 @@ function notifyIncoming(){
   try{ var n=new Notification('雑学王',opt); n.onclick=function(){ try{ window.focus(); }catch(e){} try{ n.close(); }catch(e){} }; }catch(e){}
 }
 /* しゃしん：カメラでとって あんごうチャンクで そうしんする(きろくには のこらない) */
-var PHOTO_PIECE=1300, PHOTO_MAXSIDE=1024, photoBuf={}, photoSent={};   /* v267: おくった 写真を おぼえて おく（とどかなかった 分を おくりなおす） */
+var PHOTO_PIECE=1300, PHOTO_MAXSIDE=1024, photoBuf={}, photoSent={}, photoURL={}, photoAgain={}, photoAsk={};   /* v267: おくった 写真を おぼえて おく（とどかなかった 分を おくりなおす） */
 /* v273: 写真は「1回で おくれる 大きさ」に おさめてから 送る。かけら送りは 保険で、1800文字ずつ・最大2000かけら・120万文字まで */
 var PHOTO_CHUNK_PIECE=1800, PHOTO_SOFT_MAX=170000, PHOTO_HARD_MAX=1200000;
 var camStream=null, camShotURL='', camRequest=0, camPending=false;
@@ -8025,16 +8035,37 @@ function sendPhoto(msg,tries){
   });
   if(env&&env.n) msg.n=env.n;
 }
+/* v278: しゃしんの 種類を 中身の 先頭で 見わける（JPEG だけ うけとると、PNG の しゃしんが 無言で すてられる） */
+function photoMimeOf(b){
+  if(!b||b.length<12) return '';
+  if(b[0]===0xFF&&b[1]===0xD8) return 'image/jpeg';
+  if(b[0]===0x89&&b[1]===0x50&&b[2]===0x4E&&b[3]===0x47) return 'image/png';
+  if(b[0]===0x47&&b[1]===0x49&&b[2]===0x46) return 'image/gif';
+  if(b[0]===0x52&&b[1]===0x49&&b[2]===0x46&&b[3]===0x46&&b[8]===0x57&&b[9]===0x45&&b[10]===0x42&&b[11]===0x50) return 'image/webp';
+  return '';
+}
+/* v278: しゃしんを うけとれなかったら、あいてに「もう いちど おくって」と たのむ（2回まで） */
+function photoAskAgain(m){
+  try{
+    if(!m||!m.id||m.from===S.me.id) return;
+    var k=String(m.id); if((photoAsk[k]||0)>=2) return;
+    photoAsk[k]=(photoAsk[k]||0)+1;
+    try{ photoDiagPush('うけとり','もう いちど たのむ '+photoAsk[k]); }catch(e){}
+    Net.send({t:'photo-again',id:k});
+  }catch(e){}
+}
 async function recvPhoto(m){
   if(!m.__att){ try{ photoDiagPush('うけとり','しるし なし'); }catch(e){} }
-  if(!m.__att||messageDeleted({from:m.from,pid:m.id})) return;
+  if(!m.__att||messageDeleted({from:m.from,pid:m.id})){ if(!m.__att) photoAskAgain(m); return; }
   var topic=Net.topic,key=Net.key;
   for(var i=0;i<S.chat.length;i++){ if(S.chat[i].pid&&S.chat[i].pid===m.id&&S.chat[i].from===m.from) return; }
   var bytes=await Net.fetchFile(m.__att);
-  if(!bytes){ try{ photoDiagPush('うけとり','とれなかった'); }catch(e){} return; }
-  if(Net.topic!==topic||Net.key!==key||messageDeleted({from:m.from,pid:m.id})||bytes.length<4||bytes[0]!==0xFF||bytes[1]!==0xD8){ try{ photoDiagPush('うけとり','こわれて いた'); }catch(e){} return; }
+  if(!bytes){ try{ photoDiagPush('うけとり','とれなかった'); }catch(e){} photoAskAgain(m); return; }
+  var pm=photoMimeOf(bytes);
+  if(Net.topic!==topic||Net.key!==key||messageDeleted({from:m.from,pid:m.id})){ return; }
+  if(!pm){ try{ photoDiagPush('うけとり','こわれて いた'); }catch(e){} photoAskAgain(m); return; }
   if(S.chat.some(function(c){ return c.from===m.from&&c.pid===m.id; })) return;
-  var url=bytesDataURL(bytes,'image/jpeg');
+  var url=bytesDataURL(bytes,pm);
   var viewing=(S.phase==='play'&&S.tab==='chat'&&document.visibilityState==='visible');
   S.chat.push({photo:true,from:m.from,at:(typeof m.at==='number'?m.at:Date.now()),data:url,pid:m.id,uid:String(++UID),n:m.n||0,sent:true});
   S.lastPeerN=Math.max(S.lastPeerN||0,m.n||0);
@@ -9466,6 +9497,27 @@ Net.onMsg=function(m){
           i=i|0; if(i<0||i>=total) return;
           setTimeout(function(){ try{ Net.send({t:'photo-chunk',id:id,i:i,total:total,pc:PHOTO_CHUNK_PIECE,data:d.slice(i*PHOTO_CHUNK_PIECE,(i+1)*PHOTO_CHUNK_PIECE)}); }catch(e){} },80*i+50);
         });
+      })();
+      break;
+    case 'photo-ref':   /* v278: ファイルの ばしょだけ 先に とどいた */
+      if(m.from===S.me.id) break;
+      (function(){
+        var id=String(m.id||'');
+        if(!id||!m.url) return;
+        if(S.chat.some(function(c){ return c.from===m.from&&c.pid===id; })) return;
+        try{ photoDiagPush('うけとり','ばしょを うけとった'); }catch(e){}
+        recvPhoto({from:m.from,id:id,n:m.n||0,at:(typeof m.at==='number'?m.at:Date.now()),__att:String(m.url)});
+      })();
+      break;
+    case 'photo-again':  /* v278: あいてが うけとれなかった → もう いちど おくる（2回まで） */
+      if(m.from===S.me.id) break;
+      (function(){
+        var id=String(m.id||''); var d=photoSent[id];
+        if(!d) return;
+        if((photoAgain[id]||0)>=2) return;
+        photoAgain[id]=(photoAgain[id]||0)+1;
+        try{ photoDiagPush('おくり','あいての たのみで おくりなおし '+photoAgain[id]); }catch(e){}
+        try{ Net.sendFile({t:'photo',id:id,at:Date.now()},dataURLBytes(d),function(ok){ try{ photoDiagPush('おくり','おくりなおし '+(ok?'おくれた':'だめ')); }catch(e){} }); }catch(e){}
       })();
       break;
     case 'photo':
