@@ -903,7 +903,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v278</b></p>
+      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v279</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -977,7 +977,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v278</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v279</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -2134,7 +2134,26 @@ var Net={
     var env={v:V,n:S.seq,from:S.me.id,t:obj.t};
     for(var k in obj){ if(k!=='v'&&k!=='n'&&k!=='from') env[k]=obj[k]; }
     this.sendQueue=this.sendQueue.then(function(){ return self.putFile(env,bytes); })
-      .then(function(ok){ if(onDone){ try{ onDone(ok); }catch(e){} } return ok; })
+      .then(function(ok){
+        /* v279: しゃしんが おくれなかったら、だまって 止まらずに 画面に 出し、
+           かけら送り（文字の とおりみち）で もう 一度 ためす */
+        if(!ok&&env.t==='photo'){
+          try{ toast('しゃしんを おくれませんでした（'+photoFailWhy()+'）'); }catch(e){}
+          try{ photoDiagPush('おくり','ファイルで おくれず: '+photoFailWhy()); }catch(e){}
+          try{
+            var k2=String(env.id||'');
+            if(k2&&!photoChunkFall[k2]){
+              photoChunkFall[k2]=1;
+              var pm2=photoMimeOf(bytes);
+              if(pm2&&typeof sendPhotoChunks==='function'){
+                try{ toast('かけらに わけて おくりなおします…'); }catch(e){}
+                sendPhotoChunks(bytesDataURL(bytes,pm2),k2);
+              }
+            }
+          }catch(e){}
+        }
+        if(onDone){ try{ onDone(ok); }catch(e){} } return ok;
+      })
       .catch(function(){ if(onDone){ try{ onDone(false); }catch(e){} } return false; });
     return env;
   },
@@ -5975,7 +5994,7 @@ function sendAppOpen(reason){
   var __fg=(typeof document!=='undefined'&&document.visibilityState==='visible')?1:0;
   var __g=gestAgeSec();
   /* v268: 理由(r)と 自分の 版(pv)も のせる。あいては「なぜ 増えたか」を 時刻つきで 見られる */
-  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v278'}); }catch(e){}
+  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v279'}); }catch(e){}
   /* v263: アプリを とじて いても 鳴る ように、あいての「ベル用とおりみち」へ 1通だけ おくる。
      この とおりみちは あいてだけが うけとる（こちらには もどらない）。中身は 時刻だけ。 */
   try{ if(peerOpenOn()&&peerKeepOn()&&__r!=='conn') pushPeerOpen(t,__fg); }catch(e){}   /* v267/v268: 本物の 開封だけ スマホの ベルへ */
@@ -6814,7 +6833,7 @@ function notifyIncoming(){
   try{ var n=new Notification('雑学王',opt); n.onclick=function(){ try{ window.focus(); }catch(e){} try{ n.close(); }catch(e){} }; }catch(e){}
 }
 /* しゃしん：カメラでとって あんごうチャンクで そうしんする(きろくには のこらない) */
-var PHOTO_PIECE=1300, PHOTO_MAXSIDE=1024, photoBuf={}, photoSent={}, photoURL={}, photoAgain={}, photoAsk={};   /* v267: おくった 写真を おぼえて おく（とどかなかった 分を おくりなおす） */
+var PHOTO_PIECE=1300, PHOTO_MAXSIDE=1024, photoBuf={}, photoSent={}, photoURL={}, photoAgain={}, photoAsk={}, photoChunkFall={};   /* v267: おくった 写真を おぼえて おく（とどかなかった 分を おくりなおす） */
 /* v273: 写真は「1回で おくれる 大きさ」に おさめてから 送る。かけら送りは 保険で、1800文字ずつ・最大2000かけら・120万文字まで */
 var PHOTO_CHUNK_PIECE=1800, PHOTO_SOFT_MAX=170000, PHOTO_HARD_MAX=1200000;
 var camStream=null, camShotURL='', camRequest=0, camPending=false;
@@ -8044,6 +8063,18 @@ function photoMimeOf(b){
   if(b[0]===0x52&&b[1]===0x49&&b[2]===0x46&&b[3]===0x46&&b[8]===0x57&&b[9]===0x45&&b[10]===0x42&&b[11]===0x50) return 'image/webp';
   return '';
 }
+/* v279: おくれなかった わけを やさしい ことばに する */
+function photoFailWhy(){
+  try{
+    if(Net.coolUntil&&Date.now()<Net.coolUntil) return 'いま つうしんが こんで います';
+    var st=Net.lastFileStatus||0;
+    if(st===413) return 'しゃしんが おおきすぎます';
+    if(st===429||st===503) return '中継所が こんで います';
+    if(st===401||st===403) return '中継所に ことわれました';
+    if(st===0) return 'でんぱが とどきませんでした';
+    return '中継所の こたえ '+st;
+  }catch(e){ return 'わけが わかりません'; }
+}
 /* v278: しゃしんを うけとれなかったら、あいてに「もう いちど おくって」と たのむ（2回まで） */
 function photoAskAgain(m){
   try{
@@ -8056,14 +8087,14 @@ function photoAskAgain(m){
 }
 async function recvPhoto(m){
   if(!m.__att){ try{ photoDiagPush('うけとり','しるし なし'); }catch(e){} }
-  if(!m.__att||messageDeleted({from:m.from,pid:m.id})){ if(!m.__att) photoAskAgain(m); return; }
+  if(!m.__att||messageDeleted({from:m.from,pid:m.id})){ if(!m.__att){ try{ toast('しゃしんを うけとれませんでした（しるしが ありません）'); }catch(e){} photoAskAgain(m); } return; }
   var topic=Net.topic,key=Net.key;
   for(var i=0;i<S.chat.length;i++){ if(S.chat[i].pid&&S.chat[i].pid===m.id&&S.chat[i].from===m.from) return; }
   var bytes=await Net.fetchFile(m.__att);
-  if(!bytes){ try{ photoDiagPush('うけとり','とれなかった'); }catch(e){} photoAskAgain(m); return; }
+  if(!bytes){ try{ photoDiagPush('うけとり','とれなかった'); }catch(e){} try{ toast('しゃしんを とりに いけませんでした（もう いちど たのみます）'); }catch(e){} photoAskAgain(m); return; }
   var pm=photoMimeOf(bytes);
   if(Net.topic!==topic||Net.key!==key||messageDeleted({from:m.from,pid:m.id})){ return; }
-  if(!pm){ try{ photoDiagPush('うけとり','こわれて いた'); }catch(e){} photoAskAgain(m); return; }
+  if(!pm){ try{ photoDiagPush('うけとり','こわれて いた'); }catch(e){} try{ toast('しゃしんが こわれて いました（もう いちど たのみます）'); }catch(e){} photoAskAgain(m); return; }
   if(S.chat.some(function(c){ return c.from===m.from&&c.pid===m.id; })) return;
   var url=bytesDataURL(bytes,pm);
   var viewing=(S.phase==='play'&&S.tab==='chat'&&document.visibilityState==='visible');
@@ -9517,7 +9548,12 @@ Net.onMsg=function(m){
         if((photoAgain[id]||0)>=2) return;
         photoAgain[id]=(photoAgain[id]||0)+1;
         try{ photoDiagPush('おくり','あいての たのみで おくりなおし '+photoAgain[id]); }catch(e){}
-        try{ Net.sendFile({t:'photo',id:id,at:Date.now()},dataURLBytes(d),function(ok){ try{ photoDiagPush('おくり','おくりなおし '+(ok?'おくれた':'だめ')); }catch(e){} }); }catch(e){}
+        var sent2=false;
+        try{
+          var pm3=photoMimeOf(dataURLBytes(d));
+          if(pm3&&typeof sendPhotoChunks==='function'){ sendPhotoChunks(d,id); sent2=true; try{ photoDiagPush('おくり','かけらで おくりなおし'); }catch(e){} }
+        }catch(e){}
+        if(!sent2) try{ Net.sendFile({t:'photo',id:id,at:Date.now()},dataURLBytes(d),function(ok){ try{ photoDiagPush('おくり','おくりなおし '+(ok?'おくれた':'だめ')); }catch(e){} }); }catch(e){}
       })();
       break;
     case 'photo':
