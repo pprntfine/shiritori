@@ -903,7 +903,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v279</b></p>
+      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v280</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -977,7 +977,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v279</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v280</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -1165,27 +1165,27 @@ body.in-play .leave-row{display:none!important}
   <div class="sec">あいての 名前・アイコンは あいてが きめた ものが でます（v203）</div>
   <div class="sec">つうち</div>
   <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 0 4px">
-    <span style="font-size:.84rem">音（アプリを ひらいている とき）</span>
-    <button type="button" class="ph" id="pf-snd" style="padding:4px 14px">オン</button>
+    <span style="font-size:.84rem">音（アプリが ならす おと）</span>
+    <button type="button" class="ph" id="pf-snd" style="padding:4px 14px" disabled>なし</button>
   </div>
   <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 0 4px">
     <span style="font-size:.84rem">バイブ（アプリを ひらいている とき）</span>
     <button type="button" class="ph" id="pf-sound" style="padding:4px 14px">オン</button>
   </div>
-  <p style="font-size:.72rem;color:#556;margin:0 0 10px"><b>アプリを ひらいている ときは、アプリが じきに ピンポンと 鳴らして バイブします。</b>マナーモード（サイレント）の ときは 端末が 音を けします。アプリを とじている ときは スマホの 通知（設定 → 通知 → 雑学王 → 音／バイブ）で きまります。<b>iPhoneは きまりで バイブを うごかせません。</b></p>
+  <p style="font-size:.72rem;color:#556;margin:0 0 10px"><b>アプリは もう 音を ならしません（v280）。</b>おしらせは バイブと 画面だけで します。鳴るのは <b>あいてが おくった 声の メッセージ・通話の 声・ライブの 声</b> だけです。アプリを とじている ときは スマホの 通知（設定 → 通知 → 雑学王 → 音／バイブ）で きまります。<b>iPhoneは きまりで バイブを うごかせません。</b></p>
   <div id="pf-peeropen-box">
   <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 0 4px">
     <span style="font-size:.84rem">あいてが アプリを ひらいたら しらせる</span>
     <button type="button" class="ph" id="pf-peeropen" style="padding:4px 14px">オン</button>
   </div>
-  <p style="font-size:.72rem;color:#556;margin:0 0 10px">あいてが トークを ひらいた ときに、音・バイブ・しらせを だします。<b>アプリを とじて いても 鳴ります</b>（スマホの 通知として とどきます）。<b>あいての 画面には なにも でません</b>ので、しらせが あること 自体は 知れません。ただし リアルタイムで 鳴らす ため、<b>あいての 端末の ベル用とおりみちへ「ひらいた 時刻」だけを 1通 おくります</b>（30分に 1回まで・最長12時間 中継所に のこる・とおりみちの 名前は 2人の 鍵から 作る 合言葉）。オフに すると 1通も おくらず、アプリを ひらいて いる ときだけ 鳴ります。</p>
+  <p style="font-size:.72rem;color:#556;margin:0 0 10px">あいてが トークを ひらいた ときに、バイブと 画面の しらせを だします（音は なりません）。<b>アプリを とじて いても 鳴ります</b>（スマホの 通知として とどきます）。<b>あいての 画面には なにも でません</b>ので、しらせが あること 自体は 知れません。ただし リアルタイムで 鳴らす ため、<b>あいての 端末の ベル用とおりみちへ「ひらいた 時刻」だけを 1通 おくります</b>（30分に 1回まで・最長12時間 中継所に のこる・とおりみちの 名前は 2人の 鍵から 作る 合言葉）。オフに すると 1通も おくらず、アプリを ひらいて いる ときだけ 鳴ります。</p>
   <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 0 4px">
     <span style="font-size:.84rem">アプリを とじて いる 間の 分も あとで 分かる</span>
     <button type="button" class="ph" id="pf-peerkeep" style="padding:4px 14px">オン</button>
   </div>
   <p style="font-size:.72rem;color:#556;margin:0 0 10px">オンの ときは、「ひらいた」合図の <b>あんごう文</b>を 中継所に 最長12時間 のこします。アプリを とじて いても、つぎに 開いた ときに 履歴で 分かります（音・バイブは 鳴りません）。<b>あいての 端末には なにも とどかず、あいての 画面にも でません</b>。あんごう文は かぎを もつ 2人 以外は よめません。オフに すると 中継所には なにも のこりません（とじている 間の 分は 分からなく なります）。</p>
   </div>
-  <button type="button" class="ph" id="pf-vtest">音と バイブを テストする</button>
+  <button type="button" class="ph" id="pf-vtest">バイブを テストする（音は なりません）</button>
   <p id="pf-vres" style="font-size:.78rem;color:#556;margin:6px 0 0;white-space:pre-line"></p>
   <button type="button" class="ph" id="pf-vcopy" style="display:none;margin-top:6px">けっかを コピーする</button>
   <div class="sec">トーク</div>
@@ -5994,7 +5994,7 @@ function sendAppOpen(reason){
   var __fg=(typeof document!=='undefined'&&document.visibilityState==='visible')?1:0;
   var __g=gestAgeSec();
   /* v268: 理由(r)と 自分の 版(pv)も のせる。あいては「なぜ 増えたか」を 時刻つきで 見られる */
-  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v279'}); }catch(e){}
+  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v280'}); }catch(e){}
   /* v263: アプリを とじて いても 鳴る ように、あいての「ベル用とおりみち」へ 1通だけ おくる。
      この とおりみちは あいてだけが うけとる（こちらには もどらない）。中身は 時刻だけ。 */
   try{ if(peerOpenOn()&&peerKeepOn()&&__r!=='conn') pushPeerOpen(t,__fg); }catch(e){}   /* v267/v268: 本物の 開封だけ スマホの ベルへ */
@@ -6677,6 +6677,10 @@ if($('#btn-notify-lobby')) $('#btn-notify-lobby').addEventListener('click',toggl
 /* ホストへの入室通知：タイトル表示・通知音・ブラウザ通知(内容はなし) */
 var hostAC=null;
 function beepHost(){
+  /* v280: この 音も つかわない。しらせは 画面と バイブだけ */
+  return false;
+}
+function beepHostOld(){
   try{
     hostAC=hostAC||new (window.AudioContext||window.webkitAudioContext)();
     if(hostAC.state==='suspended') hostAC.resume();
@@ -6711,7 +6715,7 @@ function buzzNotify(){
 }
 /* v240: アプリを ひらいている ときの 音（Web Audio）と、バイブ・通知の 診断 */
 var AC = null, sndReady = false;
-function sndOn(){ try{ return localStorage.getItem('mtp_snd_off') !== '1'; }catch(e){ return true; } }
+function sndOn(){ return false; }   /* v280: アプリの 音は つねに なし */
 function acGet(){
   try{
     if(!AC){ var C = window.AudioContext || window.webkitAudioContext; if(!C) return null; AC = new C(); }
@@ -6730,6 +6734,10 @@ document.addEventListener('touchstart', acUnlock, {passive:true});
 document.addEventListener('keydown', acUnlock);
 /* ピンポン（2音）。マナーモードの ときは 端末が 音を けします */
 function playPing(){
+  /* v280: アプリが じきに ならす 音は つかわない（設定で もどせない） */
+  return false;
+}
+function playPingOld(){
   if(!sndOn()) return false;
   var c = acGet(); if(!c) return false;
   try{
@@ -6750,7 +6758,7 @@ function playPing(){
     return true;
   }catch(e){ return false; }
 }
-function paintSndBtn(){ var b = document.getElementById('pf-snd'); if(b) b.textContent = sndOn() ? 'オン' : 'オフ'; }
+function paintSndBtn(){ var b = document.getElementById('pf-snd'); if(b) b.textContent = 'なし'; }
 
 /* バイブが ならない わけを その場で しらべる（音・端末・ブラウザ・タップ・画面・通知・結果） */
 function vibeReport(){
@@ -6770,7 +6778,7 @@ function vibeReport(){
   var L = [];
   L.push('きかい：' + (ios ? 'iPhone / iPad' : (and ? 'Android' : 'パソコン・そのほか')));
   L.push('音の しくみ：' + (hasA ? 'あり' : 'なし') + ' / じゅんび：' + acState);
-  L.push('音の せってい：' + (sndOn() ? 'オン' : 'オフ'));
+  L.push('音の せってい：なし（v280 から アプリは 音を ならしません）');
   L.push('バイブの しくみ：' + (hasV ? 'あり' : 'なし'));
   L.push('タップの 記録：' + act);
   L.push('画面：' + (hidden ? 'かくれている（うしろ）' : 'ひょうじ中'));
@@ -10296,11 +10304,10 @@ function recvProf(m){
     var on=!sndOn();
     try{ if(on) localStorage.removeItem('mtp_snd_off'); else localStorage.setItem('mtp_snd_off','1'); }catch(e){}
     paintSndBtn(); toast(on?'アプリの 音を オンに しました。':'アプリの 音を オフに しました。');
-    if(on) playPing(); });
+    });
     paintSndBtn(); }
   if($('#pf-vtest')){ $('#pf-vtest').addEventListener('click',function(){
     var r=$('#pf-vres'); if(!r) return;
-    playPing();
     vibeLast=vibeReport();
     r.textContent=(notifyVibeOn()?'':'※ いま バイブは オフです。上の「オン」で つけて ください。\n')+vibeLast;
     var c=$('#pf-vcopy'); if(c) c.style.display='inline-block';
