@@ -903,7 +903,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v281</b></p>
+      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v282</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -977,7 +977,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v281</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v282</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -2064,13 +2064,19 @@ var Net={
        アプリを 切った ときの 通知（ベル）が とまる → 大事な ものだけ ntfy に のせる */
     /* v181: recall（とりけし）を 追加 — 相手が 閉じて いても とりけしが とどくように */
     var NTFY_KEEP={chats:1,recall:1,purge:1,unpair:1,prof:1,join:1,ok:1,eject:1,bye:1,full:1,hi2:1};
+    /* v282: かけら・かけら催促は「いま つながって いる あいて」にしか 意味が ない。
+       中継所に のこすと、しゃしん 1まいで 100通 つかい、1日250通の わくを 使い切って
+       429（こんで います）に なって いた。ここは のこさない */
+    var NO_STORE={'photo-chunk':1,'photo-miss':1};
     if(!(env&&ntfyKeep(env.t))&&fastOk) return true;
     /* v152: 受領証・ping は 即時路が きれて いる ときも 行列を 待たせない（うしろで 保存路へ）。
        以前は 1通ごとに 最大7秒 待って いたので、うしろの トークが「送信中」の まま つまっていた */
     if(env&&!ntfyKeep(env.t)){   /* 受領証・既読・ping・通話の 合図など：トークの 行列を 待たせない */
-      if(this.coolUntil&&Date.now()<this.coolUntil) return false;
-      if(!this.allow(typeof prio==='number'?prio:1)) return false;
-      this.postStore(body); return true;
+      var __ns=NO_STORE[env.t]===1;
+      /* v282: かけらは 即時路(MQTT)だけを つかう。中継所の 制限中でも とおす */
+      if(this.coolUntil&&Date.now()<this.coolUntil) return __ns?fastOk:false;
+      if(!this.allow(typeof prio==='number'?prio:1)) return __ns?fastOk:false;
+      if(!__ns) this.postStore(body); return true;
     }
     /* ntfy は 保存用(相手が いない ときの 受けとり用)。制限中は 2本目だけで 成功あつかい */
     if(this.coolUntil&&Date.now()<this.coolUntil) return fastOk||await viaPush();
@@ -2138,7 +2144,10 @@ var Net={
         /* v279: しゃしんが おくれなかったら、だまって 止まらずに 画面に 出し、
            かけら送り（文字の とおりみち）で もう 一度 ためす */
         if(!ok&&env.t==='photo'){
-          try{ toast('しゃしんを おくれませんでした（'+photoFailWhy()+'）'); }catch(e){}
+          var __why=photoFailWhy();
+          try{ toast(__why==='いま つうしんが こんで います'
+            ? 'つうしんが こんで います。べつの とおりみちで おくります…'
+            : 'しゃしんを おくれませんでした（'+__why+'）。べつの とおりみちで おくります…'); }catch(e){}
           try{ photoDiagPush('おくり','ファイルで おくれず: '+photoFailWhy()); }catch(e){}
           try{
             var k2=String(env.id||'');
@@ -2162,6 +2171,7 @@ var Net={
     var key=this.key;
     if(!key||!this.topic) return false;
     if(this.coolUntil&&Date.now()<this.coolUntil) return false;
+    if(this.noPutUntil&&Date.now()<this.noPutUntil) return false;   /* v282: 回数制限の あとは しばらく 1回おくりを しない */
     if(!this.allow(0)) return false;
     try{
       var body=await seal(env,key);
@@ -2187,7 +2197,7 @@ var Net={
           else { try{ photoDiagPush('おくり','ばしょが わからない'); }catch(e){} }
         }
       }catch(e){}
-      if(r.status===429||r.status===503){ this.hit429(45000); return false; }
+      if(r.status===429||r.status===503){ this.hit429(45000); this.noPutUntil=Date.now()+10*60*1000; return false; }   /* v282: 10分 休む */
       if(r.status===413){ try{ note('しゃしんが 大きすぎて おくれません。','#note2'); }catch(e){} return false; }
       return !!r.ok;
     }catch(e){ return false; }
@@ -5994,7 +6004,7 @@ function sendAppOpen(reason){
   var __fg=(typeof document!=='undefined'&&document.visibilityState==='visible')?1:0;
   var __g=gestAgeSec();
   /* v268: 理由(r)と 自分の 版(pv)も のせる。あいては「なぜ 増えたか」を 時刻つきで 見られる */
-  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v281'}); }catch(e){}
+  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v282'}); }catch(e){}
   /* v263: アプリを とじて いても 鳴る ように、あいての「ベル用とおりみち」へ 1通だけ おくる。
      この とおりみちは あいてだけが うけとる（こちらには もどらない）。中身は 時刻だけ。 */
   try{ if(peerOpenOn()&&peerKeepOn()&&__r!=='conn') pushPeerOpen(t,__fg); }catch(e){}   /* v267/v268: 本物の 開封だけ スマホの ベルへ */
@@ -8037,7 +8047,7 @@ function sendPhoto(msg,tries){
       msg.sent=true; msg.failed=false; msg.sentAt=Date.now();
       if(msg.__w){ try{ clearTimeout(msg.__w); }catch(e){} msg.__w=0; }
     }
-    else if(tries>=2&&!msg.__chunked&&typeof sendPhotoChunks==='function'){   /* v273: 3回→2回で 早く かけら送りへ */
+    else if(tries>=1&&!msg.__chunked&&typeof sendPhotoChunks==='function'){   /* v273: 3回→2回で 早く かけら送りへ */
       /* v267: 中継所への 1回おくりが だめなら、かくしんで おくる（こちらは 回数制限に つよい） */
       msg.__chunked=true; msg.__chunkAt=Date.now();
       try{ photoDiagPush('かけら','きりかえ '+Math.ceil((msg.data||'').length/PHOTO_CHUNK_PIECE)+'こ'); }catch(e){}
@@ -8081,6 +8091,7 @@ function photoMimeOf(b){
 function photoFailWhy(){
   try{
     if(Net.coolUntil&&Date.now()<Net.coolUntil) return 'いま つうしんが こんで います';
+    if(Net.noPutUntil&&Date.now()<Net.noPutUntil) return '中継所の 回数せいげん';
     var st=Net.lastFileStatus||0;
     if(st===413) return 'しゃしんが おおきすぎます';
     if(st===429||st===503) return '中継所が こんで います';
@@ -8137,11 +8148,11 @@ async function sendPhotoChunks(dataURL,pid){
         try{ Net.send({t:'photo-chunk',id:id,i:i,total:total,pc:pieceLen,data:piece},function(o){ res(!!o); }); }
         catch(e){ res(false); }
       });
-      if(!ok) await new Promise(function(res){ setTimeout(res,3000+r*2000); });
+      if(!ok) await new Promise(function(res){ setTimeout(res,1200+r*800); });   /* v282: 待ちすぎない */
     }
     if(!ok) return false;
     if((i+1)%10===0||i===total-1){ try{ photoDiagPush('かけら',(i+1)+'/'+total); }catch(e){} }
-    await new Promise(function(res){ setTimeout(res,600); });
+    await new Promise(function(res){ setTimeout(res,300); });   /* v282: 1まいを 早く おくる */
   }
   return true;
 }
