@@ -908,7 +908,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v284</b></p>
+      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v288</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -982,7 +982,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v284</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v288</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -2021,6 +2021,20 @@ var Net={
       .catch(function(){ if(onDone){ try{ onDone(false); }catch(e){} } return false; });
     return env;
   },
+  /* v288: 写真の かけら専用の 列。トークの 列とは べつに する（写真の 間で トークが つまらない） */
+  sendChunk:function(obj,onDone){
+    var self=this;
+    if(!this.topic||!this.key){ if(onDone) try{ onDone(false); }catch(e){} return 0; }
+    if(this.cqBusy&&Date.now()-this.cqBusy>8000){ this.chunkQueue=Promise.resolve(); }
+    this.cqBusy=this.cqBusy||Date.now();
+    nextSeq();
+    var env={v:V,n:S.seq,from:S.me.id,t:obj.t};
+    for(var k in obj){ if(k!=='v'&&k!=='n'&&k!=='from') env[k]=obj[k]; }
+    this.chunkQueue=(this.chunkQueue||Promise.resolve()).then(function(){ return self.post(env,false,2); })
+      .then(function(ok){ self.cqBusy=0; if(onDone){ try{ onDone(ok); }catch(e){} } return ok; })
+      .catch(function(){ if(onDone){ try{ onDone(false); }catch(e){} } return false; });
+    return env;
+  },
   /* v157: 同じ 封筒（同じ 番号）の まま 送りなおす（相手に 2通 とどかない） */
   sendEnv:function(env,onDone){
     var self=this;
@@ -2058,7 +2072,11 @@ var Net={
     var body;
     try{ body=await seal(env,key); }catch(e){ return false; }
     /* v117: まず 2本目(即時)で おくる → 相手に すぐ とどく */
-    var fastOk=false; try{ fastOk=Fast.pub(body)&&Fast.open&&(FastH.subOk||FastE.subOk); }catch(e){}
+    var fastOk=false; try{
+      /* v288: かけらは 1か所だけへ（2か所に おくると 上りが 2倍に なり、その分 おそく なる） */
+      if(env&&env.t==='photo-chunk'&&Fast.pubOne){ fastOk=Fast.pubOne(body); }
+      else fastOk=Fast.pub(body)&&Fast.open&&(FastH.subOk||FastE.subOk);
+    }catch(e){}
     /* v124: 相手の スマホへ 直接（アプリが 裏でも とどく）。
        v157: 同じ 番号の 送りなおしでも、まだ わたせて いなければ もう一度（相手は 番号で 重複を すてる） */
     var pushP=null;
@@ -2078,6 +2096,9 @@ var Net={
        以前は 1通ごとに 最大7秒 待って いたので、うしろの トークが「送信中」の まま つまっていた */
     if(env&&!ntfyKeep(env.t)){   /* 受領証・既読・ping・通話の 合図など：トークの 行列を 待たせない */
       var __ns=NO_STORE[env.t]===1;
+      /* v287: 即時路で とどいた ものは 中継所の 水がめを つかわない。
+         これまでは 水がめ(5秒に 1こ)で 止められ、かけら送りが 1こずつ 待たされて いた */
+      if(__ns&&fastOk) return true;
       /* v282: かけらは 即時路(MQTT)だけを つかう。中継所の 制限中でも とおす */
       if(this.coolUntil&&Date.now()<this.coolUntil) return __ns?fastOk:false;
       if(!this.allow(typeof prio==='number'?prio:1)) return __ns?fastOk:false;
@@ -2156,13 +2177,10 @@ var Net={
           try{ photoDiagPush('おくり','ファイルで おくれず: '+photoFailWhy()); }catch(e){}
           try{
             var k2=String(env.id||'');
-            if(k2&&!photoChunkFall[k2]){
-              photoChunkFall[k2]=1;
-              var pm2=photoMimeOf(bytes);
-              if(pm2&&typeof sendPhotoChunks==='function'){
-                try{ toast('かけらに わけて おくりなおします…'); }catch(e){}
-                sendPhotoChunks(bytesDataURL(bytes,pm2),k2);
-              }
+            var pm2=photoMimeOf(bytes);
+            if(k2&&pm2&&typeof photoChunkStart==='function'){
+              try{ toast('かけらに わけて おくりなおします…'); }catch(e){}
+              photoChunkStart(k2,bytesDataURL(bytes,pm2));   /* v285: 窓口を とおす（2まい とどく のを ふせぐ） */
             }
           }catch(e){}
         }
@@ -2380,6 +2398,17 @@ Fast={
   probe:function(){ FASTS.forEach(function(f){ f.probe(); }); },
   echo:function(){ FASTS.forEach(function(f){ f.echo(); }); },
   pub:function(str){ var ok=false; FASTS.forEach(function(f){ if(f.pub(str)) ok=true; }); return ok; },
+  /* v288: かけらは 元気な 1か所だけへ おくる */
+  pubOne:function(str){
+    var a=null;
+    try{
+      if(FastH.open&&FastH.subOk&&FastE.open&&FastE.subOk) a=((FastH.lastRx||0)>=(FastE.lastRx||0))?FastH:FastE;
+      else if(FastH.open&&FastH.subOk) a=FastH;
+      else if(FastE.open&&FastE.subOk) a=FastE;
+    }catch(e){}
+    if(!a) return false;
+    return a.pub(str);
+  },
   sub:function(n){ var ok=false; FASTS.forEach(function(f){ if(f.sub(n)) ok=true; }); return ok; },
   unsub:function(n){ FASTS.forEach(function(f){ f.unsub(n); }); },
   /* 映像は 通信量が 大きいので 1か所(つながっている 方)だけ */
@@ -6014,7 +6043,7 @@ function sendAppOpen(reason){
   var __fg=(typeof document!=='undefined'&&document.visibilityState==='visible')?1:0;
   var __g=gestAgeSec();
   /* v268: 理由(r)と 自分の 版(pv)も のせる。あいては「なぜ 増えたか」を 時刻つきで 見られる */
-  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v284'}); }catch(e){}
+  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v288'}); }catch(e){}
   /* v263: アプリを とじて いても 鳴る ように、あいての「ベル用とおりみち」へ 1通だけ おくる。
      この とおりみちは あいてだけが うけとる（こちらには もどらない）。中身は 時刻だけ。 */
   try{ if(peerOpenOn()&&peerKeepOn()&&__r!=='conn') pushPeerOpen(t,__fg,true); }catch(e){}   /* v284: 本物の 起動は 画面判定で 落とさない */   /* v267/v268: 本物の 開封だけ スマホの ベルへ */
@@ -6870,9 +6899,28 @@ function notifyIncoming(){
   try{ var n=new Notification('雑学王',opt); n.onclick=function(){ try{ window.focus(); }catch(e){} try{ n.close(); }catch(e){} }; }catch(e){}
 }
 /* しゃしん：カメラでとって あんごうチャンクで そうしんする(きろくには のこらない) */
-var PHOTO_PIECE=1300, PHOTO_MAXSIDE=1024, photoBuf={}, photoSent={}, photoURL={}, photoAgain={}, photoAsk={}, photoChunkFall={};   /* v267: おくった 写真を おぼえて おく（とどかなかった 分を おくりなおす） */
+var PHOTO_PIECE=1300, PHOTO_MAXSIDE=1024, photoBuf={}, photoSent={}, photoURL={}, photoAgain={}, photoAsk={}, photoChunkFall={}, photoChunkAt={}, photoDone={};
+/* v285: かけら送りを はじめる 窓口は ここ 1つだけ。
+   同じ 写真を 2とおりの 道から 同時に おくると、あいてに 2まい とどいて しまう。 */
+function photoChunkBegin(id,d,minGap){
+  /* v287: 送信を はじめる 権利だけ とる（二重送信の よけ）。送るのは よびだし側 */
+  id=String(id||''); if(!id||!d) return false;
+  var now=Date.now(), gap=(minGap===undefined?180000:minGap);
+  if(now-(photoChunkAt[id]||0)<gap) return false;
+  photoChunkAt[id]=now; photoChunkFall[id]=1;
+  try{ var ks=Object.keys(photoChunkAt); if(ks.length>8) delete photoChunkAt[ks[0]]; }catch(e){}
+  return true;
+}
+function photoChunkStart(id,d,minGap){
+  if(!photoChunkBegin(id,d,minGap)) return false;
+  try{ sendPhotoChunks(d,String(id)); }catch(e){ return false; }
+  return true;
+}   /* v267: おくった 写真を おぼえて おく（とどかなかった 分を おくりなおす） */
 /* v273: 写真は「1回で おくれる 大きさ」に おさめてから 送る。かけら送りは 保険で、1800文字ずつ・最大2000かけら・120万文字まで */
-var PHOTO_CHUNK_PIECE=1800, PHOTO_SOFT_MAX=170000, PHOTO_HARD_MAX=1200000;
+var PHOTO_CHUNK_PIECE=1990, PHOTO_SOFT_MAX=170000, PHOTO_HARD_MAX=1200000, PHOTO_TGT_WEBP=120000;
+/* v288: WebP が つかえる 端末なら WebP で 作りなおす（同じ 見た目で 3〜4割 小さく → かけらが 減って 速い） */
+var WEBP_OK=null;
+function canWebP(){ if(WEBP_OK!==null) return WEBP_OK; try{ var c=document.createElement('canvas'); c.width=2; c.height=2; WEBP_OK=(String(c.toDataURL('image/webp',0.7)).indexOf('data:image/webp')===0); }catch(e){ WEBP_OK=false; } return WEBP_OK; }
 var camStream=null, camShotURL='', camRequest=0, camPending=false;
 function closeCam(){
   camRequest++; camPending=false; camShotURL=''; camShotWait=0; appNav.dismiss('cam-modal');
@@ -6999,7 +7047,7 @@ $('#cam-shoot').addEventListener('click',function(){
       var ctx=c.getContext('2d');
       if(mir){ ctx.translate(c.width,0); ctx.scale(-1,1); }
       ctx.drawImage(v,sx,sy,sw,sh,0,0,c.width,c.height);
-      camShotURL=c.toDataURL('image/jpeg',0.72);
+      camShotURL=c.toDataURL(canWebP()?'image/webp':'image/jpeg',0.72);
       $('#cam-shot').src=camShotURL;
       camShotWait=0;
       camPreview(true);
@@ -7827,7 +7875,7 @@ function attachmentReady(){
 function attachmentRead(file){ return new Promise(function(resolve,reject){ var r=new FileReader(); r.onload=function(){ resolve(String(r.result)); }; r.onerror=function(){ reject(new Error('read')); }; r.readAsDataURL(file); }); }
 function attachmentPhoto(url){ return new Promise(function(resolve,reject){
   var im=new Image(); im.onerror=function(){ reject(new Error('image')); };
-  im.onload=function(){ try{ var scale=Math.min(1,1280/Math.max(im.naturalWidth,im.naturalHeight)); var c=document.createElement('canvas'); c.width=Math.max(1,Math.round(im.naturalWidth*scale)); c.height=Math.max(1,Math.round(im.naturalHeight*scale)); var ctx=c.getContext('2d'); ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,c.width,c.height); ctx.drawImage(im,0,0,c.width,c.height); resolve(c.toDataURL('image/jpeg',0.82)); }catch(e){ reject(e); } }; im.src=url;
+  im.onload=function(){ try{ var scale=Math.min(1,1280/Math.max(im.naturalWidth,im.naturalHeight)); var c=document.createElement('canvas'); c.width=Math.max(1,Math.round(im.naturalWidth*scale)); c.height=Math.max(1,Math.round(im.naturalHeight*scale)); var ctx=c.getContext('2d'); ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,c.width,c.height); ctx.drawImage(im,0,0,c.width,c.height); resolve(c.toDataURL(canWebP()?'image/webp':'image/jpeg',0.82)); }catch(e){ reject(e); } }; im.src=url;
 }); }
 function attachmentButton(id,input){ $('#'+id).addEventListener('click',function(){ if(!attachmentReady()) return; var f=$('#'+input); f.value=''; f.click(); }); }
 attachmentButton('btn-attach-photo','chat-photo-file');
@@ -7993,7 +8041,9 @@ function retryPhoto(msg){
 function photoFitURL(url){
   return new Promise(function(res){
     try{
-      if(!url||url.length<=PHOTO_SOFT_MAX||url.slice(0,11)!=='data:image/'){ res(url); return; }
+      if(!url||url.slice(0,11)!=='data:image/'){ res(url); return; }
+      var web=canWebP(), TGT=web?PHOTO_TGT_WEBP:PHOTO_SOFT_MAX;
+      if(!web&&url.length<=PHOTO_SOFT_MAX){ res(url); return; }
       var im=new Image();
       im.onerror=function(){ res(url); };
       im.onload=function(){
@@ -8010,9 +8060,9 @@ function photoFitURL(url){
               if(!ctx){ res(best); return; }
               ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,c.width,c.height);
               ctx.drawImage(im,0,0,c.width,c.height);
-              var out=c.toDataURL('image/jpeg',qs[qi]);
+              var out=c.toDataURL(web?'image/webp':'image/jpeg',qs[qi]);
               if(out.length<best.length) best=out;
-              if(out.length<=PHOTO_SOFT_MAX){ res(out); return; }
+              if(out.length<=TGT){ res(out); return; }
             }
           }
           res(best);
@@ -8053,6 +8103,22 @@ function sendPhoto(msg,tries){
     photoGiveUp(msg,'しゃしんが まだ とどいて いません。ふきだしの「もういちど おくる」を おして ください。');
   };
   if(!msg.__w) msg.__w=setTimeout(__wd,60000);
+  /* v287: つながって いる あいだは、中継所への 大きな PUT(最大45秒)を まつ より
+     即時路の かけらで 送る ほうが ずっと 速い */
+  if((msg.data||'').length>40000&&typeof photoChunkBegin==='function'&&typeof sendPhotoChunks==='function'
+     &&typeof Fast!=='undefined'&&Fast.open&&Fast.subOk&&photoChunkBegin(msg.pid,msg.data)){
+    msg.__chunked=true; msg.__chunkAt=Date.now();
+    if(msg.__w){ try{ clearTimeout(msg.__w); }catch(e){} msg.__w=0; }
+    try{ photoDiagPush('かけら','即時路で すぐ '+Math.ceil((msg.data||'').length/PHOTO_CHUNK_PIECE)+'こ'); }catch(e){}
+    try{
+      sendPhotoChunks(msg.data,msg.pid).then(function(done){
+        if(msg.cancelled||S.chat.indexOf(msg)<0) return;
+        if(done){ msg.sent=true; msg.failed=false; msg.sentAt=Date.now(); if(S.tab==='chat') renderChat(true); }
+        else photoGiveUp(msg,'しゃしんを そうしん できませんでした。でんぱの よい ところで もういちど おためし ください。');
+      },function(){ photoGiveUp(msg,'しゃしんを そうしん できませんでした。もういちど おためし ください。'); });
+    }catch(e){}
+    return;
+  }
   var env=Net.sendFile({t:'photo',id:msg.pid,at:msg.at},dataURLBytes(msg.data),function(ok){
     if(Net.topic!==topic||Net.key!==key||msg.cancelled||S.chat.indexOf(msg)<0) return;
     try{ photoDiagPush('1回', (ok?'おくれた':'だめ')+' HTTP'+(Net.lastFileStatus||0)+' '+Math.round((msg.data||'').length/1000)+'kもじ'); }catch(e){}
@@ -8060,11 +8126,12 @@ function sendPhoto(msg,tries){
       msg.sent=true; msg.failed=false; msg.sentAt=Date.now();
       if(msg.__w){ try{ clearTimeout(msg.__w); }catch(e){} msg.__w=0; }
     }
-    else if(tries>=1&&!msg.__chunked&&typeof sendPhotoChunks==='function'){   /* v273: 3回→2回で 早く かけら送りへ */
+    else if(tries>=1&&!msg.__chunked&&typeof photoChunkStart==='function'){   /* v273: 3回→2回で 早く かけら送りへ。v285: 窓口を とおす */
       /* v267: 中継所への 1回おくりが だめなら、かくしんで おくる（こちらは 回数制限に つよい） */
       msg.__chunked=true; msg.__chunkAt=Date.now();
       try{ photoDiagPush('かけら','きりかえ '+Math.ceil((msg.data||'').length/PHOTO_CHUNK_PIECE)+'こ'); }catch(e){}
       try{
+        if(!photoChunkStart(msg.pid,msg.data)){ if(S.tab==='chat') renderChat(true); return; }
         sendPhotoChunks(msg.data,msg.pid).then(function(done){
           if(msg.cancelled||S.chat.indexOf(msg)<0) return;
           if(done){
@@ -8080,7 +8147,7 @@ function sendPhoto(msg,tries){
         });
       }catch(e){}
     }
-    else if(tries<10){
+    else if(tries<10&&!photoChunkFall[msg.pid]){   /* v285: かけら送りが はじまって いたら にじゅう送信 しない */
       /* v247: 中継所の 回数制限(429)の あいだは、あけすぎず 待ちすぎず やりなおす */
       var wait=Math.min(15000,2500*(tries+1));
       if(Net.coolUntil&&Net.coolUntil>Date.now()) wait=Math.max(wait,Net.coolUntil-Date.now()+2000);
@@ -8134,6 +8201,7 @@ async function recvPhoto(m){
   if(Net.topic!==topic||Net.key!==key||messageDeleted({from:m.from,pid:m.id})){ return; }
   if(!pm){ try{ photoDiagPush('うけとり','こわれて いた'); }catch(e){} try{ toast('しゃしんが こわれて いました（もう いちど たのみます）'); }catch(e){} photoAskAgain(m); return; }
   if(S.chat.some(function(c){ return c.from===m.from&&c.pid===m.id; })) return;
+  try{ photoDone[String(m.id)]=1; }catch(e){}   /* v285: かけら側で 2まい目を つくらない */
   var url=bytesDataURL(bytes,pm);
   var viewing=(S.phase==='play'&&S.tab==='chat'&&document.visibilityState==='visible');
   S.chat.push({photo:true,from:m.from,at:(typeof m.at==='number'?m.at:Date.now()),data:url,pid:m.id,uid:String(++UID),n:m.n||0,sent:true});
@@ -8153,19 +8221,35 @@ async function sendPhotoChunks(dataURL,pid){
   var pieceLen=PHOTO_CHUNK_PIECE;
   var total=Math.ceil(dataURL.length/pieceLen);
   if(total<1||total>2000) return false;
-  for(var i=0;i<total;i++){
-    var piece=dataURL.slice(i*pieceLen,(i+1)*pieceLen);
-    var ok=false;
-    for(var r=0;r<10&&!ok;r++){
-      ok=await new Promise(function(res){
-        try{ Net.send({t:'photo-chunk',id:id,i:i,total:total,pc:pieceLen,data:piece},function(o){ res(!!o); }); }
-        catch(e){ res(false); }
-      });
-      if(!ok) await new Promise(function(res){ setTimeout(res,1200+r*800); });   /* v282: 待ちすぎない */
+  /* v287: 1こずつ 返事を まって 300ミリ秒 やすむ 作りを やめ、8こ まとめて 流す。
+     ぬけた かけらは あいての photo-miss と ここでの やりなおしで うめる */
+  var PIPE=10;
+  var sendChunk=function(k){
+    return new Promise(function(res){
+      try{ Net.sendChunk({t:'photo-chunk',id:id,i:k,total:total,pc:pieceLen,data:dataURL.slice(k*pieceLen,(k+1)*pieceLen)},function(o){ res(!!o); }); }
+      catch(e){ res(false); }
+    });
+  };
+  /* v288: 8こ ずつ「ぜんぶ 返事が くるまで 待つ」のを やめ、1こ 終わる たびに つぎを 流す。
+     かけらは トークとは 別の 列（Net.sendChunk）なので、写真の 間でも トークは すぐ 出る */
+  var nextK=0, failed=[];
+  var worker=async function(){
+    while(nextK<total){
+      var k=nextK++;
+      var ok=await sendChunk(k);
+      if(!ok) failed.push(k);
+      if(k%20===19||k===total-1){ try{ photoDiagPush('かけら',(k+1)+'/'+total); }catch(e){} }
     }
-    if(!ok) return false;
-    if((i+1)%10===0||i===total-1){ try{ photoDiagPush('かけら',(i+1)+'/'+total); }catch(e){} }
-    await new Promise(function(res){ setTimeout(res,300); });   /* v282: 1まいを 早く おくる */
+  };
+  var ws2=[]; for(var w2=0;w2<Math.min(PIPE,total);w2++) ws2.push(worker());
+  await Promise.all(ws2);
+  for(var q=0;q<failed.length;q++){
+    var ok2=false;
+    for(var r2=0;r2<6&&!ok2;r2++){
+      await new Promise(function(res){ setTimeout(res,300+r2*500); });
+      ok2=await sendChunk(failed[q]);
+    }
+    if(!ok2) return false;
   }
   return true;
 }
@@ -8173,11 +8257,13 @@ async function recvPhotoChunk(m){
   if(messageDeleted({from:m.from,pid:m.id})) return;
   if(S.phase!=='play') return;
   var id=String(m.id||''); if(!id) return;   /* v277: 24文字で 切ると おくりなおしの 依頼と かみあわない */
+  if(photoDone[id]) return;   /* v285: もう そろって いる 写真の かけらは すてる */
+  if(S.chat.some(function(c){ return c.from===m.from&&String(c.pid||'')===id; })){ photoDone[id]=1; return; }
   var total=m.total|0; if(total<1||total>2000) return;   /* v273: 160 → 2000（大きい 写真が まるごと すてられて いた） */
   var b=photoBuf[id]||(photoBuf[id]={got:[],timer:null,total:total});
   if(b.total!==total) return;   /* v273: かけらの 数が ちがう 便は すてる（まざると そろわない） */
   var i=m.i|0; if(i<0||i>=total) return;
-  if(!b.got[i]) b.got[i]=String(m.data||'').slice(0,2000);
+  if(!b.got[i]) b.got[i]=String(m.data||'').slice(0,2400);
   clearTimeout(b.timer);
   /* v267: かけらが そろわない ときは、あいてに もう一度 たのむ（3回まで） */
   var waitMiss=function(){
@@ -8191,6 +8277,9 @@ async function recvPhotoChunk(m){
   for(var k=0;k<total;k++) if(!b.got[k]) return;
   var all=''; for(k=0;k<total;k++) all+=b.got[k];
   delete photoBuf[id];
+  if(photoDone[id]) return;   /* v285: 2回 そろっても 1まいだけ だす */
+  photoDone[id]=1;
+  try{ var kd=Object.keys(photoDone); if(kd.length>80) delete photoDone[kd[0]]; }catch(e){}
   Net.send({t:'ack',upTo:m.n||0});   /* そろった しるしを かえす */
   try{ photoDiagPush('かけら', 'そろった '+total+'こ'); }catch(e){}
   if(all.length>PHOTO_HARD_MAX||all.slice(0,11)!=='data:image/') return;   /* v273: 40万 → 120万文字まで うけとる */
@@ -9589,7 +9678,7 @@ Net.onMsg=function(m){
         var sent2=false;
         try{
           var pm3=photoMimeOf(dataURLBytes(d));
-          if(pm3&&typeof sendPhotoChunks==='function'){ sendPhotoChunks(d,id); sent2=true; try{ photoDiagPush('おくり','かけらで おくりなおし'); }catch(e){} }
+          if(pm3&&typeof photoChunkStart==='function'&&photoChunkStart(id,d,6000)){ sent2=true; try{ photoDiagPush('おくり','かけらで おくりなおし'); }catch(e){} }
         }catch(e){}
         if(!sent2) try{ Net.sendFile({t:'photo',id:id,at:Date.now()},dataURLBytes(d),function(ok){ try{ photoDiagPush('おくり','おくりなおし '+(ok?'おくれた':'だめ')); }catch(e){} }); }catch(e){}
       })();
@@ -10428,7 +10517,7 @@ function recvProf(m){
       say('⑫ けした 控え（この 端末）: '+(function(){ try{ var t=tombAll(), sc=tombScope(), m=t[sc]||{}; return Object.keys(m).length+'件'; }catch(e){ return '?'; } })()+'／入力の 保留: '+(chatComposing?'止まって いる':'なし')+'／画面の 残り: '+(function(){ try{ var b=document.getElementById('chat-log'); var k=0; b.querySelectorAll('.msg').forEach(function(r){ if(tombRowGone(r)) k++; }); return k+'件'; }catch(e){ return '?'; } })());
       say('⑬ あいての 画面から 消す 合図: '+(function(){ try{ return purgePending().length+'件 まだ おくって いない'; }catch(e){ return '?'; } })()+'／この 画面で まだ けせて いない 合図: '+(function(){ try{ return purgeInAll().length+'件'; }catch(e){ return '?'; } })()+'／あいてから とどいた 合図: '+(function(){ try{ return (window.__purgeIn||0)+'件'+(window.__purgeAt?('（'+new Date(window.__purgeAt).toLocaleTimeString('ja-JP')+'）'):''); }catch(e){ return '?'; } })());
       say('⑪ 既読から15分で きえる: '+(vanishOn()?'オン':'オフ')+'／時計の うごいて いる 記事: '+S.chat.filter(function(m){ return m&&!m.sys&&m.rad; }).length+'件／つぎの 消去まで: '+(function(){ var w=S.chat.filter(function(m){ return m&&!m.sys&&m.rad; }).map(function(m){ return m.rad+VANISH_MS; }).sort(function(a,b){ return a-b; })[0]; return w?Math.max(0,Math.ceil((w-Date.now())/1000))+'秒':'なし'; })()+'／けす 合図の まち: '+purgePending().length+'件');
-      say('⑭ この 端末の 役: '+(S.isHost===true?'ホスト（部屋を ひらいた側）':(S.isHost===false?'あいて（入室した側）':'まだ わからない'))+'／しらせの 設定の 行: '+(function(){ try{ var b=document.getElementById('pf-peeropen-box'); if(!b) return 'なし'; return (b.style.display==='none'?'かくして ある':'だして ある'); }catch(e){ return '?'; } })()+'／しらせ: '+(peerOpenOn()?'オン':'オフ')+'／とじている 間の 分: '+(peerKeepOn()?'のこす（12時間）':'のこさない')+'／あいての スマホへ おくる 間隔: 1分に 1回'+(function(){ try{ var j=JSON.parse(localStorage.getItem('zg_openpush_log')||'null'); return j?('／さいごの しらせ送信: '+new Date(j.at).toLocaleTimeString('ja-JP')+' '+(j.ok?'とどいた':'とどかなかった')):''; }catch(e){ return ''; } })()+'／この 端末には 音・バイブの 設定が '+(function(){ try{ return document.getElementById('pf-peeropen')?'あり':'なし'; }catch(e){ return '?'; } })());
+      say('⑭ この 端末の 役: '+(S.isHost===true?'ホスト（部屋を ひらいた側）':(S.isHost===false?'あいて（入室した側）':'まだ わからない'))+'／しらせの 設定の 行: '+(function(){ try{ var b=document.getElementById('pf-peeropen-box'); if(!b) return 'なし'; return (b.style.display==='none'?'かくして ある':'だして ある'); }catch(e){ return '?'; } })()+'／しらせ: '+(peerOpenOn()?'オン':'オフ')+'／とじている 間の 分: '+(peerKeepOn()?'のこす（12時間）':'のこさない')+'／あいての スマホへ おくる 間隔: 1分に 1回'+(function(){ try{ var j=JSON.parse(localStorage.getItem('zg_openpush_log')||'null'); return j?('／さいごの しらせ送信: '+new Date(j.at).toLocaleTimeString('ja-JP')+' '+(j.ok?'とどいた':'とどかなかった')):''; }catch(e){ return ''; } })()+'／背面の CSS: '+(function(){ try{ var el=document.getElementById('chat'); if(!el) return 'なし'; var st=getComputedStyle(el); return String(st.backgroundColor||'')+' / '+String(st.backgroundImage||'none').slice(0,48); }catch(er){ return '?'; } })()+'／この 端末には 音・バイブの 設定が '+(function(){ try{ return document.getElementById('pf-peeropen')?'あり':'なし'; }catch(e){ return '?'; } })());
       say('　※ しらせの 項目は ホストの 端末だけに 出ます。あいての 端末の 設定には 行 そのものが ありません（相手には みえません）。');
       say('');
       say(''); say('アプリは ひらいた ままで だいじょうぶです（v265〜 テスト通知は ひらいた ままでも とどきます）。30秒 待って ください。');
@@ -10661,6 +10750,7 @@ body.bgdark .line-chat .msg .nm{color:#AFC2D8!important}
 #pf-bg button .nmm{font-size:.58rem;color:#556;padding:4px 2px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
 #pf-bg button.sel{border-color:#06C755;box-shadow:0 0 0 3px #DDF6E6}
 #pf-bg button.sel .nmm{color:#06A046}
+#pf-bg-reset{margin:8px 0 2px;padding:9px 12px;border-radius:12px;border:1px solid #E3E7ED;background:#fff;color:#374151;font:800 .78rem/1.2 inherit;cursor:pointer}
 </style>
 <script>
 /* v249: 背面（がいへき）の えらびかた。CSSの へんすうを かえるだけで だす。 */
@@ -10713,14 +10803,29 @@ body.bgdark .line-chat .msg .nm{color:#AFC2D8!important}
         g.appendChild(b);
       })(k);
     }
+    /* v286: 背面が おかしく なった ときの 1タップ復帰 */
+    var rs=document.createElement('button'); rs.type='button'; rs.id='pf-bg-reset';
+    rs.textContent='背面を しろに もどす（おかしく なった とき）';
+    rs.addEventListener('click',function(){ try{ save(0); apply(0); }catch(e){} try{ toast('背面を しろに もどしました'); }catch(e){} });
     var anchor=document.getElementById('pf-snd'); var holder=anchor?(anchor.closest('.row')||anchor):null;
-    if(holder&&holder.parentNode===pm&&holder!==pm){ pm.insertBefore(sec,holder); pm.insertBefore(note,holder); pm.insertBefore(g,holder); }
-    else { pm.appendChild(sec); pm.appendChild(note); pm.appendChild(g); }
+    if(holder&&holder.parentNode===pm&&holder!==pm){ pm.insertBefore(sec,holder); pm.insertBefore(note,holder); pm.insertBefore(g,holder); pm.insertBefore(rs,holder); }
+    else { pm.appendChild(sec); pm.appendChild(note); pm.appendChild(g); pm.appendChild(rs); }
   }
   function boot(){ apply(saved()); build();
     var pm=document.querySelector('#prof-modal');
     if(pm){ pm.addEventListener('click',function(){ setTimeout(build,0); }); }
   }
+  /* v286: 背面は 色と グラデーションだけ。写真や 画像（url(...)）が まぎれこんだら すぐ しろに もどす */
+  var __bgFix=0;
+  function bgWatch(){
+    try{
+      if(Date.now()-__bgFix<8000) return;
+      var e1=document.getElementById('chat'), e2=document.body, bad=false;
+      [e1,e2].forEach(function(el){ if(!el||bad) return; try{ if(String(getComputedStyle(el).backgroundImage||'').indexOf('url(')>=0) bad=true; }catch(e){} });
+      if(bad){ __bgFix=Date.now(); save(0); apply(0); try{ toast('背面の 画像を もどしました。'); }catch(e){} }
+    }catch(e){}
+  }
+  setInterval(bgWatch,3000);
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot); else boot();
   setTimeout(boot,1200);
 })();
