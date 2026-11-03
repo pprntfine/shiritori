@@ -752,6 +752,8 @@ body.in-play .leave-row{display:none!important}
 .lhead .lh-nm{flex:1;min-width:0;font-weight:800;font-size:1rem;color:#15181C;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lhead .lh-dot{width:9px;height:9px;border-radius:50%;background:#C3CAD2;flex:none}
 .lhead .lh-dot.on{background:#06C755}
+/* v283: つながりの 文字（つながり中・あいて きれた など）は 出さない。ランプの 色だけで しらせる */
+#net-txt{display:none!important}
 .lhead #btn-unpair{background:#FFECEC;color:#C62828}
 .lhead button{flex:none;border:0;background:#F1F3F6;color:#334;border-radius:999px;padding:5px 8px;font-size:.66rem;font-weight:800;white-space:nowrap}
 .lhead{gap:6px!important;padding:6px 8px!important}
@@ -885,7 +887,7 @@ body.in-play .leave-row{display:none!important}
       <div class="brand">雑学王</div>
       <div class="bar-right">
         <!-- v202: かぎマークは ひょうじしない（あんごうは つねに 有効・AES-GCM 256） -->
-        <span id="net" class="net"><i></i><span id="net-txt">オフライン</span></span>
+        <span id="net" class="net" aria-hidden="true"><i></i><span id="net-txt"></span></span>
         <button id="btn-eject" class="ghost" type="button" hidden>退室</button>
         <button id="btn-quit" class="ghost" type="button" hidden>やめる</button>
       </div>
@@ -903,7 +905,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v282</b></p>
+      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v283</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -977,7 +979,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v282</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v283</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -2785,9 +2787,9 @@ function setNet(state){
   try{ var dt=$('#lh-dot'); if(dt) dt.classList.toggle('on',state==='open'&&(Fast.open||Net.open)); }catch(e){}
   if(state==='open'&&(S.paired||S.linked)&&!S._profSent){ S._profSent=true; setTimeout(sendProf,1500); }
   var n=$('#net'); n.classList.remove('on','lost');
-  if(state==='open'){ n.classList.add('on'); $('#net-txt').textContent='つながり中'; setTimeout(resendUndelivered,1200); try{ sendAppOpen('conn'); }catch(e){} }
-  else if(state==='lost'){ n.classList.add('lost'); $('#net-txt').textContent='再接続中…'; }
-  else { $('#net-txt').textContent='オフライン'; }
+  /* v283: 文字は 書かない（ランプだけ） */
+  if(state==='open'){ n.classList.add('on'); setTimeout(resendUndelivered,1200); try{ sendAppOpen('conn'); }catch(e){} }
+  else if(state==='lost'){ n.classList.add('lost'); }
 }
 function setLock(on,txt){ /* v202: かぎマークは ひょうじしない（あんごうは つねに 有効） */
   var l=$('#lock'); if(!l) return;
@@ -6004,7 +6006,7 @@ function sendAppOpen(reason){
   var __fg=(typeof document!=='undefined'&&document.visibilityState==='visible')?1:0;
   var __g=gestAgeSec();
   /* v268: 理由(r)と 自分の 版(pv)も のせる。あいては「なぜ 増えたか」を 時刻つきで 見られる */
-  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v282'}); }catch(e){}
+  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v283'}); }catch(e){}
   /* v263: アプリを とじて いても 鳴る ように、あいての「ベル用とおりみち」へ 1通だけ おくる。
      この とおりみちは あいてだけが うけとる（こちらには もどらない）。中身は 時刻だけ。 */
   try{ if(peerOpenOn()&&peerKeepOn()&&__r!=='conn') pushPeerOpen(t,__fg); }catch(e){}   /* v267/v268: 本物の 開封だけ スマホの ベルへ */
@@ -6279,8 +6281,8 @@ function peerPresenceTick(){   /* v183: 「つながり中」ランプを あい
     var live=Math.max(+(window.__zgsPeerLast||0)||0,+(window.__zgsPeerLive||0)||0);
     var on=!live||(Date.now()-live<70000);
     try{ if(S.__pWasOn&&!on&&live) plogAdd('off'); S.__pWasOn=!!on; }catch(e){}   /* v185: きえた も 履歴に */
-    if(n.classList.contains('on')&&!on){ n.classList.remove('on'); n.classList.add('lost'); $('#net-txt').textContent='あいて きれた'; }
-    else if(!n.classList.contains('on')&&on&&Net.open){ n.classList.remove('lost'); n.classList.add('on'); $('#net-txt').textContent='つながり中'; try{ if(chatOnScreen()) maybeSendRead(true); }catch(e){} }   /* v232: つながった すぐ後に なくなった 既読を 立て直す */
+    if(n.classList.contains('on')&&!on){ n.classList.remove('on'); n.classList.add('lost'); }   /* v283: 文字は 出さない */
+    else if(!n.classList.contains('on')&&on&&Net.open){ n.classList.remove('lost'); n.classList.add('on'); try{ if(chatOnScreen()) maybeSendRead(true); }catch(e){} }   /* v232: つながった すぐ後に なくなった 既読を 立て直す */
   }catch(e){}
 }
 setInterval(peerPresenceTick,5000);
