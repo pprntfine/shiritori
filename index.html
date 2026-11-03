@@ -903,7 +903,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v280</b></p>
+      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v281</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -977,7 +977,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v280</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v281</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -5994,7 +5994,7 @@ function sendAppOpen(reason){
   var __fg=(typeof document!=='undefined'&&document.visibilityState==='visible')?1:0;
   var __g=gestAgeSec();
   /* v268: 理由(r)と 自分の 版(pv)も のせる。あいては「なぜ 増えたか」を 時刻つきで 見られる */
-  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v280'}); }catch(e){}
+  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v281'}); }catch(e){}
   /* v263: アプリを とじて いても 鳴る ように、あいての「ベル用とおりみち」へ 1通だけ おくる。
      この とおりみちは あいてだけが うけとる（こちらには もどらない）。中身は 時刻だけ。 */
   try{ if(peerOpenOn()&&peerKeepOn()&&__r!=='conn') pushPeerOpen(t,__fg); }catch(e){}   /* v267/v268: 本物の 開封だけ スマホの ベルへ */
@@ -6005,9 +6005,8 @@ try{ setTimeout(function(){ try{ if(document.visibilityState==='visible') sendAp
 var lastOpenPush=0;
 async function pushPeerOpen(at,fg){
   try{
-    /* v276: 「アプリを ひらいた」しらせは もう だれにも おくらない
-       （相手の スマホも 自分の スマホも 鳴らさない）。トークの 記録(chat-open)は これまで どおり */
-    return false;
+    /* v281: しらせを もう一度 おくる。おくるのは 入室した 側 だけ、
+       とどくのは ホストの スマホの ベル 1台 だけ。ホストが ひらいた ことは どこへも おくらない */
     if(S.isHost!==false) return false;   /* v271: ホストの 開封は あいての スマホへ おくらない */
     /* v267: 「開いた」の 押しこみは 本物（画面が 見えて いた）だけ。10分に 1回・端末に おぼえる */
     if(fg!==1) return false;
@@ -6146,7 +6145,14 @@ function peerOpenNotice(proof){
   if(proof==='back'||proof==='net'||proof==='guess') return;   /* v267: 本物の 開封だけ しらせる */
   var t=Date.now(); if(t-lastPeerOpenNotice<60000) return;   /* 60秒に 1回まで */
   lastPeerOpenNotice=t;
-  try{ toast(proof==='touch'?'あいてが 手で アプリを ひらきました':(proof==='screen'?'あいての 画面に アプリが 出ました':'あいてが アプリを ひらきました')); }catch(e){}
+  var __msg=(proof==='touch'?'あいてが 手で アプリを ひらきました':(proof==='screen'?'あいての 画面に アプリが 出ました':'あいてが アプリを ひらきました'));
+  try{ toast(__msg); }catch(e){}
+  /* v281: 音を ならさない ぶん、目で 分かる ように 「あいて」の 行を 8秒 光らせる */
+  try{
+    var __ml=document.getElementById('mem-line');
+    if(__ml){ var __c=__ml.style.color; __ml.style.color='#ffd75e'; __ml.style.fontWeight='700';
+      setTimeout(function(){ try{ __ml.style.color=__c; __ml.style.fontWeight=''; }catch(e){} },8000); }
+  }catch(e){}
   try{ if(sndOn()) beepHost(); }catch(e){}
   try{ buzzNotify(); }catch(e){}
 }
