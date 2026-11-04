@@ -548,6 +548,33 @@ label,.lead,.hint{color:#6B7280!important}
 #call-box.hidevid #call-remote-cv{visibility:hidden}
 #call-box.rtc-ok #call-remote-cv{display:none}
 #call-box.hidevid #call-remote-img{visibility:hidden}
+/* v290: 通話の ようすを 大きく 出す（発信中・通話中・終了） */
+#call-center{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:10px;text-align:center;padding:0 20px 14vh;pointer-events:none}
+#call-center[hidden]{display:none}
+#call-big{color:#fff;font-size:1.2rem;font-weight:900;letter-spacing:.02em;line-height:1.3;
+  padding:11px 22px;border-radius:999px;background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.18)}
+#call-big .dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:#FFC24B;
+  margin-right:9px;vertical-align:1px}
+#call-center.on #call-big{background:rgba(10,107,67,.66);border-color:rgba(255,255,255,.34)}
+#call-center.on #call-big .dot{background:#5CE39B}
+#call-center.call-ring #call-big .dot{animation:callPulse .95s ease-in-out infinite}
+@keyframes callPulse{0%,100%{opacity:.25;transform:scale(.78)}50%{opacity:1;transform:scale(1.3)}}
+#call-elapsed{color:#fff;font-size:1.7rem;font-weight:900;font-variant-numeric:tabular-nums;
+  letter-spacing:.06em;text-shadow:0 2px 12px rgba(0,0,0,.65)}
+#call-elapsed[hidden]{display:none}
+#call-sub{color:rgba(255,255,255,.9);font-size:.76rem;font-weight:700;line-height:1.7;max-width:22em;
+  word-break:auto-phrase;line-break:strict;
+  background:rgba(0,0,0,.42);padding:7px 13px;border-radius:12px}
+#call-sub[hidden]{display:none}
+#call-end-big{pointer-events:auto;margin-top:16px;width:86px;height:86px;border-radius:50%;border:0;
+  background:#E5323B;color:#fff;font-size:.92rem;font-weight:900;line-height:1.15;
+  box-shadow:0 10px 26px rgba(0,0,0,.5),0 0 0 6px rgba(229,50,59,.22)}
+#call-end-big:active{transform:scale(.95)}
+/* v291: 中央に 大きく 出すので、上の 小さい 時刻・状態は けす */
+#call-box #call-time,#call-box #call-state{display:none}
+#call-spk{min-width:92px}
+#call-spk.off{opacity:.72}
 .call-top{position:absolute;top:0;left:0;right:0;display:flex;gap:10px;align-items:center;
   padding:calc(10px + env(safe-area-inset-top)) 14px 10px;z-index:3;
   background:linear-gradient(rgba(0,0,0,.55),rgba(0,0,0,0))}
@@ -908,7 +935,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v288</b></p>
+      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v291</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -982,7 +1009,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v288</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v291</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -1153,6 +1180,13 @@ body.in-play .leave-row{display:none!important}
     <button id="call-flip" type="button">切替</button>
     <button id="call-mic" type="button">マイク:オン</button>
     <button id="call-hide" type="button">隠す</button>
+    <button id="call-spk" type="button">受話口</button>
+  </div>
+  <div id="call-center" hidden>
+    <div id="call-big"><span class="dot"></span>つないでいます…</div>
+    <div id="call-elapsed" hidden>00:00</div>
+    <div id="call-sub" hidden></div>
+    <button id="call-end-big" type="button">終了</button>
   </div>
   <span id="call-time" class="ig-time">00:00</span>
   <span id="call-state" class="ig-state">つないでいます…</span>
@@ -1749,15 +1783,67 @@ function rid(n){
   for(var i=0;i<n;i++) s+=ALPHABET.charAt(a[i]%ALPHABET.length);
   return s.toLowerCase();
 }
+/* v289: 鍵交換以外は既定で私的通信。ローカルの世代情報は電文へ入れない。 */
+var HANDSHAKE_TYPES=Object.freeze({join:1,in2:1,in3:1,deny:1,full:1,expired:1,ping:1,ob:1,nettest:1,'nettest-ok':1});
+var PRIV=Object.freeze({reaction:1,'reaction-ack':1,recall:1,'recall-ack':1,purge:1,'live-on':1,'live-see':1,'live-off':1,igh:1,chats:1,chat:1,photo:1,attachment:1,'photo-chunk':1,'photo-ref':1,'photo-again':1,'photo-miss':1,'chat-open':1,'app-live':1,read:1,ack:1,prof:1,unpair:1,rtc2:1,rtc:1,'rtc-bye':1,'call-no':1,'rtc-sdp':1,'rtc-ice':1,'live-jpg':1,'live-ctl':1,'live-frame':1,'live-audio':1,call:1,'call-end':1});
+var outboundScopes=new WeakMap(), inboundScopes=new WeakMap();
+var privateTimers=new Set(), privateAborts=new Set(), photoScopes=Object.create(null);
+function privateType(t){ return typeof t==='string'&&!Object.prototype.hasOwnProperty.call(HANDSHAKE_TYPES,t); }
+function privateReady(){
+  var p=S&&S.opp&&S.opp.id;
+  return !!(S&&S.paired&&S.sealed&&S.sessKey&&Net&&Net.topic&&Net.key===S.sessKey
+    &&Net.key!==Net.roomKey&&Net.key!==Net.legacy&&S.me&&S.me.id&&p&&p!==S.me.id
+    &&(S.isHost===false||(S.isHost===true&&S.guest&&S.guest.did===p)));
+}
+function privateScope(){ return privateReady()?{epoch:Net.epoch,generation:Net.privateEpoch,key:Net.key,topic:Net.topic,peer:S.opp.id,me:S.me.id,host:S.isHost}:null; }
+function privateCurrent(c){ return !!(c&&privateReady()&&c.epoch===Net.epoch&&c.generation===Net.privateEpoch&&c.key===Net.key&&c.topic===Net.topic&&c.peer===S.opp.id&&c.me===S.me.id&&c.host===S.isHost); }
+function privateIncoming(m){ return !!(m&&m.sec===289&&!m.__legacy&&privateCurrent(inboundScopes.get(m))&&m.from===S.opp.id&&m.to===S.me.id); }
+function bindOutbound(env,useLegacy){
+  var c=privateType(env.t)?privateScope():{epoch:Net.epoch,topic:Net.topic,key:useLegacy?(Net.legacy||Net.key):Net.key,handshake:true};
+  if(!c) return false;
+  if(!c.handshake){ env.sec=289; env.to=c.peer; }
+  outboundScopes.set(env,c); return true;
+}
+function outboundCurrent(c){ return c&&c.handshake?(c.epoch===Net.epoch&&c.topic===Net.topic&&!!c.key):privateCurrent(c); }
+function privateLater(fn,ms,c){
+  c=c||privateScope(); if(!c) return null;
+  var t=setTimeout(function(){ privateTimers.delete(t); if(privateCurrent(c)) fn(); },ms);
+  privateTimers.add(t); return t;
+}
+function discardPrivateWork(){
+  privateTimers.forEach(function(t){ clearTimeout(t); }); privateTimers.clear();
+  privateAborts.forEach(function(a){ try{ a.abort(); }catch(e){} }); privateAborts.clear();
+  if(typeof photoBuf!=='undefined') Object.keys(photoBuf).forEach(function(k){ clearTimeout(photoBuf[k].timer); });
+  if(typeof S!=='undefined'&&S&&S.chat){
+    S.flushEnv=null; S.flushing=false;
+    S.chat.forEach(function(m){ if(m.photo||m.file){ clearTimeout(m.__w); m.__w=0; if(!m.sent) m.cancelled=true; } });
+  }
+  photoBuf={}; photoSent={}; photoURL={}; photoAgain={}; photoAsk={}; photoChunkFall={}; photoChunkAt={}; photoDone={}; photoScopes=Object.create(null);
+  if(typeof Vid!=='undefined'&&Vid){ try{ Vid.stop(); Vid.stopListen(); }catch(e){} }
+  if((typeof pc!=='undefined'&&pc)||(typeof callStream!=='undefined'&&callStream)||(typeof micStream!=='undefined'&&micStream)){
+    try{ stopCall(false); }catch(e){}
+  }
+  if(typeof rtcBuf!=='undefined'){ Object.keys(rtcBuf).forEach(function(k){ clearTimeout(rtcBuf[k].timer); }); rtcBuf={}; rtcCand=[]; rtcDone={}; }
+}
+function bindPrivateMessage(m){
+  if(!m||!privateReady()) return false;
+  if(!m.__privateScope) m.__privateScope=privateScope();
+  return privateCurrent(m.__privateScope);
+}
+function peerVersion(v){ return typeof v==='string'&&v.length<=7&&/^v[0-9]{1,6}$/.test(v)&&!(/\s/).test(v)?v:''; }
+function recordEscape(v){ return String(v==null?'':v).replace(/[&<>"']/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
 var Net={
+  epoch:0,privateEpoch:0,
   topic:null,key:null,legacy:null,ws:null,open:false,seen:null,lastTs:0,retry:0,retryTimer:null,pollTimer:null,
   onMsg:null,onState:null,sendQueue:Promise.resolve(),recvQueue:Promise.resolve(),lastSeq:null,
   /* セッション専用の とおりみちへ 切り替える(鍵は そのまま) */
   retopic:function(topic){
     if(!topic||topic===this.topic) return false;
-    var lg=this.legacy;
+    var lg=this.legacy,rk=this.roomKey,secure=this.secure;
     this.connect(topic,this.key);
+    this.roomKey=rk;
     this.legacy=lg;
+    this.secure=!!(secure&&privateReady());
     return true;
   },
   reset:function(){
@@ -1766,10 +1852,12 @@ var Net={
     this.legacy=null;
   },
   /* セッション鍵へ切り替える。招待リンクの鍵は legacy に残す */
-  setSession:function(key){ this.legacy=this.key; this.key=key; },
+  setSession:function(key){ return this.switchTo(key); },
   /* 2人だけの鍵に きりかえる。旧鍵(合言葉)は 合図の 種類だけ うけつける */
   switchTo:function(key){
     if(!key) return false;
+    this.privateEpoch++;
+    discardPrivateWork();
     if(!this.roomKey) this.roomKey=this.key;   /* 部屋の鍵は かならず 1回だけ 記録 */
     this.legacy=this.roomKey;
     this.key=key;
@@ -1777,7 +1865,7 @@ var Net={
     try{ paintTopicTag(); }catch(e){}
     return true;
   },
-  clearSession:function(){ if(this.legacy){ this.key=this.legacy; this.legacy=null; } },
+  clearSession:function(){ discardPrivateWork(); this.epoch++; this.secure=false; if(this.legacy){ this.key=this.legacy; this.legacy=null; } },
   connect:function(topic,key,since){
     this.close();
     this.topic=topic; this.key=key; this.legacy=null; this.roomKey=key;
@@ -1800,10 +1888,14 @@ var Net={
   recvFast:function(body){
     var self=this;
     if(!this.topic) return;
+    var epoch=this.epoch;
     this.lastRecv=Date.now();
-    this.recvQueue=this.recvQueue.then(function(){ return self.process(body,null); }).catch(function(){});
+    this.recvQueue=this.recvQueue.then(function(){ if(epoch===self.epoch) return self.process(body,null); }).catch(function(){});
   },
   close:function(){
+    this.epoch++; this.secure=false; discardPrivateWork();
+    if(typeof S!=='undefined'&&S){ S.in2Busy=false; S.in3Busy=false; }
+    this.sendQueue=Promise.resolve(); this.chunkQueue=Promise.resolve(); this.recvQueue=Promise.resolve(); this.qBusy=0; this.cqBusy=0;
     try{ Fast.close(); }catch(e){}
     if(this.retryTimer){clearTimeout(this.retryTimer);this.retryTimer=null;}
     this.stopPoll();
@@ -1945,7 +2037,8 @@ var Net={
     this.saveSince(ev.id);
     var self=this;
     /* 復号は順番どおりに処理する（トークの並びが崩れないように） */
-    this.recvQueue=this.recvQueue.then(function(){ return self.process(ev.message,ev.attachment); }).catch(function(){});
+    var epoch=this.epoch;
+    this.recvQueue=this.recvQueue.then(function(){ if(epoch===self.epoch) return self.process(ev.message,ev.attachment); }).catch(function(){});
   },
   saveSince:function(id){
     try{
@@ -1972,15 +2065,19 @@ var Net={
   },
   process:async function(body,att){
     if(!this.key) return;
+    var epoch=this.epoch,key=this.key,topic=this.topic,scope=privateScope();
     var env=null, legacy=false;
-    try{ env=await unseal(body,this.key); }
+    try{ env=await unseal(body,key); }
     catch(e){
       if(this.legacy){                       /* 招待リンクの鍵で来た＝まだ承認されていない端末 */
         try{ env=await unseal(body,this.legacy); legacy=true; }catch(e2){ return; }
       } else return;
     }
-    if(!env||env.v!==V||typeof env.t!=='string') return;
-    if(({chats:1,chat:1,photo:1,attachment:1,'photo-chunk':1,'photo-ref':1,'photo-again':1,recall:1,'recall-ack':1,reaction:1,'reaction-ack':1}[env.t])&&(!S.sealed||legacy||!S.opp||env.from!==S.opp.id)) return;
+    if(epoch!==this.epoch||key!==this.key||topic!==this.topic||!env||env.v!==V||typeof env.t!=='string') return;
+    if(privateType(env.t)){
+      if(!privateCurrent(scope)||legacy||env.sec!==289||env.from!==scope.peer||env.to!==scope.me||!Number.isSafeInteger(env.n)) return;
+      inboundScopes.set(env,scope);
+    }
     env.__legacy=legacy;
     env.__att=(att&&att.url)?String(att.url):'';
     /* v115: 番号は「同じものを 2回 うけとらない」ためだけに つかう。
@@ -2008,14 +2105,15 @@ var Net={
   },
   send:function(obj,onDone){
     var self=this;
-    if(!this.topic||!this.key) return 0;
+    if(!this.topic||!this.key||(privateType(obj.t)&&!privateReady())){ if(onDone) try{ onDone(false); }catch(e){} return 0; }
     if(this.qBusy&&Date.now()-this.qBusy>8000){ this.sendQueue=Promise.resolve(); }
     this.qBusy=this.qBusy||Date.now();
     nextSeq();
     var env={v:V,n:S.seq,from:S.me.id,t:obj.t};
     for(var k in obj){ if(k!=='v'&&k!=='n'&&k!=='from') env[k]=obj[k]; }
+    if(!bindOutbound(env,false)) return 0;
     /* v267: どこまで 読んだ か を すべての 封筒に のせる（既読の とりこぼしを 自分で なおす） */
-    try{ if(!(obj&&(obj.t==='read'||obj.t==='ack'))&&S.readUpTo) env.rd=S.readUpTo; }catch(e){}
+    try{ if(privateType(obj.t)&&!(obj.t==='read'||obj.t==='ack')&&S.readUpTo) env.rd=S.readUpTo; }catch(e){}
     this.sendQueue=this.sendQueue.then(function(){ return self.post(env,false,(({ack:1,ping:1,hi2:1}[obj&&obj.t])?2:0)); })
       .then(function(ok){ self.qBusy=0; if(onDone){ try{ onDone(ok); }catch(e){} } return ok; })
       .catch(function(){ if(onDone){ try{ onDone(false); }catch(e){} } return false; });
@@ -2024,12 +2122,13 @@ var Net={
   /* v288: 写真の かけら専用の 列。トークの 列とは べつに する（写真の 間で トークが つまらない） */
   sendChunk:function(obj,onDone){
     var self=this;
-    if(!this.topic||!this.key){ if(onDone) try{ onDone(false); }catch(e){} return 0; }
+    if(!privateReady()){ if(onDone) try{ onDone(false); }catch(e){} return 0; }
     if(this.cqBusy&&Date.now()-this.cqBusy>8000){ this.chunkQueue=Promise.resolve(); }
     this.cqBusy=this.cqBusy||Date.now();
     nextSeq();
     var env={v:V,n:S.seq,from:S.me.id,t:obj.t};
     for(var k in obj){ if(k!=='v'&&k!=='n'&&k!=='from') env[k]=obj[k]; }
+    if(!bindOutbound(env,false)) return 0;
     this.chunkQueue=(this.chunkQueue||Promise.resolve()).then(function(){ return self.post(env,false,2); })
       .then(function(ok){ self.cqBusy=0; if(onDone){ try{ onDone(ok); }catch(e){} } return ok; })
       .catch(function(){ if(onDone){ try{ onDone(false); }catch(e){} } return false; });
@@ -2038,7 +2137,7 @@ var Net={
   /* v157: 同じ 封筒（同じ 番号）の まま 送りなおす（相手に 2通 とどかない） */
   sendEnv:function(env,onDone){
     var self=this;
-    if(!this.topic||!this.key||!env){ if(onDone) try{ onDone(false); }catch(e){} return 0; }
+    if(!this.topic||!this.key||!env||!outboundCurrent(outboundScopes.get(env))){ if(onDone) try{ onDone(false); }catch(e){} return 0; }
     this.sendQueue=this.sendQueue.then(function(){ return self.post(env,false,0); })
       .then(function(ok){ if(onDone){ try{ onDone(ok); }catch(e){} } return ok; })
       .catch(function(){ if(onDone){ try{ onDone(false); }catch(e){} } return false; });
@@ -2047,11 +2146,12 @@ var Net={
   /* 招待リンクの鍵で返す（入室をおことわりする時だけ） */
   sendLegacy:function(obj){
     var self=this;
-    if(!this.topic||!this.key) return 0;
+    if(!this.topic||!this.key||privateType(obj.t)) return 0;
     nextSeq();
     var env={v:V,n:S.seq,from:S.me.id,t:obj.t};
     for(var k in obj){ if(k!=='v'&&k!=='n'&&k!=='from') env[k]=obj[k]; }
-    this.sendQueue=this.sendQueue.then(function(){ return self.post(env,!!self.legacy); }).catch(function(){});
+    if(!bindOutbound(env,true)) return 0;
+    this.sendQueue=this.sendQueue.then(function(){ return self.post(env,true); }).catch(function(){});
     return env.n;
   },
   /* 1分あたりの 送信数を 自分で かぎる（中継所の 回数制限に さきに 当たらない ため） */
@@ -2067,10 +2167,14 @@ var Net={
     return true;
   },
   post:async function(env,useLegacy,prio){
-    var key=useLegacy?(this.legacy||this.key):this.key;
+    var scope=outboundScopes.get(env);
+    if(!outboundCurrent(scope)) return false;
+    if(privateType(env.t)&&(useLegacy||!privateCurrent(scope))) return false;
+    var key=scope.key;
     if(!key||!this.topic) return false;
     var body;
     try{ body=await seal(env,key); }catch(e){ return false; }
+    if(!outboundCurrent(scope)) return false;
     /* v117: まず 2本目(即時)で おくる → 相手に すぐ とどく */
     var fastOk=false; try{
       /* v288: かけらは 1か所だけへ（2か所に おくると 上りが 2倍に なり、その分 おそく なる） */
@@ -2102,7 +2206,7 @@ var Net={
       /* v282: かけらは 即時路(MQTT)だけを つかう。中継所の 制限中でも とおす */
       if(this.coolUntil&&Date.now()<this.coolUntil) return __ns?fastOk:false;
       if(!this.allow(typeof prio==='number'?prio:1)) return __ns?fastOk:false;
-      if(!__ns) this.postStore(body); return true;
+      if(!__ns) this.postStore(body,scope); return true;
     }
     /* ntfy は 保存用(相手が いない ときの 受けとり用)。制限中は 2本目だけで 成功あつかい */
     if(this.coolUntil&&Date.now()<this.coolUntil) return fastOk||await viaPush();
@@ -2111,7 +2215,7 @@ var Net={
     if(fastOk){
       /* v267: 相手が いま つながって いるなら 保存は いらない（1日に 250通の わくを 節約） */
       var __live=0; try{ __live=+(window.__zgsPeerLive||0)||0; }catch(e){}
-      if(!(env&&env.t==='chats'&&__live&&Date.now()-__live<70000)) this.postStore(body);
+      if(!(env&&env.t==='chats'&&__live&&Date.now()-__live<70000)) this.postStore(body,scope);
       return true;
     }
     /* v182: つうちサーバー(psrv)が あれば トーク・とりけしは その直接路を 先に 待つ。
@@ -2119,7 +2223,8 @@ var Net={
        psrv なら 相手の スマホへ 直接 とどくのですぐ「送信済み・未読」に なる。4秒 だめなら 従来どおり 中継所へ（悪くは ならない） */
     if(pushP&&psrvGet()&&(env.t==='chats'||env.t==='recall')){
       var pOk=await Promise.race([pushP.catch(function(){ return false; }),new Promise(function(r){ setTimeout(function(){ r(false); },4000); })]);
-      if(pOk){ this.postStore(body); return true; }
+      if(!outboundCurrent(scope)) return false;
+      if(pOk){ this.postStore(body,scope); return true; }
     }
     try{
       /* トーク・既読・受領証は中継サーバーに保存させない（接続中の相手へ直接届くのみ） */
@@ -2127,8 +2232,11 @@ var Net={
       var ac=(typeof AbortController!=='undefined')?new AbortController():null;
       var tmo=setTimeout(function(){ try{ if(ac) ac.abort(); }catch(e){} },7000);
       var r;
-      try{ r=await fetch('https://ntfy.sh/'+this.topic+noCache,{method:'POST',headers:{'Content-Type':'text/plain'},body:body,signal:ac?ac.signal:undefined}); }
-      finally{ clearTimeout(tmo); }
+      if(!outboundCurrent(scope)){ clearTimeout(tmo); return false; }
+      if(ac) privateAborts.add(ac);
+      try{ r=await fetch('https://ntfy.sh/'+scope.topic+noCache,{method:'POST',headers:{'Content-Type':'text/plain'},body:body,signal:ac?ac.signal:undefined}); }
+      finally{ clearTimeout(tmo); if(ac) privateAborts.delete(ac); }
+      if(!outboundCurrent(scope)) return false;
       this.lastPostStatus=r.status;
       if(r.status===429||r.status===503){
         var ra=0;
@@ -2143,30 +2251,35 @@ var Net={
       return true;
     }catch(e){ return fastOk||await viaPush(); }
   },
-  postStore:function(body){
+  postStore:function(body,scope){
     var self=this;
+    if(!outboundCurrent(scope)) return;
     if(this.coolUntil&&Date.now()<this.coolUntil) return;
     try{
-      fetch('https://ntfy.sh/'+this.topic,{method:'POST',headers:{'Content-Type':'text/plain'},body:body})
-        .then(function(r){ if(r.status===429||r.status===503) self.hit429(45000); }).catch(function(){});
+      var ac=typeof AbortController!=='undefined'?new AbortController():null; if(ac) privateAborts.add(ac);
+      fetch('https://ntfy.sh/'+scope.topic,{method:'POST',headers:{'Content-Type':'text/plain'},body:body,signal:ac?ac.signal:undefined})
+        .then(function(r){ if(outboundCurrent(scope)&&(r.status===429||r.status===503)) self.hit429(45000); }).catch(function(){})
+        .finally(function(){ if(ac) privateAborts.delete(ac); });
     }catch(e){}
   },
   /* 未達のメッセージを同じ番号のまま再送（相手は重複を自動で捨てる） */
   resendEnv:function(env){
     var self=this;
-    if(!env||!this.topic||!this.key) return false;
+    if(!env||!outboundCurrent(outboundScopes.get(env))) return false;
     self.post(env,false,0).catch(function(){});
     return env.n;
   },
   /* v115: 写真・ライブの 合図など 大きい ものは 「あんごうした ファイル」として 1回で おくる */
   sendFile:function(obj,bytes,onDone){
     var self=this;
-    if(!this.topic||!this.key){ if(onDone) try{ onDone(false); }catch(e){} return 0; }
+    if(!privateReady()){ if(onDone) try{ onDone(false); }catch(e){} return 0; }
     nextSeq();
     var env={v:V,n:S.seq,from:S.me.id,t:obj.t};
     for(var k in obj){ if(k!=='v'&&k!=='n'&&k!=='from') env[k]=obj[k]; }
+    if(!bindOutbound(env,false)) return 0;
     this.sendQueue=this.sendQueue.then(function(){ return self.putFile(env,bytes); })
       .then(function(ok){
+        if(!privateCurrent(outboundScopes.get(env))) return false;
         /* v279: しゃしんが おくれなかったら、だまって 止まらずに 画面に 出し、
            かけら送り（文字の とおりみち）で もう 一度 ためす */
         if(!ok&&env.t==='photo'){
@@ -2191,24 +2304,28 @@ var Net={
   },
   putFile:async function(env,bytes){
     if(env&&messageDeleted({from:env.from,pid:env.id})) return false;
-    var key=this.key;
-    if(!key||!this.topic) return false;
+    var scope=outboundScopes.get(env),key=scope&&scope.key;
+    if(!privateCurrent(scope)) return false;
     if(this.coolUntil&&Date.now()<this.coolUntil) return false;
     if(this.noPutUntil&&Date.now()<this.noPutUntil) return false;   /* v282: 回数制限の あとは しばらく 1回おくりを しない */
     if(!this.allow(0)) return false;
     try{
-      var body=await seal(env,key);
       var iv=randFrom(12);
       var ct=await crypto.subtle.encrypt({name:'AES-GCM',iv:iv},key,bytes);
       var all=new Uint8Array(12+ct.byteLength); all.set(iv,0); all.set(new Uint8Array(ct),12);
+      env.fh=toHex(await crypto.subtle.digest('SHA-256',all));
+      var body=await seal(env,key);
+      if(!privateCurrent(scope)) return false;
       /* v247: かぎり時間を つける（でんぱが 悪いと fetch が かえって こず、
          しゃしんが「送信中」の まま ずっと 止まっていた） */
       var ac2=(typeof AbortController!=='undefined')?new AbortController():null;
       var tmo2=setTimeout(function(){ try{ if(ac2) ac2.abort(); }catch(e){} },45000);   /* v273: 20秒では 写真が 切れすぎた */
       var r;
-      try{ r=await fetch('https://ntfy.sh/'+this.topic+'?filename=d.bin&message='+encodeURIComponent(body),
+      if(ac2) privateAborts.add(ac2);
+      try{ r=await fetch('https://ntfy.sh/'+scope.topic+'?filename=d.bin&message='+encodeURIComponent(body),
         {method:'PUT',headers:{'Content-Type':'application/octet-stream'},body:all,signal:ac2?ac2.signal:undefined}); }
-      finally{ clearTimeout(tmo2); }
+      finally{ clearTimeout(tmo2); if(ac2) privateAborts.delete(ac2); }
+      if(!privateCurrent(scope)) return false;
       this.lastPostStatus=r.status; this.lastFileStatus=r.status; this.lastFileAt=Date.now();
       /* v278: ファイルの ばしょを 本文の とおりみちで もう 1本 つたえる
          （中継所の 添付が うけとり側で 見えない ときに、ここから 取りに いける） */
@@ -2216,7 +2333,8 @@ var Net={
         if(r.ok){
           var tj=await r.json();
           var au=(tj&&tj.attachment&&tj.attachment.url)?String(tj.attachment.url):'';
-          if(au){ photoURL[env.id]=au; try{ Net.send({t:'photo-ref',id:String(env.id),url:au}); }catch(e){} }
+          if(!privateCurrent(scope)) return false;
+          if(au&&env.t==='photo'){ photoURL[env.id]=au; try{ Net.send({t:'photo-ref',id:String(env.id),url:au,fh:env.fh}); }catch(e){} }
           else { try{ photoDiagPush('おくり','ばしょが わからない'); }catch(e){} }
         }
       }catch(e){}
@@ -2226,19 +2344,36 @@ var Net={
     }catch(e){ return false; }
   },
   /* うけとった ファイルを とってきて ひらく */
-  fetchFile:async function(url){
+  fetchFile:async function(url,m){
+    var scope=inboundScopes.get(m);
+    if(!privateIncoming(m)||typeof m.fh!=='string'||!(/^[0-9a-f]{64}$/).test(m.fh)) return null;
+    try{ var u=new URL(url); if(u.protocol!=='https:'||u.origin!=='https://ntfy.sh'||u.username||u.password) return null; }catch(e){ return null; }
     for(var t=0;t<4;t++){
+      if(!privateCurrent(scope)) return null;
+      var ac=typeof AbortController!=='undefined'?new AbortController():null;
+      if(ac) privateAborts.add(ac);
+      var timer=setTimeout(function(){ if(ac) ac.abort(); },45000);
       try{
-        var r=await fetch(url,{cache:'no-store'});
+        var r=await fetch(url,{cache:'no-store',redirect:'error',credentials:'omit',signal:ac?ac.signal:undefined});
+        if(!privateCurrent(scope)) return null;
         if(r.ok){
-          var buf=new Uint8Array(await r.arrayBuffer());
-          var keys=[this.key,this.legacy,this.roomKey].filter(Boolean);
-          for(var i=0;i<keys.length;i++){
-            try{ return new Uint8Array(await crypto.subtle.decrypt({name:'AES-GCM',iv:buf.slice(0,12)},keys[i],buf.slice(12))); }catch(e){}
-          }
-          return null;
+          var max=2*1024*1024+28,buf;
+          if(Number(r.headers.get('content-length'))>max) return null;
+          if(!r.body||!r.body.getReader) return null;
+          var reader=r.body.getReader(),parts=[],size=0;
+          try{ while(true){
+            var part=await reader.read(); if(!privateCurrent(scope)) return null;
+            if(part.done) break; size+=part.value.length; if(size>max) return null; parts.push(part.value);
+          } }finally{ try{ await reader.cancel(); }catch(e){} }
+          buf=new Uint8Array(size); var pos=0; parts.forEach(function(p){ buf.set(p,pos); pos+=p.length; });
+          if(buf.length<29||toHex(await crypto.subtle.digest('SHA-256',buf))!==m.fh||!privateCurrent(scope)) return null;
+          try{
+            var pt=new Uint8Array(await crypto.subtle.decrypt({name:'AES-GCM',iv:buf.slice(0,12)},scope.key,buf.slice(12)));
+            return privateCurrent(scope)?pt:null;
+          }catch(e){ return null; }
         }
-      }catch(e){}
+      }catch(e){}finally{ clearTimeout(timer); if(ac) privateAborts.delete(ac); }
+      if(!privateCurrent(scope)) return null;
       await new Promise(function(res){ setTimeout(res,1200*(t+1)); });
     }
     return null;
@@ -2312,8 +2447,8 @@ var Fast={
       if(q===1){ try{ this.ws.send(new Uint8Array([0x40,2,body[2+tl],body[3+tl]])); }catch(e){} }   /* PUBACK: うけとった ことを 中継所へ */
       var tname=new TextDecoder().decode(body.slice(2,2+tl));
       if(tname==='zgk/'+this.topic+'/e'){ this.echoAt=Date.now(); return; }
-      if(tname.indexOf('zgv/')===0){ try{ Vid.onBin(body.slice(off)); }catch(e){} return; }
-      if(tname.indexOf('zga/')===0){ try{ Aud.onBin(body.slice(off)); }catch(e){} return; }
+      if(tname.indexOf('zgv/')===0){ if(privateReady()&&tname===Vid.rxTopic) try{ Vid.onBin(body.slice(off),tname); }catch(e){} return; }
+      if(tname.indexOf('zga/')===0){ if(privateReady()&&tname===Aud.rxTopic) try{ Aud.onBin(body.slice(off),tname); }catch(e){} return; }
       var msg=new TextDecoder().decode(body.slice(off));
       try{ Net.lastAlive=Date.now(); Net.recvFast(msg); }catch(e){}
     }
@@ -2327,7 +2462,7 @@ var Fast={
     try{ this.ws.send(this.pkt(0xA2,this.cat([new Uint8Array([0,(this.pid++&255)||1]),this.enc(name)]))); }catch(e){}
   },
   pubBin:function(name,bytes){
-    if(!this.open||!this.ws) return false;
+    if(!this.open||!this.ws||!privateReady()||(name!==Vid.txTopic&&name!==Aud.txTopic)) return false;
     if(this.ws.bufferedAmount>600000) return false;   /* 回線が つまって いる ときは 古い コマを すてる(おくれ防止) */
     try{ this.ws.send(this.pkt(0x30,this.cat([this.enc(name),bytes]))); return true; }catch(e){ return false; }
   },
@@ -2428,18 +2563,18 @@ var Vid={
   on:false, rxOn:false, timer:null, seq:0, rxTopic:null, txTopic:null, busy:false, lastRx:0, shown:0, rxSeq:-1,
   FPS:15, W:480, Q:0.62,
   topicFor:async function(dir){
-    var k=(Net.key&&S.sealed)?Net.key:null; if(!k) return null;
+    var scope=privateScope(),k=scope&&scope.key; if(!k) return null;
     var raw; try{ raw=new Uint8Array(await crypto.subtle.exportKey('raw',k)); }catch(e){ return null; }
-    var h=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('vid|'+dir+'|'+b64(raw)));
-    return 'zgv/'+toHex(h).slice(0,32);
+    var h=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('vid289|'+dir+'|'+b64(raw)));
+    return privateCurrent(scope)?'zgv/'+toHex(h).slice(0,32):null;
   },
   myDir:function(){ return S.isHost?'h':'g'; },
   peerDir:function(){ return S.isHost?'g':'h'; },
   listen:async function(){
-    var ticket=callMediaTicket;
-    var t=await this.topicFor(this.peerDir()); if(!t||ticket!==callMediaTicket) return;
+    var ticket=callMediaTicket,scope=privateScope();
+    var t=await this.topicFor(this.peerDir()); if(!t||ticket!==callMediaTicket||!privateCurrent(scope)) return;
     if(this.rxTopic&&this.rxTopic!==t) Fast.unsub(this.rxTopic);
-    this.rxTopic=t; this.rxOn=true;
+    this.rxTopic=t; this.rxOn=true; this.scope=scope;
     if(!Fast.sub(t)){ try{ Fast.probe(); }catch(e){} }
     try{ Aud.listen(); }catch(e){}
   },
@@ -2447,8 +2582,9 @@ var Vid={
   start:async function(){
     if(this.on) return;
     if(!callStream){ return; }
-    var ticket=callMediaTicket, source=callStream;
-    var topic=await this.topicFor(this.myDir()); if(!topic||ticket!==callMediaTicket||callStream!==source) return;
+    var ticket=callMediaTicket, source=callStream,scope=privateScope();
+    var topic=await this.topicFor(this.myDir()); if(!topic||ticket!==callMediaTicket||callStream!==source||!privateCurrent(scope)) return;
+    this.scope=scope;
     this.txTopic=topic;
     this.on=true; this.seq=0;
     var v=$('#call-local'); if(v&&!v.srcObject){ v.srcObject=callStream; try{ v.play(); }catch(e){} }
@@ -2460,11 +2596,11 @@ var Vid={
   },
   stop:function(){ this.on=false; if(this.timer){ clearInterval(this.timer); this.timer=null; } try{ Aud.stop(); }catch(e){} },
   snap:function(){
-    if(!this.on||this.busy||!callStream) return;
+    if(!this.on||this.busy||!callStream||!privateCurrent(this.scope)) return;
     if(!Fast.open){ if(!this._kickAt||Date.now()-this._kickAt>3000){ this._kickAt=Date.now(); try{ Fast.kick(); }catch(e){} } return; }
     if(document.hidden||callHide) return;
     var v=$('#call-local'); if(!v||!v.videoWidth) return;
-    var self=this; this.busy=true;
+    var self=this,scope=this.scope,ticket=callMediaTicket,topic=this.txTopic; this.busy=true;
     try{
       var w=v.videoWidth,h=v.videoHeight,sc=Math.min(1,this.W/Math.max(w,h));
       var cw=Math.round(w*sc), ch=Math.round(h*sc);
@@ -2474,24 +2610,25 @@ var Vid={
         if(!bl){ self.busy=false; return; }
         bl.arrayBuffer().then(async function(ab){
           try{
-            var key=Net.key; if(!key||!S.sealed){ self.busy=false; return; }
+            var key=scope.key; if(!self.on||ticket!==callMediaTicket||!privateCurrent(scope)){ self.busy=false; return; }
             var iv=randFrom(12);
             var hdr=new Uint8Array(4); var n=(++self.seq)>>>0; hdr[0]=n>>>24; hdr[1]=(n>>>16)&255; hdr[2]=(n>>>8)&255; hdr[3]=n&255;
             var pt=new Uint8Array(4+ab.byteLength); pt.set(hdr,0); pt.set(new Uint8Array(ab),4);
-            var ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv:iv},key,pt));
+            var ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv:iv,additionalData:new TextEncoder().encode(topic)},key,pt));
             var out=new Uint8Array(12+ct.length); out.set(iv,0); out.set(ct,12);
-            Fast.pubBin(self.txTopic,out);
+            if(self.on&&ticket===callMediaTicket&&privateCurrent(scope)&&topic===self.txTopic) Fast.pubBin(topic,out);
           }catch(e){}
           self.busy=false;
         },function(){ self.busy=false; });
       },'image/jpeg',self.Q);
     }catch(e){ this.busy=false; }
   },
-  onBin:async function(buf){
-    if(!this.rxOn||buf.length<30) return;
-    var key=Net.key; if(!key||!S.sealed) return;
+  onBin:async function(buf,topic){
+    if(!this.rxOn||topic!==this.rxTopic||buf.length<30||buf.length>2*1024*1024) return;
+    var scope=this.scope,key=scope&&scope.key,ticket=callMediaTicket; if(!privateCurrent(scope)) return;
     var pt;
-    try{ pt=new Uint8Array(await crypto.subtle.decrypt({name:'AES-GCM',iv:buf.slice(0,12)},key,buf.slice(12))); }catch(e){ return; }   /* 2人の 鍵で ひらけない ものは すてる */
+    try{ pt=new Uint8Array(await crypto.subtle.decrypt({name:'AES-GCM',iv:buf.slice(0,12),additionalData:new TextEncoder().encode(topic)},key,buf.slice(12))); }catch(e){ return; }
+    if(!this.rxOn||topic!==this.rxTopic||ticket!==callMediaTicket||!privateCurrent(scope)||pt.length<6) return;
     var n=((pt[0]<<24)|(pt[1]<<16)|(pt[2]<<8)|pt[3])>>>0;
     if(n<=this.rxSeq&&n>5) return;    /* 古い コマは すてる */
     this.rxSeq=n;
@@ -2504,6 +2641,7 @@ var Vid={
     if(!cvs){ cvs=document.createElement('canvas'); cvs.id='call-remote-cv'; box.insertBefore(cvs,box.firstChild.nextSibling); }
     try{
       var bm=await createImageBitmap(new Blob([jpg],{type:'image/jpeg'}));
+      if(!this.rxOn||topic!==this.rxTopic||ticket!==callMediaTicket||!privateCurrent(scope)){ bm.close(); return; }
       if(cvs.width!==bm.width){ cvs.width=bm.width; cvs.height=bm.height; }
       cvs.getContext('2d').drawImage(bm,0,0); try{ bm.close(); }catch(e){}
       this.shown++;
@@ -2519,10 +2657,10 @@ var Vid={
 var Aud={
   on:false, rxOn:false, rec:null, txTopic:null, rxTopic:null, seq:0, rxSeq:-1, ctx:null, playAt:0, mime:'', lastRx:0,
   topicFor:async function(dir){
-    var k=(Net.key&&S.sealed)?Net.key:null; if(!k) return null;
+    var scope=privateScope(),k=scope&&scope.key; if(!k) return null;
     var raw; try{ raw=new Uint8Array(await crypto.subtle.exportKey('raw',k)); }catch(e){ return null; }
-    var h=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('aud|'+dir+'|'+b64(raw)));
-    return 'zga/'+toHex(h).slice(0,32);
+    var h=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('aud289|'+dir+'|'+b64(raw)));
+    return privateCurrent(scope)?'zga/'+toHex(h).slice(0,32):null;
   },
   pickMime:function(){
     if(!window.MediaRecorder) return '';
@@ -2534,8 +2672,9 @@ var Aud={
   start:async function(){
     if(this.on) return;
     var src=callStream||micStream; if(!src||!src.getAudioTracks||!src.getAudioTracks().length) return;
-    var ticket=callMediaTicket;
-    var topic=await this.topicFor(Vid.myDir()); if(!topic||ticket!==callMediaTicket||src!==(callStream||micStream)) return;
+    var ticket=callMediaTicket,scope=privateScope();
+    var topic=await this.topicFor(Vid.myDir()); if(!topic||ticket!==callMediaTicket||src!==(callStream||micStream)||!privateCurrent(scope)) return;
+    this.scope=scope;
     this.txTopic=topic;
     this.mime=this.pickMime(); if(!this.mime) return;
     this.on=true; this.seq=0;
@@ -2545,7 +2684,7 @@ var Aud={
       var mr; try{ mr=new MediaRecorder(stream,{mimeType:self.mime,audioBitsPerSecond:24000}); }catch(e){ self.on=false; return; }
       var parts=[];
       mr.ondataavailable=function(e){ if(e.data&&e.data.size) parts.push(e.data); };
-      mr.onstop=function(){ if(parts.length) self.send(new Blob(parts,{type:self.mime})); if(self.on) loop(); };
+      mr.onstop=function(){ if(ticket!==callMediaTicket||!privateCurrent(scope)||!self.on) return; if(parts.length) self.send(new Blob(parts,{type:self.mime})); if(self.on) loop(); };
       try{ mr.start(); }catch(e){ self.on=false; return; }
       self.rec=mr;
       setTimeout(function(){ try{ if(mr.state!=='inactive') mr.stop(); }catch(e){} },500);
@@ -2554,23 +2693,25 @@ var Aud={
   stop:function(){ this.on=false; try{ if(this.rec&&this.rec.state!=='inactive') this.rec.stop(); }catch(e){} this.rec=null; },
   send:async function(blob){
     try{
-      if(!Fast.open) return;
-      var key=Net.key; if(!key||!S.sealed) return;
+      if(!Fast.open||!this.on) return;
+      var scope=this.scope,key=scope&&scope.key,ticket=callMediaTicket,topic=this.txTopic; if(!privateCurrent(scope)) return;
       var ab=new Uint8Array(await blob.arrayBuffer());
+      if(!this.on||ticket!==callMediaTicket||!privateCurrent(scope)) return;
       var m=new TextEncoder().encode(this.mime.slice(0,40));
       var n=(++this.seq)>>>0;
       var pt=new Uint8Array(5+m.length+ab.length);
       pt[0]=n>>>24; pt[1]=(n>>>16)&255; pt[2]=(n>>>8)&255; pt[3]=n&255; pt[4]=m.length;
       pt.set(m,5); pt.set(ab,5+m.length);
       var iv=randFrom(12);
-      var ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv:iv},key,pt));
+      var ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv:iv,additionalData:new TextEncoder().encode(topic)},key,pt));
       var out=new Uint8Array(12+ct.length); out.set(iv,0); out.set(ct,12);
-      Fast.pubBin(this.txTopic,out);
+      if(this.on&&ticket===callMediaTicket&&privateCurrent(scope)&&topic===this.txTopic) Fast.pubBin(topic,out);
     }catch(e){}
   },
   listen:async function(){
-    var ticket=callMediaTicket;
-    var t=await this.topicFor(Vid.peerDir()); if(!t||ticket!==callMediaTicket) return;
+    var ticket=callMediaTicket,scope=privateScope();
+    var t=await this.topicFor(Vid.peerDir()); if(!t||ticket!==callMediaTicket||!privateCurrent(scope)) return;
+    this.scope=scope;
     if(this.rxTopic&&this.rxTopic!==t) Fast.unsub(this.rxTopic);
     this.rxTopic=t; this.rxOn=true; this.rxSeq=-1;
     if(!Fast.sub(t)){ try{ Fast.probe(); }catch(e){} }
@@ -2583,12 +2724,13 @@ var Aud={
       if(this.ctx&&this.ctx.state==='suspended') this.ctx.resume();
     }catch(e){}
   },
-  onBin:async function(buf){
-    if(!this.rxOn||buf.length<30) return;
+  onBin:async function(buf,topic){
+    if(!this.rxOn||topic!==this.rxTopic||buf.length<30||buf.length>2*1024*1024) return;
     if(pc&&pc.connectionState==='connected'&&$('#call-box')&&$('#call-box').classList.contains('rtc-ok')) return;   /* 直接の 音が ある ときは つかわない */
-    var key=Net.key; if(!key||!S.sealed) return;
+    var scope=this.scope,key=scope&&scope.key,ticket=callMediaTicket; if(!privateCurrent(scope)) return;
     var pt;
-    try{ pt=new Uint8Array(await crypto.subtle.decrypt({name:'AES-GCM',iv:buf.slice(0,12)},key,buf.slice(12))); }catch(e){ return; }
+    try{ pt=new Uint8Array(await crypto.subtle.decrypt({name:'AES-GCM',iv:buf.slice(0,12),additionalData:new TextEncoder().encode(topic)},key,buf.slice(12))); }catch(e){ return; }
+    if(!this.rxOn||topic!==this.rxTopic||ticket!==callMediaTicket||!privateCurrent(scope)||pt.length<5||pt[4]>40||5+pt[4]>=pt.length) return;
     var n=((pt[0]<<24)|(pt[1]<<16)|(pt[2]<<8)|pt[3])>>>0;
     if(n<=this.rxSeq&&n>5) return;
     this.rxSeq=n; this.lastRx=Date.now();
@@ -2596,6 +2738,7 @@ var Aud={
     this.unlock(); var ctx=this.ctx; if(!ctx) return;
     try{
       var ab=await ctx.decodeAudioData(data.buffer.slice(data.byteOffset,data.byteOffset+data.byteLength));
+      if(!this.rxOn||topic!==this.rxTopic||ticket!==callMediaTicket||!privateCurrent(scope)) return;
       var src=ctx.createBufferSource(); src.buffer=ab; src.connect(ctx.destination);
       var now=ctx.currentTime;
       if(this.playAt<now||this.playAt>now+1.5) this.playAt=now+0.12;   /* おくれすぎたら おいつく */
@@ -3220,21 +3363,23 @@ function showJoinReq(){
 function approveJoin(){
   var req=S.joinReq;
   if(!req||!S.isHost) return;
+  var epoch=Net.epoch;
   S.joinReq=null; showJoinReq();
   $('#jr-ok').disabled=true; $('#jr-no').disabled=true;
   (async function(){
     try{
-      S.guest={did:req.did,name:req.name};
+      S.guest={did:req.did,name:req.name,pub:req.pub};
       S.opp={id:req.did,name:req.name};
       var hk=await genECDH();
       S.myECDH=hk;
       var hpub=await exportPub(hk);
       var ps=await pairSecret(hk,req.pub);
+      if(epoch!==Net.epoch||!S.guest||S.guest.did!==req.did) return;
       S.sessKey=ps.key; S.sas=ps.tag;
       var wel={t:'in2',host:'ぶー',to:req.did,hostPub:hpub,pr:S.price||'',ds:S.desc||''};
       Net.sendLegacy(wel);
-      setTimeout(function(){ try{ Net.sendLegacy(wel); }catch(e){} },600);
-      setTimeout(function(){ try{ Net.sendLegacy(wel); }catch(e){} },1400);
+      setTimeout(function(){ if(epoch!==Net.epoch||!S.guest||S.guest.did!==req.did) return; try{ Net.sendLegacy(wel); }catch(e){} },600);
+      setTimeout(function(){ if(epoch!==Net.epoch||!S.guest||S.guest.did!==req.did) return; try{ Net.sendLegacy(wel); }catch(e){} },1400);
       S.paired=true; S.sealed=true;
       try{ memAdd('満席に なりました(2人)'); }catch(e){}
       note('入室を ゆるしました。2人だけの あんごうを あわせています…','#note2');
@@ -6043,7 +6188,7 @@ function sendAppOpen(reason){
   var __fg=(typeof document!=='undefined'&&document.visibilityState==='visible')?1:0;
   var __g=gestAgeSec();
   /* v268: 理由(r)と 自分の 版(pv)も のせる。あいては「なぜ 増えたか」を 時刻つきで 見られる */
-  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v288'}); }catch(e){}
+  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v291'}); }catch(e){}
   /* v263: アプリを とじて いても 鳴る ように、あいての「ベル用とおりみち」へ 1通だけ おくる。
      この とおりみちは あいてだけが うけとる（こちらには もどらない）。中身は 時刻だけ。 */
   try{ if(peerOpenOn()&&peerKeepOn()&&__r!=='conn') pushPeerOpen(t,__fg,true); }catch(e){}   /* v284: 本物の 起動は 画面判定で 落とさない */   /* v267/v268: 本物の 開封だけ スマホの ベルへ */
@@ -6102,7 +6247,7 @@ function peerLine(){
   else{
     var pr=window.__zgsPeerProof||'';   /* v266: さいごの 合図の たしからしさ */
     var m2={touch:'手で ひらいた',screen:'画面に 出た',back:'裏で つながった',push:'スマホが うけとめた',guess:'推定'};
-    if(pr&&m2[pr]) str+='（'+m2[pr]+'）'; if(S.peerVer) str+=' '+S.peerVer;   /* v268: あいての 版 */
+    if(pr&&Object.prototype.hasOwnProperty.call(m2,pr)) str+='（'+m2[pr]+'）'; if(peerVersion(S.peerVer)) str+=' '+peerVersion(S.peerVer);
   }
   return str;
 }
@@ -6134,7 +6279,7 @@ function memStop(){
   if(memBox){ memBox.remove(); memBox=null; }
 }
 /* v185: あいてだけの アクセス履歴（この端末が 観測した ことだけを この端末に 残す・100件まで） */
-function plogLoad(){ try{ return JSON.parse(localStorage.getItem('zg_peer_log')||'[]')||[]; }catch(e){ return []; } }
+function plogLoad(){ try{ var l=JSON.parse(localStorage.getItem('zg_peer_log')||'[]'); return Array.isArray(l)?l.filter(function(e){ return e&&typeof e==='object'; }).slice(-100).map(function(e){ e.pv=peerVersion(e.pv); return e; }):[]; }catch(e){ return []; } }
 /* v269: あとから 見ても「じぶんの 接続」が まざって いない ようにする。
    出し手ID(f)が 自分と 同じ 記録は 読みこむ ときに すてる（ふるい 版で まざった 分も ここで 消える） */
 function plogLoadMine(){ return plogLoad(); }
@@ -6168,8 +6313,8 @@ function swRoleSync(){
   window.__swRole=r;
   try{ caches.open('zg-count').then(function(c){ return c.put('role',new Response(r)); }).catch(function(){}); }catch(e){}
 }
-function plogSave(l){ try{ localStorage.setItem('zg_peer_log',JSON.stringify(l.slice(-100))); }catch(e){} }
-try{ if(!S.peerVer) S.peerVer=localStorage.getItem('zg_peer_ver')||''; }catch(e){}   /* v268: あいての 版を おぼえて おく */
+function plogSave(l){ try{ localStorage.setItem('zg_peer_log',JSON.stringify(l.slice(-100).map(function(e){ return Object.assign({},e,{pv:peerVersion(e.pv)}); }))); }catch(e){} }
+try{ S.peerVer=peerVersion(localStorage.getItem('zg_peer_ver')); if(!S.peerVer) localStorage.removeItem('zg_peer_ver'); }catch(e){}
 /* v258: あいてが アプリを ひらいたら、ホストにだけ しらせる（音・バイブ・画面の しらせ） */
 var PEEROPEN_KEY='mtp_peeropen_off';
 function peerOpenOn(){ try{ return localStorage.getItem(PEEROPEN_KEY)!=='1'; }catch(e){ return true; } }
@@ -6230,7 +6375,7 @@ function plogAdd(kind,at,proof,meta){
     }
     var rec={t:t,k:kind,p:proof||''};
     if(S.me&&S.me.id) rec.f=S.me.id;   /* v269: 出し手は つねに あいて（自分なら 読みこみ時に 消える） */
-    if(meta){ if(meta.r) rec.r=String(meta.r); if(meta.pv) rec.pv=String(meta.pv); if(meta.rt) rec.rt=meta.rt; if(meta.f) rec.f=meta.f; }
+    if(meta){ if(meta.r) rec.r=String(meta.r); if(peerVersion(meta.pv)) rec.pv=peerVersion(meta.pv); if(meta.rt) rec.rt=meta.rt; if(meta.f) rec.f=meta.f; }
     l.push(rec); if(l.length>100) l=l.slice(-100);
     plogSave(l); plogRender();
   }catch(e){}
@@ -6276,7 +6421,7 @@ function plogRender(){
       var __rlab={launch:'アプリを ひらいた',resume:'画面を つけた（もどった）',play:'トークを ひらいた'};
       if(e.k==='off'){ ico='○'; ic='#e0a060'; big='つながりが きれた'; col='#c9c9c9'; sub='あいての アプリが とじた'; }
       else if(e.k==='net'||e.k==='conn'){ ico='×'; ic='#8f8f8f'; big='つながっただけ'; col='#9a9a9a'; sub='アプリは ひらいて いない（回線が つながり直した だけ）'; }
-      else if(e.r&&__rlab[e.r]){ ico='●'; ic='#4ade80'; big=__rlab[e.r]; col='#8ef0b0'; sub=(e.r==='launch'?'アプリを たちあげた とき（いちばん たしか）':(e.r==='resume'?'アプリが 画面に もどった とき':'あいてが トークを 開いた とき')); }
+      else if(e.r&&Object.prototype.hasOwnProperty.call(__rlab,e.r)){ ico='●'; ic='#4ade80'; big=__rlab[e.r]; col='#8ef0b0'; sub=(e.r==='launch'?'アプリを たちあげた とき（いちばん たしか）':(e.r==='resume'?'アプリが 画面に もどった とき':'あいてが トークを 開いた とき')); }
       else { ico='●'; ic='#eab308'; big='アプリを ひらいた'; col='#f0e68c'; sub=openProofLabel(e.p); }
       if(e.k==='late') sub='おくれて とどいた 合図／'+sub;
       /* その あと 既読が かえって きた か */
@@ -6299,7 +6444,7 @@ function plogRender(){
         +'<div style="flex:1;min-width:0"><div style="font-weight:700;font-size:.95rem;color:'+col+'"><span style="color:'+ic+'">'+ico+'</span> '+big+'</div>'
         +'<div style="font-size:.78rem;opacity:.8;line-height:1.45;margin-top:2px">'+sub+'</div></div></div>';
     }
-    var __ft='<div style="margin-top:10px;padding-top:6px;border-top:1px solid rgba(255,255,255,.18);font-size:.68rem;opacity:.55;line-height:1.5">あいず 自分 '+deviceTag(S.me.id)+'／あいて '+deviceTag(S.opp&&S.opp.id)+'</div>';
+    var __ft='<div style="margin-top:10px;padding-top:6px;border-top:1px solid rgba(255,255,255,.18);font-size:.68rem;opacity:.55;line-height:1.5">あいず 自分 '+recordEscape(deviceTag(S.me.id))+'／あいて '+recordEscape(deviceTag(S.opp&&S.opp.id))+'</div>';
     b.innerHTML=__hdr+(h||'<div style="opacity:.7">まだ きろくは ありません</div>')+(l.length?__ft:'');
   }catch(e){}
 }
@@ -6336,9 +6481,9 @@ if(brand) brand.addEventListener('click',function(){
   if(memBox){ memBox.remove(); memBox=null; return; }
   if(!S.isHost||S.phase!=='play'){ note('じゅんび ちゅうです。','#note2'); return; }
   memBox=document.createElement('div'); memBox.id='mem-box';
-  memBox.innerHTML='<span id="mem-line">'+peerLine()+'</span>'
+  memBox.innerHTML='<span id="mem-line">'+recordEscape(peerLine())+'</span>'
  +'<details id="mem-plog" open><summary style="font-weight:700">あいてが アプリを ひらいた 記録</summary>'
- +'<div style="font-size:.72rem;opacity:.75;margin:3px 0 2px;line-height:1.5">この 端末が 見た 分だけ。あいてには みえません。'+(S.peerVer?('　あいての 版 <b>'+S.peerVer+'</b>'):'')+'</div>'
+ +'<div style="font-size:.72rem;opacity:.75;margin:3px 0 2px;line-height:1.5">この 端末が 見た 分だけ。あいてには みえません。'+(peerVersion(S.peerVer)?('　あいての 版 <b>'+recordEscape(peerVersion(S.peerVer))+'</b>'):'')+'</div>'
  +'<div id="mem-plog-list" style="font-size:.8rem;line-height:1.5;max-height:52vh;overflow:auto;margin-top:4px"></div></details>'
  +'<details id="mem-det"><summary>めも</summary><div id="mem-list"></div></details>';
   document.body.appendChild(memBox);
@@ -7869,7 +8014,7 @@ new MutationObserver(function(){
 /* v212: 本体の写真とファイルを選んで送る */
 var ATTACH_MAX=2*1024*1024;
 function attachmentReady(){
-  if((S.paired||S.linked)&&Net.topic&&Net.key) return true;
+  if(privateReady()) return true;
   toast('まだ つながっていません。接続してから おしてください。'); return false;
 }
 function attachmentRead(file){ return new Promise(function(resolve,reject){ var r=new FileReader(); r.onload=function(){ resolve(String(r.result)); }; r.onerror=function(){ reject(new Error('read')); }; r.readAsDataURL(file); }); }
@@ -7888,12 +8033,12 @@ async function attachmentSelected(input,isPhoto){
   isPhoto=mime.indexOf('image/')===0;
   if(file.size>(isPhoto?20*1024*1024:ATTACH_MAX)){ toast(isPhoto?'写真は 20 MB 以下を 選んでください。':'動画・ファイルは 2 MB 以下を 選んでください。'); return; }
   if(!confirm('「'+file.name+'」を あいてに 送りますか？'+(isPhoto?'\n写真は 送信用に 小さくします。':''))) return;
-  var peer=S.opp&&S.opp.id,topic=Net.topic,key=Net.key;
+  var peer=S.opp&&S.opp.id,topic=Net.topic,key=Net.key,scope=privateScope();
   try{
     var data=await attachmentRead(file);
     data=bytesDataURL(dataURLBytes(data),mime);
     if(isPhoto) data=await attachmentPhoto(data);
-    if(Net.topic!==topic||Net.key!==key||(S.opp&&S.opp.id)!==peer) return;
+    if(!privateCurrent(scope)) return;
     if(dataURLBytes(data).length>ATTACH_MAX){ toast('送信できる大きさを 超えています。2 MB 以下にしてください。'); return; }
     var msg={from:S.me.id,at:Date.now(),data:data,pid:'A'+Date.now().toString(36)+Math.random().toString(36).slice(2,8),uid:String(++UID),sent:false,n:0};
     if(isPhoto){ msg.photo=true; S.chat.push(msg); renderChat(true); sendPhoto(msg); }
@@ -7903,19 +8048,21 @@ async function attachmentSelected(input,isPhoto){
 $('#chat-photo-file').addEventListener('change',function(){ attachmentSelected(this,true); });
 /* 写真は従来どおり最適化。動画は元のバイト列を添付として送る。 */
 function sendAttachment(msg,tries){
+  if(!bindPrivateMessage(msg)) return;
   if(msg.cancelled||messageDeleted(msg)||S.chat.indexOf(msg)<0) return;
   tries=tries||0; if(!attachmentReady()) return;
   var topic=Net.topic,key=Net.key;
   var env=Net.sendFile({t:'attachment',id:msg.pid,at:msg.at,name:msg.fileName,size:msg.fileSize,mime:attachmentDataMime(msg.data)},dataURLBytes(msg.data),function(ok){
-    if(Net.topic!==topic||Net.key!==key||S.chat.indexOf(msg)<0) return;
+    if(!privateCurrent(msg.__privateScope)||S.chat.indexOf(msg)<0) return;
     if(ok){ msg.sent=true; msg.failed=false; }
-    else if(tries<3){ setTimeout(function(){ if(Net.topic===topic&&Net.key===key&&S.chat.indexOf(msg)>=0) sendAttachment(msg,tries+1); },5000*(tries+1)); }
+    else if(tries<3){ privateLater(function(){ if(S.chat.indexOf(msg)>=0) sendAttachment(msg,tries+1); },5000*(tries+1),msg.__privateScope); }
     else{ msg.failed=true; toast('ファイルを 送れませんでした。通信を確認し、選びなおしてください。'); }
     renderChat(true);
   }); if(env&&env.n) msg.n=env.n;
 }
 var attachmentReceiving=new Set();
 async function recvAttachment(m){
+  if(!privateIncoming(m)) return;
   if(messageDeleted({from:m.from,pid:m.id})) return;
   if(!m.__att||!m.id||typeof m.size!=='number'||m.size<0||m.size>ATTACH_MAX) return;
   var id=String(m.from)+':'+String(m.id),topic=Net.topic,key=Net.key;
@@ -7923,7 +8070,8 @@ async function recvAttachment(m){
   if(attachmentReceiving.has(id)||exists()) return;
   attachmentReceiving.add(id);
   try{
-    var bytes=await Net.fetchFile(m.__att);
+    var bytes=await Net.fetchFile(m.__att,m);
+    if(!privateIncoming(m)) return;
     if(Net.topic!==topic||Net.key!==key||!bytes||bytes.length!==m.size||bytes.length>ATTACH_MAX||exists()||messageDeleted({from:m.from,pid:m.id})) return;
     S.chat.push({file:true,from:m.from,at:typeof m.at==='number'?m.at:Date.now(),data:bytesDataURL(bytes,attachmentKind(bytes,m.name,m.mime)),fileName:String(m.name||'ファイル').slice(0,180),fileSize:bytes.length,pid:m.id,uid:String(++UID),n:m.n||0,sent:true});
     S.lastPeerN=Math.max(S.lastPeerN||0,m.n||0); if(m.n) Net.send({t:'ack',n1:m.n});
@@ -8024,7 +8172,7 @@ function attachmentLink(m,position){
 function dataURLBytes(u){ var b=atob(String(u).split(',')[1]||''), a=new Uint8Array(b.length); for(var i=0;i<b.length;i++) a[i]=b.charCodeAt(i); return a; }
 function bytesDataURL(a,mime){ var s='',CH=0x8000; for(var i=0;i<a.length;i+=CH) s+=String.fromCharCode.apply(null,a.subarray(i,i+CH)); return 'data:'+(mime||'image/jpeg')+';base64,'+btoa(s); }
 function photoGiveUp(msg,why){
-  if(!msg) return;
+  if(!msg||!privateCurrent(msg.__privateScope)) return;
   msg.failed=true;
   if(msg.__w){ try{ clearTimeout(msg.__w); }catch(e){} msg.__w=0; }
   try{ note(why||'しゃしんを そうしん できませんでした。ふきだしの「もういちど おくる」を おして ください。','#note2'); }catch(e){}
@@ -8073,6 +8221,7 @@ function photoFitURL(url){
   });
 }
 function sendPhoto(msg,tries){
+  if(!bindPrivateMessage(msg)) return;
   if(!msg||msg.cancelled||messageDeleted(msg)||S.chat.indexOf(msg)<0) return;
   if(msg.sent) return;
   tries=tries||0;
@@ -8094,15 +8243,16 @@ function sendPhoto(msg,tries){
   /* v247: 「送信中」の まま 固まらない ように 見張り番を おく（60秒）
      v273: かけら送りに うつった あとは 切らない（かけらは 1つずつ 待つので 長く かかる） */
   var __wd=function(){
+    if(!privateCurrent(msg.__privateScope)) return;
     msg.__w=0;
     if(msg.sent) return;
     if(msg.__chunked&&!msg.failed){
       if(Date.now()-(msg.__chunkAt||0)>12*60*1000){ photoGiveUp(msg,'しゃしんを おくり きれませんでした。でんぱの よい ところで「もういちど おくる」を おして ください。'); return; }
-      msg.__w=setTimeout(__wd,180000); return;
+      msg.__w=privateLater(__wd,180000,msg.__privateScope); return;
     }
     photoGiveUp(msg,'しゃしんが まだ とどいて いません。ふきだしの「もういちど おくる」を おして ください。');
   };
-  if(!msg.__w) msg.__w=setTimeout(__wd,60000);
+  if(!msg.__w) msg.__w=privateLater(__wd,60000,msg.__privateScope);
   /* v287: つながって いる あいだは、中継所への 大きな PUT(最大45秒)を まつ より
      即時路の かけらで 送る ほうが ずっと 速い */
   if((msg.data||'').length>40000&&typeof photoChunkBegin==='function'&&typeof sendPhotoChunks==='function'
@@ -8120,7 +8270,7 @@ function sendPhoto(msg,tries){
     return;
   }
   var env=Net.sendFile({t:'photo',id:msg.pid,at:msg.at},dataURLBytes(msg.data),function(ok){
-    if(Net.topic!==topic||Net.key!==key||msg.cancelled||S.chat.indexOf(msg)<0) return;
+    if(!privateCurrent(msg.__privateScope)||msg.cancelled||S.chat.indexOf(msg)<0) return;
     try{ photoDiagPush('1回', (ok?'おくれた':'だめ')+' HTTP'+(Net.lastFileStatus||0)+' '+Math.round((msg.data||'').length/1000)+'kもじ'); }catch(e){}
     if(ok){
       msg.sent=true; msg.failed=false; msg.sentAt=Date.now();
@@ -8151,7 +8301,7 @@ function sendPhoto(msg,tries){
       /* v247: 中継所の 回数制限(429)の あいだは、あけすぎず 待ちすぎず やりなおす */
       var wait=Math.min(15000,2500*(tries+1));
       if(Net.coolUntil&&Net.coolUntil>Date.now()) wait=Math.max(wait,Net.coolUntil-Date.now()+2000);
-      setTimeout(function(){ sendPhoto(msg,tries+1); },wait);
+      privateLater(function(){ sendPhoto(msg,tries+1); },wait,msg.__privateScope);
     }
     else photoGiveUp(msg,'しゃしんを そうしん できませんでした（でんぱ、または 中継所の 回数せいげん）。ふきだしの「もういちど おくる」を おして ください。');
     if(S.tab==='chat') renderChat(true);
@@ -8183,7 +8333,7 @@ function photoFailWhy(){
 /* v278: しゃしんを うけとれなかったら、あいてに「もう いちど おくって」と たのむ（2回まで） */
 function photoAskAgain(m){
   try{
-    if(!m||!m.id||m.from===S.me.id) return;
+    if(!privateIncoming(m)||!m.id||m.from===S.me.id) return;
     var k=String(m.id); if((photoAsk[k]||0)>=2) return;
     photoAsk[k]=(photoAsk[k]||0)+1;
     try{ photoDiagPush('うけとり','もう いちど たのむ '+photoAsk[k]); }catch(e){}
@@ -8191,11 +8341,13 @@ function photoAskAgain(m){
   }catch(e){}
 }
 async function recvPhoto(m){
+  if(!privateIncoming(m)) return;
   if(!m.__att){ try{ photoDiagPush('うけとり','しるし なし'); }catch(e){} }
   if(!m.__att||messageDeleted({from:m.from,pid:m.id})){ if(!m.__att){ try{ toast('しゃしんを うけとれませんでした（しるしが ありません）'); }catch(e){} photoAskAgain(m); } return; }
   var topic=Net.topic,key=Net.key;
   for(var i=0;i<S.chat.length;i++){ if(S.chat[i].pid&&S.chat[i].pid===m.id&&S.chat[i].from===m.from) return; }
-  var bytes=await Net.fetchFile(m.__att);
+  var bytes=await Net.fetchFile(m.__att,m);
+  if(!privateIncoming(m)) return;
   if(!bytes){ try{ photoDiagPush('うけとり','とれなかった'); }catch(e){} try{ toast('しゃしんを とりに いけませんでした（もう いちど たのみます）'); }catch(e){} photoAskAgain(m); return; }
   var pm=photoMimeOf(bytes);
   if(Net.topic!==topic||Net.key!==key||messageDeleted({from:m.from,pid:m.id})){ return; }
@@ -8215,8 +8367,10 @@ async function recvPhoto(m){
 async function sendPhotoChunks(dataURL,pid){
   /* v273: 1つ おくれるまで まって やりなおす（回数制限で 途中で 止まらない）。
      ぜんぶ おくれたら true、あきらめたら false を かえす */
-  if(S.phase!=='play'||!S.paired) return false;
+  var scope=privateScope(); if(S.phase!=='play'||!scope) return false;
   var id=pid;
+  if(photoScopes[id]&&!privateCurrent(photoScopes[id])) return false;
+  photoScopes[id]=scope;
   try{ photoSent[id]=dataURL; var ks=Object.keys(photoSent); if(ks.length>6) delete photoSent[ks[0]]; }catch(e){}
   var pieceLen=PHOTO_CHUNK_PIECE;
   var total=Math.ceil(dataURL.length/pieceLen);
@@ -8226,6 +8380,7 @@ async function sendPhotoChunks(dataURL,pid){
   var PIPE=10;
   var sendChunk=function(k){
     return new Promise(function(res){
+      if(!privateCurrent(scope)){ res(false); return; }
       try{ Net.sendChunk({t:'photo-chunk',id:id,i:k,total:total,pc:pieceLen,data:dataURL.slice(k*pieceLen,(k+1)*pieceLen)},function(o){ res(!!o); }); }
       catch(e){ res(false); }
     });
@@ -8235,6 +8390,7 @@ async function sendPhotoChunks(dataURL,pid){
   var nextK=0, failed=[];
   var worker=async function(){
     while(nextK<total){
+      if(!privateCurrent(scope)) return;
       var k=nextK++;
       var ok=await sendChunk(k);
       if(!ok) failed.push(k);
@@ -8243,10 +8399,12 @@ async function sendPhotoChunks(dataURL,pid){
   };
   var ws2=[]; for(var w2=0;w2<Math.min(PIPE,total);w2++) ws2.push(worker());
   await Promise.all(ws2);
+  if(!privateCurrent(scope)) return false;
   for(var q=0;q<failed.length;q++){
     var ok2=false;
     for(var r2=0;r2<6&&!ok2;r2++){
       await new Promise(function(res){ setTimeout(res,300+r2*500); });
+      if(!privateCurrent(scope)) return false;
       ok2=await sendChunk(failed[q]);
     }
     if(!ok2) return false;
@@ -8254,26 +8412,29 @@ async function sendPhotoChunks(dataURL,pid){
   return true;
 }
 async function recvPhotoChunk(m){
+  if(!privateIncoming(m)) return;
   if(messageDeleted({from:m.from,pid:m.id})) return;
   if(S.phase!=='play') return;
   var id=String(m.id||''); if(!id) return;   /* v277: 24文字で 切ると おくりなおしの 依頼と かみあわない */
   if(photoDone[id]) return;   /* v285: もう そろって いる 写真の かけらは すてる */
   if(S.chat.some(function(c){ return c.from===m.from&&String(c.pid||'')===id; })){ photoDone[id]=1; return; }
   var total=m.total|0; if(total<1||total>2000) return;   /* v273: 160 → 2000（大きい 写真が まるごと すてられて いた） */
-  var b=photoBuf[id]||(photoBuf[id]={got:[],timer:null,total:total});
+  var b=photoBuf[id]||(photoBuf[id]={got:[],timer:null,total:total,scope:inboundScopes.get(m)});
+  if(!privateCurrent(b.scope)) return;
   if(b.total!==total) return;   /* v273: かけらの 数が ちがう 便は すてる（まざると そろわない） */
   var i=m.i|0; if(i<0||i>=total) return;
   if(!b.got[i]) b.got[i]=String(m.data||'').slice(0,2400);
   clearTimeout(b.timer);
   /* v267: かけらが そろわない ときは、あいてに もう一度 たのむ（3回まで） */
   var waitMiss=function(){
+    if(!privateCurrent(b.scope)) return;
     var miss=[]; for(var q=0;q<b.total;q++) if(!b.got[q]) miss.push(q);
     if(!miss.length){ delete photoBuf[id]; return; }
     b.tries=(b.tries||0)+1;
-    if(b.tries<=3){ try{ Net.send({t:'photo-miss',id:id,need:miss}); }catch(e){} b.timer=setTimeout(waitMiss,15000); return; }
+    if(b.tries<=3){ try{ Net.send({t:'photo-miss',id:id,need:miss}); }catch(e){} b.timer=privateLater(waitMiss,15000,b.scope); return; }
     delete photoBuf[id];
   };
-  b.timer=setTimeout(waitMiss,15000);
+  b.timer=privateLater(waitMiss,15000,b.scope);
   for(var k=0;k<total;k++) if(!b.got[k]) return;
   var all=''; for(k=0;k<total;k++) all+=b.got[k];
   delete photoBuf[id];
@@ -8371,18 +8532,32 @@ function askCall(){
   return new Promise(function(res){
     closeCallAsk();
     var w=document.createElement('div'); w.id='call-ask';
-    w.style.cssText='position:fixed;inset:0;z-index:9999;background:rgba(20,16,24,.6);display:flex;align-items:center;justify-content:center;padding:20px';
-    w.innerHTML='<div style="background:#fff;border-radius:22px;padding:24px 18px 18px;max-width:330px;width:100%;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.25)">'+
-      '<div style="font-size:2.4rem;animation:zgring 1s ease-in-out infinite">📞</div>'+
-      '<div style="font-weight:900;font-size:1.1rem;margin:8px 0 2px;color:#3B3B3B">'+peerName().replace(/[<>&"]/g,'')+' から でんわです</div>'+
-      '<div style="font-size:.82rem;color:#8a8177;margin-bottom:16px">でるまで あなたの マイクは オフです</div>'+
-      '<div style="display:flex;gap:10px">'+
-      '<button type="button" id="ca-no" style="flex:1;padding:14px;border:0;border-radius:14px;background:#F4F0EA;color:#C62828;font-weight:900;font-size:1rem">ことわる</button>'+
-      '<button type="button" id="ca-yes" style="flex:1;padding:14px;border:0;border-radius:14px;background:#06C755;color:#fff;font-weight:900;font-size:1rem">でる</button></div></div>'+
-      '<style>@keyframes zgring{0%,100%{transform:rotate(0)}25%{transform:rotate(-14deg)}75%{transform:rotate(14deg)}}</style>';
+        w.style.cssText='position:fixed;inset:0;z-index:9999;background:radial-gradient(120% 80% at 50% 0%,#20303F 0%,#0A0E13 72%);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:26px 20px calc(26px + env(safe-area-inset-bottom));text-align:center;color:#fff';
+    /* v291: 着信を 大きく・はっきり（だれから・でる・ことわる） */
+    w.innerHTML='<style>@keyframes zgring{0%,100%{transform:rotate(0)}25%{transform:rotate(-12deg)}75%{transform:rotate(12deg)}}'+
+      '@keyframes zgwave{0%{transform:scale(.8);opacity:.5}70%{transform:scale(1.55);opacity:0}100%{opacity:0}}'+
+      '@keyframes zgblink{0%,100%{opacity:.35}50%{opacity:1}}</style>'+
+      '<div style="position:relative;width:168px;height:168px;display:grid;place-items:center;margin-bottom:16px">'+
+        '<span style="position:absolute;inset:0;border-radius:50%;background:rgba(6,199,85,.30);animation:zgwave 1.9s ease-out infinite"></span>'+
+        '<span style="position:absolute;inset:0;border-radius:50%;background:rgba(6,199,85,.22);animation:zgwave 1.9s ease-out .65s infinite"></span>'+
+        '<span style="position:relative;width:106px;height:106px;border-radius:50%;background:linear-gradient(160deg,#19D66B,#04A94A);display:grid;place-items:center;font-size:3rem;box-shadow:0 12px 30px rgba(6,199,85,.35);animation:zgring 1.15s ease-in-out infinite">📞</span>'+
+      '</div>'+
+      '<div style="font-size:.82rem;font-weight:900;letter-spacing:.14em;color:#7CE3A8;animation:zgblink 1.6s ease-in-out infinite">でんわが きて います</div>'+
+      '<div style="font-weight:900;font-size:1.6rem;margin:9px 0 5px;line-height:1.35;word-break:auto-phrase">'+peerName().replace(/[<>&"]/g,'')+'</div>'+
+      '<div style="font-size:.8rem;color:rgba(255,255,255,.75);line-height:1.7;margin-bottom:30px">でるまで あなたの マイクは オフです</div>'+
+      '<div style="display:flex;gap:44px;align-items:flex-start">'+
+        '<div style="display:flex;flex-direction:column;align-items:center;gap:9px">'+
+          '<button type="button" id="ca-no" style="width:86px;height:86px;border-radius:50%;border:0;background:#E5323B;color:#fff;font-size:1.8rem;box-shadow:0 10px 26px rgba(0,0,0,.45),0 0 0 6px rgba(229,50,59,.18)">✕</button>'+
+          '<span style="font-size:.86rem;font-weight:900;color:#FFB4B8">ことわる</span></div>'+
+        '<div style="display:flex;flex-direction:column;align-items:center;gap:9px">'+
+          '<button type="button" id="ca-yes" style="width:86px;height:86px;border-radius:50%;border:0;background:#06C755;color:#fff;font-size:1.8rem;box-shadow:0 10px 26px rgba(0,0,0,.45),0 0 0 6px rgba(6,199,85,.22);animation:zgblink 1.7s ease-in-out infinite">📞</button>'+
+          '<span style="font-size:.86rem;font-weight:900;color:#8CF0B8">でる</span></div>'+
+      '</div>'+
+      '<div style="margin-top:26px;font-size:.72rem;color:rgba(255,255,255,.55);line-height:1.7">でない まま しばらく たつと、じどうで きれます</div>';
+    try{ if(navigator.vibrate) navigator.vibrate([560,380,560,380,560,380,560]); }catch(e){}
     document.body.appendChild(w);
     var settled=false;
-    var done=function(v){ if(settled) return; settled=true; clearTimeout(ringT); ringT=null; callAskDone=null; appNav.dismiss('call-ask'); try{ w.remove(); }catch(e){} res(v); };
+    var done=function(v){ if(settled) return; settled=true; try{ if(navigator.vibrate) navigator.vibrate(0); }catch(e){} clearTimeout(ringT); ringT=null; callAskDone=null; appNav.dismiss('call-ask'); try{ w.remove(); }catch(e){} res(v); };
     callAskDone=done; appNav.open('call-ask',function(){ done('no'); });
     $('#ca-yes').addEventListener('click',function(){ done('yes'); });
     $('#ca-no').addEventListener('click',function(){ done('no'); });
@@ -8411,6 +8586,7 @@ function tuneSenders(){
   });
 }
 async function getCallMedia(wantVideo){
+  var scope=privateScope(); if(!scope) return {name:'SecurityError'};
   cancelCallMedia();
   var ticket=callMediaTicket, cancelled={name:'AbortError'}, finish;
   var aborted=new Promise(function(resolve){ finish=resolve; });
@@ -8422,13 +8598,13 @@ async function getCallMedia(wantVideo){
   }:{audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}};
   try{
     var request=navigator.mediaDevices.getUserMedia(constraints).then(function(st){
-      if(ticket!==callMediaTicket){ stopMediaTracks(st); return cancelled; }
+      if(ticket!==callMediaTicket||!privateCurrent(scope)){ stopMediaTracks(st); return cancelled; }
       if(wantVideo) callStream=st;
       micStream=st; micOn=true; callVideo=!!wantVideo;
       return true;
     },function(err){ return ticket!==callMediaTicket?cancelled:((err&&err.name)?err:{name:'Error'}); });
     var result=await Promise.race([request,aborted]);
-    if(ticket!==callMediaTicket) return cancelled;
+    if(ticket!==callMediaTicket||!privateCurrent(scope)) return cancelled;
     callMediaCancel=null; appNav.dismiss('call-media');
     if(result===true) appNav.open('call-box',function(){ stopCall(); },function(){ return !!(callStream||micStream||rtcOn||callOn||!$('#call-box').hidden); });
     return result;
@@ -8438,6 +8614,56 @@ async function getCallMedia(wantVideo){
     return (err&&err.name)?err:{name:'Error'};
   }
 }
+/* v290: 発信中・通話中・終了を 大きく 出す。音の 出し先も ここで えらぶ */
+var callOutMode='earpiece', callOutState='';
+try{ if(localStorage.getItem('zg_call_out')==='speaker') callOutMode='speaker'; }catch(e){}
+function callOutLabel(m){ return m==='speaker'?'スピーカー':'受話口'; }
+function callPanel(kind,big,sub){
+  var c=$('#call-center'), b=$('#call-big'), s=$('#call-sub'), t=$('#call-elapsed');
+  if(!c||!b) return;
+  c.hidden=false;
+  c.classList.toggle('call-ring',kind==='ring');
+  c.classList.toggle('on',kind==='on');
+  b.textContent='';
+  var d=document.createElement('span'); d.className='dot'; b.appendChild(d);
+  b.appendChild(document.createTextNode(big));
+  if(s){ s.textContent=sub||''; s.hidden=!sub; }
+  if(t) t.hidden=(kind!=='on');
+  var st=$('#call-state'); if(st) st.textContent=big;
+}
+function callPanelHide(){ var c=$('#call-center'); if(c) c.hidden=true; }
+function callAudioEls(){
+  var out=[], a=$('#rtc-audio'), r=$('#call-remote');
+  if(a) out.push(a); if(r) out.push(r);
+  return out;
+}
+function paintCallOut(){
+  var b=$('#call-spk'); if(!b) return;
+  b.textContent=callOutLabel(callOutMode);
+  b.classList.toggle('off',callOutState!=='ok');
+  b.title=(callOutState==='ok')?('いまの 音: '+callOutLabel(callOutMode))
+    :'この 端末では アプリから 出し先を えらべません';
+}
+async function applyCallOutput(mode){
+  var els=callAudioEls();
+  paintCallOut();
+  if(!els.length||typeof els[0].setSinkId!=='function'){ callOutState='none'; paintCallOut(); return 'none'; }
+  var want=(mode==='speaker')?/speaker|スピーカー|external/i:/earpiece|receiver|受話|handset/i;
+  var id='', matched=false;
+  try{
+    var devs=await navigator.mediaDevices.enumerateDevices();
+    var outs=devs.filter(function(d){ return d.kind==='audiooutput'&&d.deviceId; });
+    for(var i=0;i<outs.length;i++){ if(want.test(outs[i].label||'')){ id=outs[i].deviceId; matched=true; break; } }
+  }catch(e){}
+  var ok=true;
+  for(var j=0;j<els.length;j++){
+    try{ await els[j].setSinkId(id); }catch(e){ ok=false; }
+  }
+  if(!ok||(mode==='earpiece'&&!matched)) callOutState='none';
+  else { callOutState='ok'; callOutMode=mode; try{ localStorage.setItem('zg_call_out',mode); }catch(e){} }
+  paintCallOut();
+  return callOutState;
+}
 function openCallUI(){
   var b=$('#call-box'); if(!b) return;
   b.hidden=false; b.classList.remove('hidevid'); callHide=false;
@@ -8445,14 +8671,19 @@ function openCallUI(){
   if(lv&&callStream){ lv.srcObject=callStream; try{ lv.play(); }catch(e){} }
   var hs=$('#call-hide'); if(hs) hs.textContent='画面を隠す';
   var st=$('#call-state'); if(st) st.textContent='つないでいます…';
+  callPanel('ring','つないでいます…','すこし おまちください。');
+  paintCallOut();
   callT0=Date.now();
   if(callTimer) clearInterval(callTimer);
   callTimer=setInterval(function(){
     var sec=Math.floor((Date.now()-callT0)/1000);
-    var el=$('#call-time');
-    if(el) el.textContent=('0'+Math.floor(sec/60)).slice(-2)+':'+('0'+(sec%60)).slice(-2);
+    var txt=('0'+Math.floor(sec/60)).slice(-2)+':'+('0'+(sec%60)).slice(-2);
+    var el=$('#call-time'); if(el) el.textContent=txt;
+    var el2=$('#call-elapsed'); if(el2&&!el2.hidden) el2.textContent=txt;
   },1000);
   var bl=$('#btn-live'); if(bl) bl.textContent='ライブ止';
+  /* v290: まず 受話口を ためす。かなわなければ そのまま 鳴らし、画面で 伝える */
+  if(callOutMode==='earpiece') setTimeout(function(){ if(callOn) applyCallOutput('earpiece'); },400);
 }
 function closeLiveLegacy(){
   liveOn=false;
@@ -8490,8 +8721,9 @@ function snapJpg(){
   }catch(e){}
 }
 async function recvLiveJpg(m){
-  if(!m.__att) return;
-  var b=await Net.fetchFile(m.__att);
+  if(!privateIncoming(m)||!m.__att) return;
+  var b=await Net.fetchFile(m.__att,m);
+  if(!privateIncoming(m)) return;
   if(!b||b[0]!==0xFF||b[1]!==0xD8) return;
   var box=$('#call-box'); if(!box) return;
   if(box.hidden){ openCallUI(); var st=$('#call-state'); if(st) st.textContent='コマ送りで うけとっています'; }
@@ -8594,10 +8826,11 @@ function snapLive(){
   }catch(e){}
 }
 async function sendLiveChunks(url,fid){
-  if(S.phase!=='play'||!S.paired) return;
+  var scope=privateScope(); if(S.phase!=='play'||!scope) return;
   var id='L'+Date.now().toString(36)+((Math.random()*1e6)|0).toString(36);
   var total=Math.ceil(url.length/PHOTO_PIECE);
   for(var i=0;i<total;i++){
+    if(!privateCurrent(scope)) return;
     Net.send({t:'live-frame',fid:fid,id:id,i:i,total:total,data:url.slice(i*PHOTO_PIECE,(i+1)*PHOTO_PIECE)});
     await new Promise(function(res){ setTimeout(res,200); });
   }
@@ -8643,7 +8876,9 @@ var vbEl=$('#btn-voice'); if(vbEl) vbEl.addEventListener('click',async function(
   micLoop();
 });
 async function micLoop(){
+  var scope=privateScope(); if(!scope) return;
   while(voiceChunkOn){
+    if(!privateCurrent(scope)) return;
     if(liveOn&&liveDark){ await new Promise(function(r){ setTimeout(r,400); }); continue; }
     var clip=await new Promise(function(res){
       var mime=MediaRecorder.isTypeSupported('audio/webm;codecs=opus')?'audio/webm;codecs=opus':(MediaRecorder.isTypeSupported('audio/mp4')?'audio/mp4':'');
@@ -8656,15 +8891,15 @@ async function micLoop(){
         setTimeout(function(){ try{ if(mr.state!=='inactive') mr.stop(); }catch(e){} },1600);
       }catch(e){ res(null); }
     });
-    if(!clip||!voiceChunkOn) return;
+    if(!clip||!voiceChunkOn||!privateCurrent(scope)) return;
     if(liveOn&&liveDark) continue;
     var fr=new FileReader(), url=await new Promise(function(res){ fr.onload=function(){ res(String(fr.result)); }; fr.readAsDataURL(clip.blob); });
-    if(!voiceChunkOn) return;
+    if(!voiceChunkOn||!privateCurrent(scope)) return;
     if(liveOn&&liveDark) continue;
     var id='A'+Date.now().toString(36)+((Math.random()*1e6)|0).toString(36);
     var total=Math.ceil(url.length/PHOTO_PIECE);
     for(var i=0;i<total;i++){
-      if(!voiceChunkOn) return;
+      if(!voiceChunkOn||!privateCurrent(scope)) return;
       Net.send({t:'live-audio',id:id,mime:clip.mime,i:i,total:total,data:url.slice(i*PHOTO_PIECE,(i+1)*PHOTO_PIECE)});
       await new Promise(function(res){ setTimeout(res,180); });
     }
@@ -8678,6 +8913,7 @@ function ensureRtcAudio(){
   return a;
 }
 function stopCall(notify){
+  var __wasOn=!!(rtcOn||callOn||(function(){ var b=$('#call-box'); return b&&!b.hidden; })());
   cancelCallMedia(); callBusy=false; closeCallAsk(); closeLiveAsk(); appNav.dismiss('call-box');
   rtcOn=false; callOn=false;
   try{ if(Vid.curSid) Vid.closedSid=Vid.curSid; } catch(e){}
@@ -8699,6 +8935,8 @@ function stopCall(notify){
   var cb=$('#btn-call'); if(cb) cb.textContent='電話:オフ';
   var bl=$('#btn-live'); if(bl) bl.textContent='ライブ';
   var stt=$('#call-state'); if(stt) stt.textContent='つないでいます…';
+  callPanelHide();
+  if(__wasOn&&notify!==false){ try{ toast('通話を おわりました。'); }catch(e){} }
   if(notify!==false) try{ Net.send({t:'rtc-bye'}); }catch(e){}
 }
 $('#btn-call').addEventListener('click',async function(){
@@ -8712,6 +8950,7 @@ $('#btn-call').addEventListener('click',async function(){
   voiceChunkOn=false;
   var self2=this, voiceTicket=callMediaTicket;
   rtcStart(true).then(function(){ if(voiceTicket!==callMediaTicket) return; self2.textContent='電話:よびだし中…'; toast(peerName()+' を よびだしています…');
+      callPanel('ring','発信中…','あいてが でるのを まっています。でない ときは 下の「終了」を おしてください。');
       setTimeout(function(){ if(voiceTicket===callMediaTicket&&rtcOn&&!callVideo&&pc&&pc.connectionState!=='connected'){ stopCall(); toast(peerName()+' は でませんでした。'); } },50000); })
     .catch(function(e){ if(voiceTicket!==callMediaTicket) return; callDiagLog('rtcStart-voice',e); stopMic(); self2.textContent='電話:不可'; toast('電話を はじめられませんでした（'+(e&&e.name||'')+'）。'); });
 });
@@ -8731,16 +8970,17 @@ function waitIce(p,ms){
   });
 }
 function rtcStart(isCaller){
+  var scope=privateScope(); if(!scope) return Promise.reject(new Error('pair-key-required'));
   var ticket=callMediaTicket;
   var cfg={iceServers:buildIce()};
   pc=new RTCPeerConnection(cfg);
   var connection=pc;
-  function current(){ if(ticket!==callMediaTicket||pc!==connection) throw new Error('closed'); return connection; }
+  function current(){ if(ticket!==callMediaTicket||pc!==connection||!privateCurrent(scope)) throw new Error('closed'); return connection; }
   rtcOn=true; callOn=true;
   var src=callStream||micStream;
   if(src) src.getTracks().forEach(function(t){ try{ pc.addTrack(t,src); }catch(e){} });
   pc.ontrack=function(e){
-    if(ticket!==callMediaTicket||pc!==connection){ stopMediaTracks((e.streams&&e.streams[0])); return; }
+    if(ticket!==callMediaTicket||pc!==connection||!privateCurrent(scope)){ stopMediaTracks((e.streams&&e.streams[0])); return; }
     var st=(e.streams&&e.streams[0])||new MediaStream([e.track]);
     var hasVid=(st.getVideoTracks&&st.getVideoTracks().length>0);
     if(hasVid){
@@ -8749,11 +8989,13 @@ function rtcStart(isCaller){
       if(rv){
         rv.srcObject=st;
         rv.muted=false;
+        applyCallOutput(callOutMode);
         var pr=rv.play(); if(pr&&pr.catch) pr.catch(function(){ rv.muted=true; rv.play().catch(function(){}); showTapForSound(); });
       }
     }else{
       var a=ensureRtcAudio();
       a.srcObject=st; try{ a.play(); }catch(err){}
+      applyCallOutput(callOutMode);
     }
   };
   pc.onicecandidate=function(){};   /* v115: 候補は SDP に まとめて 1回で おくる */
@@ -8765,6 +9007,8 @@ function rtcStart(isCaller){
     if(pc&&pc.connectionState==='connected'){
       if(cb) cb.textContent='電話:中';
       if(stt) stt.textContent='つながりました';
+      callPanel('on','通話中','つながって います。おわるときは 下の「終了」を おしてください。');
+      paintCallOut();
       if(fbT){ clearTimeout(fbT); fbT=0; }
       tuneSenders();
       setTimeout(tuneSenders,2500);
@@ -8785,6 +9029,7 @@ function rtcStart(isCaller){
       try{ var cb3=$('#call-box'); if(cb3) cb3.classList.remove('rtc-ok'); if(callVideo){ Vid.listen(); Vid.start(); } }catch(e){}
       if(cb) cb.textContent='電話:つなぐ中…';
       if(stt) stt.textContent='つなぎなおしています…';
+      callPanel('ring','つなぎ直し中…','でんわが きれました。すぐに もどらない ときは「終了」して かけ直してください。');
       if(!fbT) fbT=setTimeout(function(){
         fbT=0;
         if(!rtcOn) return;
@@ -8811,14 +9056,17 @@ function rtcStart(isCaller){
   return Promise.resolve(true);
 }
 function rtcSendSdp(kind,sdpStr){
+  var scope=privateScope(),ticket=callMediaTicket; if(!scope) return;
   /* v115: SDP は あんごうファイル 1つで おくる（かけらが 欠けて つながらない のを なくす） */
   /* v136: ntfy の ファイル（回数せいげんで とまる）を やめ、即時路で かけらを 3回 おくる（重複は うけがわで すてる） */
   var id='S'+Date.now().toString(36)+((Math.random()*1e6)|0).toString(36);
   var total=Math.ceil(sdpStr.length/PHOTO_PIECE);
   var round=0, vflag=(kind==='offer')?(callVideo?1:0):0;   /* v139: 電話の 答えに ライブの しるしを つけない */
   (function burst(){
+    if(!privateCurrent(scope)||ticket!==callMediaTicket) return;
     var i=0;
     (function next(){
+      if(!privateCurrent(scope)||ticket!==callMediaTicket) return;
       if(i>=total){ if(++round<3) setTimeout(burst,1500); return; }
       if(kind==='offer'&&!rtcOn) return;
       Net.send({t:'rtc',k:kind,vid:vflag,id:id,i:i,total:total,data:sdpStr.slice(i*PHOTO_PIECE,(i+1)*PHOTO_PIECE)});
@@ -8828,12 +9076,13 @@ function rtcSendSdp(kind,sdpStr){
   })();
 }
 async function rtcRecvFile(m){
-  if(!m.__att) return;
-  var b=await Net.fetchFile(m.__att); if(!b) return;
+  if(!privateIncoming(m)||!m.__att) return;
+  var b=await Net.fetchFile(m.__att,m); if(!b||!privateIncoming(m)) return;
   var sdp; try{ sdp=JSON.parse(new TextDecoder().decode(b)); }catch(e){ return; }
   await rtcHandleSdp(m,sdp);
 }
 async function rtcHandleSdp(m,sdp){
+  if(!privateIncoming(m)) return;
   try{
     if(m.k==='offer'){
       if(rtcOn) stopCall(false);
@@ -8842,6 +9091,7 @@ async function rtcHandleSdp(m,sdp){
         /* v139: ライブは 見る側が えらぶ。えらぶまで カメラ・マイクは つけない */
         if(liveAsking) return; liveAsking=true;
         try{ mode=await askLiveMode(); }finally{ liveAsking=false; }
+        if(!privateIncoming(m)) return;
         if(mode==='no'){
           /* v139: 見ない ときは だまって とじる（配信している 人の ライブは とめない） */
           try{ Vid.closedSid=Vid.curSid||('x'+Date.now()); Vid.stopListen(); var rc=$('#call-remote-cv'); if(rc) rc.remove(); var bx=$('#call-box'); if(bx) bx.hidden=true; }catch(e){}
@@ -8850,6 +9100,7 @@ async function rtcHandleSdp(m,sdp){
         try{ Aud.unlock(); }catch(e){}
         if(mode==='both'){
           callVideo=true; gm=await getCallMedia(true);
+          if(!privateIncoming(m)) return;
           if(gm&&gm.name==='AbortError') return;
           if(gm!==true){ callVideo=false; mode='watch'; toast('カメラを つかえないので 見るだけに します。'); }
         }
@@ -8861,18 +9112,20 @@ async function rtcHandleSdp(m,sdp){
         if(callAsking) return; callAsking=true;
         var ans0;
         try{ ans0=await askCall(); }finally{ callAsking=false; }
+        if(!privateIncoming(m)) return;
         if(ans0!=='yes'){
           try{ Net.send({t:'call-no',r:ans0==='timeout'?'busy':'no'}); }catch(e){}
           return;
         }
         try{ Aud.unlock(); }catch(e){}
         gm=await getCallMedia(false);
+        if(!privateIncoming(m)) return;
         if(gm&&gm.name==='AbortError') return;
         if(gm!==true){ note('マイクを つかえません（'+((gm&&gm.name)||'')+'）。','#note2'); try{ Net.send({t:'call-no',r:'mic'}); }catch(e){} return; }
       }
       rtcStart(false);
       var answerPC=pc, answerTicket=callMediaTicket;
-      function answerCurrent(){ if(answerTicket!==callMediaTicket||pc!==answerPC) throw new Error('closed'); return answerPC; }
+      function answerCurrent(){ if(answerTicket!==callMediaTicket||pc!==answerPC||!privateIncoming(m)) throw new Error('closed'); return answerPC; }
       if(m.vid===1&&mode==='watch'){ try{ pc.addTransceiver('video',{direction:'recvonly'}); pc.addTransceiver('audio',{direction:'recvonly'}); }catch(e){} }
       await answerCurrent().setRemoteDescription(new RTCSessionDescription(sdp));
       var ans=await answerCurrent().createAnswer();
@@ -8887,12 +9140,14 @@ async function rtcHandleSdp(m,sdp){
 }
 var rtcDone={};
 async function rtcRecvSdp(m){
+  if(!privateIncoming(m)) return;
   var id=String(m.id||'').slice(0,24), total=m.total|0, i=m.i|0;
   if(!id||total<1||total>12||i<0||i>=total) return;
   if(rtcDone[id]) return;
-  var b=rtcBuf[id]||(rtcBuf[id]={got:[],timer:null});
+  var b=rtcBuf[id]||(rtcBuf[id]={got:[],timer:null,scope:inboundScopes.get(m),from:m.from,k:m.k,vid:m.vid,total:total});
+  if(!privateCurrent(b.scope)||b.from!==m.from||b.k!==m.k||b.vid!==m.vid||b.total!==total) return;
   if(!b.got[i]) b.got[i]=String(m.data||'').slice(0,1600);
-  clearTimeout(b.timer); b.timer=setTimeout(function(){ delete rtcBuf[id]; },30000);
+  clearTimeout(b.timer); b.timer=privateLater(function(){ delete rtcBuf[id]; },30000,b.scope);
   for(var k=0;k<total;k++) if(!b.got[k]) return;
   var all=''; for(k=0;k<total;k++) all+=b.got[k];
   delete rtcBuf[id]; rtcDone[id]=1;
@@ -8905,6 +9160,7 @@ async function rtcRecvSdp(m){
         /* v139: ライブは 見る側が えらぶ。えらぶまで カメラ・マイクは つけない */
         if(liveAsking) return; liveAsking=true;
         try{ mode=await askLiveMode(); }finally{ liveAsking=false; }
+        if(!privateIncoming(m)) return;
         if(mode==='no'){
           /* v139: 見ない ときは だまって とじる（配信している 人の ライブは とめない） */
           try{ Vid.closedSid=Vid.curSid||('x'+Date.now()); Vid.stopListen(); var rc=$('#call-remote-cv'); if(rc) rc.remove(); var bx=$('#call-box'); if(bx) bx.hidden=true; }catch(e){}
@@ -8913,6 +9169,7 @@ async function rtcRecvSdp(m){
         try{ Aud.unlock(); }catch(e){}
         if(mode==='both'){
           callVideo=true; gm=await getCallMedia(true);
+          if(!privateIncoming(m)) return;
           if(gm&&gm.name==='AbortError') return;
           if(gm!==true){ callVideo=false; mode='watch'; toast('カメラを つかえないので 見るだけに します。'); }
         }
@@ -8924,18 +9181,20 @@ async function rtcRecvSdp(m){
         if(callAsking) return; callAsking=true;
         var ans0;
         try{ ans0=await askCall(); }finally{ callAsking=false; }
+        if(!privateIncoming(m)) return;
         if(ans0!=='yes'){
           try{ Net.send({t:'call-no',r:ans0==='timeout'?'busy':'no'}); }catch(e){}
           return;
         }
         try{ Aud.unlock(); }catch(e){}
         gm=await getCallMedia(false);
+        if(!privateIncoming(m)) return;
         if(gm&&gm.name==='AbortError') return;
         if(gm!==true){ note('マイクを つかえません（'+((gm&&gm.name)||'')+'）。','#note2'); try{ Net.send({t:'call-no',r:'mic'}); }catch(e){} return; }
       }
       rtcStart(false);
       var answerPC=pc, answerTicket=callMediaTicket;
-      function answerCurrent(){ if(answerTicket!==callMediaTicket||pc!==answerPC) throw new Error('closed'); return answerPC; }
+      function answerCurrent(){ if(answerTicket!==callMediaTicket||pc!==answerPC||!privateIncoming(m)) throw new Error('closed'); return answerPC; }
       if(m.vid===1&&mode==='watch'){ try{ pc.addTransceiver('video',{direction:'recvonly'}); pc.addTransceiver('audio',{direction:'recvonly'}); }catch(e){} }
       await answerCurrent().setRemoteDescription(new RTCSessionDescription(sdp));
       var ans=await answerCurrent().createAnswer();
@@ -8953,6 +9212,7 @@ async function rtcRecvSdp(m){
   }catch(e){ if(!answerPC||answerPC===pc) stopCall(false); }
 }
 async function recvRtcIce(m){
+  if(!privateIncoming(m)) return;
   try{
     var cand=JSON.parse(String(m.c||''));
     if(pc&&pc.remoteDescription){ try{ await pc.addIceCandidate(cand); }catch(e){} }
@@ -9123,8 +9383,9 @@ function outSave(){
   }catch(e){}
 }
 function queueChat(txt,at){
+  var scope=privateScope(); if(!scope) return null;
   S.outbox=S.outbox||outLoad();
-  var item={text:txt,at:at||Date.now(),mid:newChatId()};
+  var item={text:txt,at:at||Date.now(),mid:newChatId(),__privateScope:scope};
   S.outbox.push(item);
   outSave();
   var msg={mid:item.mid,from:S.me.id,text:txt,at:item.at,sent:false,acked:false,delivered:false,tries:0,n:0,uid:String(++UID)};
@@ -9149,7 +9410,8 @@ function markPushAcked(env){
   }catch(e){}
 }
 function flushOutbox(){
-  S.outbox=(S.outbox||outLoad()).filter(function(it){ return !messageDeleted({from:S.me.id,mid:it.mid,text:it.text,at:it.at}); });
+  var scope=privateScope(); if(!scope) return;
+  S.outbox=(S.outbox||outLoad()).filter(function(it){ return bindPrivateMessage(it)&&!messageDeleted({from:S.me.id,mid:it.mid,text:it.text,at:it.at}); });
   if(!S.outbox.length) return;
   try{ FASTS.forEach(function(f){ if(f.topic&&f.open&&Date.now()-(f.lastRx||0)>6000) f.probe(); else if(f.topic&&!f.open&&!f.ws) f.kick(); }); }catch(e){}
   if(!Net.topic||!Net.key) return;
@@ -9169,6 +9431,7 @@ function flushOutbox(){
   S.flushing=true;
   var same=S.flushEnv&&S.flushEnv.items.length===items.length&&items.every(function(x,i){ return x===S.flushEnv.items[i]; });
   var onDoneF=function(ok){
+    if(!privateCurrent(scope)) return;
     S.flushing=false;
     if(ok){
       S.outbox=S.outbox.filter(function(x){ return items.indexOf(x)<0; });
@@ -9271,6 +9534,7 @@ $('#btn-leave').addEventListener('click',function(){ unpairBoth(this); });
 
 /* v118: ペアを 両方の 端末から 解除する（再度 入るには あたらしく ペアが ひつよう） */
 function wipePairLocal(){
+  discardPrivateWork();
   try{ pairClear(); }catch(e){}
   unreadClear(); chatClearStore(); hwmClear(); try{ swClearNotifs(); }catch(e){}
   try{ localStorage.removeItem('mtp_since_v1'); localStorage.removeItem('mtp_cid_v1'); }catch(e){}
@@ -9393,11 +9657,13 @@ setInterval(function(){ try{ paintTopicTag(); }catch(e){} },3000);
 var LEGACY_OK={join:1,in2:1,in3:1,keyed:1,deny:1,full:1,expired:1,ping:1,ob:1,nettest:1,'nettest-ok':1,ready:1,ready2:1,bye:1};
 var LOBBY_TYPES={join:1,welcome:1,deny:1,full:1,expired:1,bye:1,ping:1,ready:1,ready2:1};
 Net.onMsg=function(m){
+  if(!m||typeof m.t!=='string') return;
+  if(privateType(m.t)&&!privateIncoming(m)) return;
   /* v219: 保存領域の復元と削除を先に完了し、同時受信・再接続時の復活を防ぐ。 */
   if(m&&({chats:1,chat:1,photo:1,attachment:1,'photo-chunk':1,recall:1,reaction:1}[m.t])&&!deletionReady.has(m)){
     var scope=deletionScope(); if(!scope) return;
     deletionInbox=deletionInbox.catch(function(){}).then(async function(){
-      await deletionLoad(); await reactionLoad(); if(deletionScope()!==scope) return;
+      await deletionLoad(); await reactionLoad(); if(deletionScope()!==scope||!privateIncoming(m)) return;
       deletionReady.add(m);
       if(m.t==='recall') await receiveDeletion(m); else if(m.t==='reaction') await receiveReaction(m); else Net.onMsg(m);
     }).catch(function(){}); return;
@@ -9420,8 +9686,7 @@ Net.onMsg=function(m){
     if(S.isHost && S.guest && m.from!==S.guest.did) return;
     if(!S.isHost && S.paired && S.opp.id && m.from!==S.opp.id) return;
   }
-  var PRIV={reaction:1,'reaction-ack':1,recall:1,'recall-ack':1,'live-on':1,'live-see':1,'live-off':1,igh:1,chats:1,chat:1,photo:1,'photo-chunk':1,read:1,ack:1,prof:1,unpair:1,rtc2:1,rtc:1,'rtc-bye':1,'call-no':1,'rtc-sdp':1,'rtc-ice':1,'live-jpg':1,'live-ctl':1,'live-frame':1,'live-audio':1,call:1,'call-end':1};
-  if(PRIV[m.t]&&(m.__legacy||!S.sealed)) return;
+  if(PRIV[m.t]&&!privateIncoming(m)) return;
   /* 連投よけ(1秒60通まで) */
   var nowMs=Date.now();
   if(!S.rl||nowMs-S.rl.t>1000) S.rl={t:nowMs,n:0};
@@ -9470,14 +9735,17 @@ Net.onMsg=function(m){
 
     /* 承認された：端末固有の鍵でセッション鍵を受け取る */
     case 'in2':
-      if(S.isHost||S.linked) break;
+      if(S.isHost||S.linked||S.paired||S.in2Busy) break;
       if(m.to&&m.to!==S.me.id) break;
-      if(!m.hostPub) break;
+      if(!m.hostPub||m.to!==S.me.id) break;
+      S.in2Busy=true;
+      var in2Epoch=Net.epoch;
       (async function(){
         try{
           if(!S.myECDH){ S.myECDH=await genECDH(); }
           S.myPub=await exportPub(S.myECDH);
           var ps=await pairSecret(S.myECDH,m.hostPub);
+          if(in2Epoch!==Net.epoch||S.paired) return;
           S.sessKey=ps.key; S.sas=ps.tag;
           stopAnnounce();
           S.opp={id:m.from,name:'にゃん'};
@@ -9486,24 +9754,28 @@ Net.onMsg=function(m){
           if(S.room) S.prodName=S.room;
           S.paired=true; S.sealed=true;
           Net.sendLegacy({t:'in3',to:m.from,pub:S.myPub});
-          setTimeout(function(){ try{ Net.sendLegacy({t:'in3',to:m.from,pub:S.myPub}); }catch(e){} },500);
+          setTimeout(function(){ if(in2Epoch!==Net.epoch||!S.opp||S.opp.id!==m.from) return; try{ Net.sendLegacy({t:'in3',to:m.from,pub:S.myPub}); }catch(e){} },500);
           /* ここで 2人だけの 鍵に きりかえる（以後 本番の 内容は 新鍵のみ） */
           Net.switchTo(S.sessKey);
           S.sas=ps.tag;
           await savePairState();
           note('2人だけの あんごうを あわせました。','#note2');
         }catch(e){ note('あんごうの あわせかたに 失敗しました。','#note2'); }
+        finally{ if(in2Epoch===Net.epoch) S.in2Busy=false; }
       })();
       break;
 
     case 'in3':
-      if(!S.isHost||!S.myECDH) break;
+      if(!S.isHost||!S.myECDH||privateReady()||S.in3Busy) break;
       if(m.to&&m.to!==S.me.id) break;
       if(!S.guest||m.from!==S.guest.did) break;   /* v118: 承認した 相手 だけ */
-      if(!m.pub) break;
+      if(!m.pub||m.to!==S.me.id||m.pub!==S.guest.pub) break;
+      S.in3Busy=true;
+      var in3Epoch=Net.epoch,in3Peer=S.guest.did;
       (async function(){
         try{
           var ps=await pairSecret(S.myECDH,m.pub);
+          if(in3Epoch!==Net.epoch||!S.guest||S.guest.did!==in3Peer) return;
           if(S.sas&&ps.tag!==S.sas){
             note('あんごう あいずが あいません。だれかが 間に入った 可能性が あります。','#note2');
             return;
@@ -9514,9 +9786,10 @@ Net.onMsg=function(m){
           note('2人だけの あんごうに きりかえました。','#note2');
           if(S.phase!=='play'){
             startPlay();
-            setTimeout(function(){ try{ Net.send({t:'qz',rn:0}); Net.send({t:'start'}); }catch(e){} },250);
+            privateLater(function(){ try{ Net.send({t:'qz',rn:0}); Net.send({t:'start'}); }catch(e){} },250);
           }
         }catch(e){ note('あんごうの かためが 失敗しました。','#note2'); }
+        finally{ if(in3Epoch===Net.epoch) S.in3Busy=false; }
       })();
       break;
 
@@ -9590,7 +9863,7 @@ Net.onMsg=function(m){
       /* v262: とじて いた あいだの 分も 記録する（中継所の のこり＝最長12時間まで） */
       if(!m.at||Date.now()-m.at>12*3600*1000) break;
       /* v268: あいての 版を おぼえる（「ふるい 版」の 判定と 表示に つかう） */
-      if(m.pv){ S.peerVer=String(m.pv); try{ localStorage.setItem('zg_peer_ver',S.peerVer); }catch(e){} }
+      if(m.pv!==undefined){ S.peerVer=peerVersion(m.pv); try{ if(S.peerVer) localStorage.setItem('zg_peer_ver',S.peerVer); else localStorage.removeItem('zg_peer_ver'); }catch(e){} }
       /* v266: 合図に のって いる 手ざわりで「ほんとうに ひらいた か」を きめる */
       var __opf=openProof(m.fg,m.g);
       /* v268: 合図の 理由。起動/もどった/トーク開始 だけ が「ひらいた」 */
@@ -9648,12 +9921,13 @@ Net.onMsg=function(m){
       if(m.from===S.me.id) break;
       (function(){
         var id=String(m.id||''), need=m.need||[], d=photoSent[id];
-        if(!d||!need.length) return;
+        if(!d||!privateCurrent(photoScopes[id])||!Array.isArray(need)||!need.length||need.length>2000) return;
+        var scope=photoScopes[id];
         var total=Math.ceil(d.length/PHOTO_CHUNK_PIECE);
         try{ photoDiagPush('かけら','おくりなおし '+need.length+'こ'); }catch(e){}
         need.forEach(function(i){
           i=i|0; if(i<0||i>=total) return;
-          setTimeout(function(){ try{ Net.send({t:'photo-chunk',id:id,i:i,total:total,pc:PHOTO_CHUNK_PIECE,data:d.slice(i*PHOTO_CHUNK_PIECE,(i+1)*PHOTO_CHUNK_PIECE)}); }catch(e){} },80*i+50);
+          privateLater(function(){ try{ Net.send({t:'photo-chunk',id:id,i:i,total:total,pc:PHOTO_CHUNK_PIECE,data:d.slice(i*PHOTO_CHUNK_PIECE,(i+1)*PHOTO_CHUNK_PIECE)}); }catch(e){} },80*i+50,scope);
         });
       })();
       break;
@@ -9664,14 +9938,14 @@ Net.onMsg=function(m){
         if(!id||!m.url) return;
         if(S.chat.some(function(c){ return c.from===m.from&&c.pid===id; })) return;
         try{ photoDiagPush('うけとり','ばしょを うけとった'); }catch(e){}
-        recvPhoto({from:m.from,id:id,n:m.n||0,at:(typeof m.at==='number'?m.at:Date.now()),__att:String(m.url)});
+        m.__att=String(m.url); recvPhoto(m);
       })();
       break;
     case 'photo-again':  /* v278: あいてが うけとれなかった → もう いちど おくる（2回まで） */
       if(m.from===S.me.id) break;
       (function(){
         var id=String(m.id||''); var d=photoSent[id];
-        if(!d) return;
+        if(!d||!privateCurrent(photoScopes[id])) return;
         if((photoAgain[id]||0)>=2) return;
         photoAgain[id]=(photoAgain[id]||0)+1;
         try{ photoDiagPush('おくり','あいての たのみで おくりなおし '+photoAgain[id]); }catch(e){}
@@ -10011,6 +10285,26 @@ $('#call-hide').addEventListener('click',function(){
   this.textContent=callHide?'映像を出す':'画面を隠す';
 });
 $('#call-end').addEventListener('click',function(){ stopCall(); });
+$('#call-end-big').addEventListener('click',function(){ stopCall(); });
+$('#call-spk').addEventListener('click',async function(){
+  var next=(callOutMode==='speaker')?'earpiece':'speaker';
+  var r=await applyCallOutput(next);
+  if(r==='ok'){ toast('音の 出る ところ: '+callOutLabel(callOutMode)); return; }
+  if(navigator.mediaDevices&&navigator.mediaDevices.selectAudioOutput){
+    try{
+      var dev=await navigator.mediaDevices.selectAudioOutput();
+      var els=callAudioEls();
+      for(var i=0;i<els.length;i++){ try{ await els[i].setSinkId(dev.deviceId); }catch(e){} }
+      callOutState='ok';
+      callOutMode=/speaker|スピーカー/i.test(dev.label||'')?'speaker':'earpiece';
+      try{ localStorage.setItem('zg_call_out',callOutMode); }catch(e){}
+      paintCallOut();
+      toast('音の 出る ところ: '+((dev.label||'').replace(/\s*[（(].*$/,'')||callOutLabel(callOutMode)));
+      return;
+    }catch(e){}
+  }
+  toast('この 端末／ブラウザでは、アプリから 音の 出し分けが できません。通話中に 端末の 音量ボタンか、通話画面の スピーカーで きりかえて ください。');
+});
 $('#call-box').addEventListener('click',function(){ var rv=$('#call-remote'); if(rv&&rv.muted&&rv.srcObject){ rv.muted=false; rv.play().catch(function(){}); } try{ Aud.unlock(); }catch(e){} hideTapForSound(); });
 document.addEventListener('visibilitychange',function(){
   /* 画面を はなれたら カメラを とめる(いきのこり配信を ふせぐ) */
@@ -10517,7 +10811,7 @@ function recvProf(m){
       say('⑫ けした 控え（この 端末）: '+(function(){ try{ var t=tombAll(), sc=tombScope(), m=t[sc]||{}; return Object.keys(m).length+'件'; }catch(e){ return '?'; } })()+'／入力の 保留: '+(chatComposing?'止まって いる':'なし')+'／画面の 残り: '+(function(){ try{ var b=document.getElementById('chat-log'); var k=0; b.querySelectorAll('.msg').forEach(function(r){ if(tombRowGone(r)) k++; }); return k+'件'; }catch(e){ return '?'; } })());
       say('⑬ あいての 画面から 消す 合図: '+(function(){ try{ return purgePending().length+'件 まだ おくって いない'; }catch(e){ return '?'; } })()+'／この 画面で まだ けせて いない 合図: '+(function(){ try{ return purgeInAll().length+'件'; }catch(e){ return '?'; } })()+'／あいてから とどいた 合図: '+(function(){ try{ return (window.__purgeIn||0)+'件'+(window.__purgeAt?('（'+new Date(window.__purgeAt).toLocaleTimeString('ja-JP')+'）'):''); }catch(e){ return '?'; } })());
       say('⑪ 既読から15分で きえる: '+(vanishOn()?'オン':'オフ')+'／時計の うごいて いる 記事: '+S.chat.filter(function(m){ return m&&!m.sys&&m.rad; }).length+'件／つぎの 消去まで: '+(function(){ var w=S.chat.filter(function(m){ return m&&!m.sys&&m.rad; }).map(function(m){ return m.rad+VANISH_MS; }).sort(function(a,b){ return a-b; })[0]; return w?Math.max(0,Math.ceil((w-Date.now())/1000))+'秒':'なし'; })()+'／けす 合図の まち: '+purgePending().length+'件');
-      say('⑭ この 端末の 役: '+(S.isHost===true?'ホスト（部屋を ひらいた側）':(S.isHost===false?'あいて（入室した側）':'まだ わからない'))+'／しらせの 設定の 行: '+(function(){ try{ var b=document.getElementById('pf-peeropen-box'); if(!b) return 'なし'; return (b.style.display==='none'?'かくして ある':'だして ある'); }catch(e){ return '?'; } })()+'／しらせ: '+(peerOpenOn()?'オン':'オフ')+'／とじている 間の 分: '+(peerKeepOn()?'のこす（12時間）':'のこさない')+'／あいての スマホへ おくる 間隔: 1分に 1回'+(function(){ try{ var j=JSON.parse(localStorage.getItem('zg_openpush_log')||'null'); return j?('／さいごの しらせ送信: '+new Date(j.at).toLocaleTimeString('ja-JP')+' '+(j.ok?'とどいた':'とどかなかった')):''; }catch(e){ return ''; } })()+'／背面の CSS: '+(function(){ try{ var el=document.getElementById('chat'); if(!el) return 'なし'; var st=getComputedStyle(el); return String(st.backgroundColor||'')+' / '+String(st.backgroundImage||'none').slice(0,48); }catch(er){ return '?'; } })()+'／この 端末には 音・バイブの 設定が '+(function(){ try{ return document.getElementById('pf-peeropen')?'あり':'なし'; }catch(e){ return '?'; } })());
+      say('⑭ この 端末の 役: '+(S.isHost===true?'ホスト（部屋を ひらいた側）':(S.isHost===false?'あいて（入室した側）':'まだ わからない'))+'／しらせの 設定の 行: '+(function(){ try{ var b=document.getElementById('pf-peeropen-box'); if(!b) return 'なし'; return (b.style.display==='none'?'かくして ある':'だして ある'); }catch(e){ return '?'; } })()+'／しらせ: '+(peerOpenOn()?'オン':'オフ')+'／とじている 間の 分: '+(peerKeepOn()?'のこす（12時間）':'のこさない')+'／あいての スマホへ おくる 間隔: 1分に 1回'+(function(){ try{ var j=JSON.parse(localStorage.getItem('zg_openpush_log')||'null'); return j?('／さいごの しらせ送信: '+new Date(j.at).toLocaleTimeString('ja-JP')+' '+(j.ok?'とどいた':'とどかなかった')):''; }catch(e){ return ''; } })()+'／背面の CSS: '+(function(){ try{ var el=document.getElementById('chat-log'); if(!el) return 'なし'; var st=getComputedStyle(el); return String(st.backgroundColor||'')+' / '+String(st.backgroundImage||'none').slice(0,48); }catch(er){ return '?'; } })()+'／この 端末には 音・バイブの 設定が '+(function(){ try{ return document.getElementById('pf-peeropen')?'あり':'なし'; }catch(e){ return '?'; } })());
       say('　※ しらせの 項目は ホストの 端末だけに 出ます。あいての 端末の 設定には 行 そのものが ありません（相手には みえません）。');
       say('');
       say(''); say('アプリは ひらいた ままで だいじょうぶです（v265〜 テスト通知は ひらいた ままでも とどきます）。30秒 待って ください。');
@@ -10820,7 +11114,7 @@ body.bgdark .line-chat .msg .nm{color:#AFC2D8!important}
   function bgWatch(){
     try{
       if(Date.now()-__bgFix<8000) return;
-      var e1=document.getElementById('chat'), e2=document.body, bad=false;
+      var e1=document.getElementById('chat-log'), e2=document.body, bad=false;
       [e1,e2].forEach(function(el){ if(!el||bad) return; try{ if(String(getComputedStyle(el).backgroundImage||'').indexOf('url(')>=0) bad=true; }catch(e){} });
       if(bad){ __bgFix=Date.now(); save(0); apply(0); try{ toast('背面の 画像を もどしました。'); }catch(e){} }
     }catch(e){}
