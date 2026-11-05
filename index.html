@@ -871,7 +871,7 @@ body.in-play .leave-row{display:none!important}
 .line-composer .chat-tools-toggle{display:block;min-height:36px;padding:6px 12px;border:1px solid #D9E2E9;border-radius:18px;background:#fff;color:#357459;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
 .line-composer .chat-tools-toggle:focus-visible{outline:3px solid #32795b;outline-offset:2px}
 /* v225: 入力幅を減らさない独立したスタンプ欄。画像や外部素材は使わない。 */
-.chat-composer-actions{display:flex;gap:8px;align-items:center}
+.chat-composer-actions{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .line-composer .chat-composer-actions button{min-height:44px}
 .line-composer #btn-stickers[aria-expanded="true"]{background:#e5f7da;border-color:#32795b}
 .sticker-picker{grid-column:1/-1;grid-row:2;min-width:0;max-height:min(300px,45dvh);overflow-y:auto;overscroll-behavior:contain;background:#fff;border:1px solid #D9E2E9;border-radius:16px;padding:8px;color:#34493c}
@@ -952,7 +952,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v293</b></p>
+      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v296</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1026,7 +1026,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v293</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v296</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -1114,10 +1114,10 @@ body.in-play .leave-row{display:none!important}
         <div class="chat-composer-actions">
           <button id="btn-chat-tools" type="button" class="chat-tools-toggle" aria-expanded="false" aria-controls="chat-tools">メニュー</button>
           <button id="btn-stickers" type="button" class="chat-tools-toggle" aria-expanded="false" aria-controls="sticker-picker" aria-haspopup="dialog">スタンプ</button>
+          <button id="btn-call" type="button" class="chat-tools-toggle" title="こえで はなす（でんわ）">電話</button>
         </div>
       <div id="chat-tools" class="tools" hidden>
         <button id="btn-live" type="button" class="notify-btn" title="ライブ えいぞう">ライブ</button>
-        <button id="btn-call" type="button" class="notify-btn" title="こえで はなす">電話:オフ</button>
         <button id="btn-photo" type="button" class="notify-btn" title="しゃしんを おくる">カメラ</button>
         <button id="btn-attach-photo" type="button" class="notify-btn">写真・動画</button>
         <input id="chat-photo-file" type="file" accept="image/*,video/*" hidden>
@@ -2131,6 +2131,13 @@ var Net={
     if(!bindOutbound(env,false)) return 0;
     /* v267: どこまで 読んだ か を すべての 封筒に のせる（既読の とりこぼしを 自分で なおす） */
     try{ if(privateType(obj.t)&&!(obj.t==='read'||obj.t==='ack')&&S.readUpTo) env.rd=S.readUpTo; }catch(e){}
+    /* v296: トークは ならばずに 同時に 送る（1通ずつ 待つと、でんぱが わるい とき 何秒も つまる）。
+       あいて側は mid（通ごとの 番号）で 重複を すてるので、ならばなくても 二重に ならない */
+    if(obj&&obj.t==='chats'){
+      self.post(env,false,0).then(function(ok){ if(onDone){ try{ onDone(ok); }catch(e){} } return ok; })
+        .catch(function(){ if(onDone){ try{ onDone(false); }catch(e){} } return false; });
+      return env;
+    }
     this.sendQueue=this.sendQueue.then(function(){ return self.post(env,false,(({ack:1,ping:1,hi2:1}[obj&&obj.t])?2:0)); })
       .then(function(ok){ self.qBusy=0; if(onDone){ try{ onDone(ok); }catch(e){} } return ok; })
       .catch(function(){ if(onDone){ try{ onDone(false); }catch(e){} } return false; });
@@ -2183,6 +2190,16 @@ var Net={
     b.tok-=1;
     return true;
   },
+  /* v296: トーク用の 早い 水がめ。トークが 5秒に 1こでは 会話に ならない。
+     1秒に 4こ まで つかえる（ふだんの 会話は これで 足りる） */
+  allowChat:function(){
+    var now=Date.now(), b=this.chatBudget;
+    if(!b) b=this.chatBudget={tok:8,t:now};
+    b.tok=Math.min(8,b.tok+(now-b.t)/250); b.t=now;
+    if(b.tok<1){ b.tok=0; return false; }
+    b.tok-=1;
+    return true;
+  },
   post:async function(env,useLegacy,prio){
     var scope=outboundScopes.get(env);
     if(!outboundCurrent(scope)) return false;
@@ -2203,7 +2220,7 @@ var Net={
     var pushP=null;
     /* v219: 削除の合図は通知を出すベルに載せない。本文だけ従来の通知経路を使う。 */
     if(env&&(env.t==='chats'||env.t==='chat')&&!env.__pushOk){ try{ pushP=pushToPeer(body).then(function(ok){ if(ok){ env.__pushOk=1; if(env.t==='chats') markPushAcked(env); } return ok; }); }catch(e){} }
-    var viaPush=function(){ if(!pushP) return Promise.resolve(false); return Promise.race([pushP,new Promise(function(r){ setTimeout(function(){ r(false); },8000); })]); };
+    var viaPush=function(){ if(!pushP) return Promise.resolve(false); return Promise.race([pushP,new Promise(function(r){ setTimeout(function(){ r(false); },2500); })]); };
     /* v131: ntfy は 1日250回（同じ Wi-Fi の 2台で 合計）まで。既読・受領・ping などで つかいきると
        アプリを 切った ときの 通知（ベル）が とまる → 大事な ものだけ ntfy に のせる */
     /* v181: recall（とりけし）を 追加 — 相手が 閉じて いても とりけしが とどくように */
@@ -2222,12 +2239,12 @@ var Net={
       if(__ns&&fastOk) return true;
       /* v282: かけらは 即時路(MQTT)だけを つかう。中継所の 制限中でも とおす */
       if(this.coolUntil&&Date.now()<this.coolUntil) return __ns?fastOk:false;
-      if(!this.allow(typeof prio==='number'?prio:1)) return __ns?fastOk:false;
+      if(!(env.t==='chats'?this.allowChat():this.allow(typeof prio==='number'?prio:1))) return __ns?fastOk:false;
       if(!__ns) this.postStore(body,scope); return true;
     }
     /* ntfy は 保存用(相手が いない ときの 受けとり用)。制限中は 2本目だけで 成功あつかい */
     if(this.coolUntil&&Date.now()<this.coolUntil) return fastOk||await viaPush();
-    if(!this.allow(typeof prio==='number'?prio:1)) return fastOk||await viaPush();
+    if(!(env.t==='chats'?this.allowChat():this.allow(typeof prio==='number'?prio:1))) return fastOk||await viaPush();
     /* v122: 即時路で おくれたら 保存路は 待たずに うしろで（つぎの メッセージが つまらない） */
     if(fastOk){
       /* v267: 相手が いま つながって いるなら 保存は いらない（1日に 250通の わくを 節約） */
@@ -2239,7 +2256,7 @@ var Net={
        即時路(MQTT)が きれている とき、従来は 中継所(ntfy)の 返事を 最大7秒 待つため「送信中」が 長く なっていた。
        psrv なら 相手の スマホへ 直接 とどくのですぐ「送信済み・未読」に なる。4秒 だめなら 従来どおり 中継所へ（悪くは ならない） */
     if(pushP&&psrvGet()&&(env.t==='chats'||env.t==='recall')){
-      var pOk=await Promise.race([pushP.catch(function(){ return false; }),new Promise(function(r){ setTimeout(function(){ r(false); },4000); })]);
+      var pOk=await Promise.race([pushP.catch(function(){ return false; }),new Promise(function(r){ setTimeout(function(){ r(false); },1500); })]);
       if(!outboundCurrent(scope)) return false;
       if(pOk){ this.postStore(body,scope); return true; }
     }
@@ -2486,7 +2503,7 @@ var Fast={
   flushBuf:function(){ var self=this, q=this.buf; this.buf=[]; q.forEach(function(x){ self.pub(x); }); },
   pub:function(str){
     if(!this.topic) return false;
-    if(!this.open||!this.ws||!this.subOk){ this.buf.push(str); if(this.buf.length>30) this.buf.shift(); return false; }
+    if(!this.open||!this.ws||!this.subOk){ this.buf.push(str); if(this.buf.length>200) this.buf.shift(); return false; }
     try{
       if(this.persistNow){ var id=(this.pid++&0xFFFF)||1; this.ws.send(this.pkt(0x32,this.cat([this.enc('zgk/'+this.topic),new Uint8Array([id>>8,id&255]),new TextEncoder().encode(str)]))); }
       else this.ws.send(this.pkt(0x30,this.cat([this.enc('zgk/'+this.topic),new TextEncoder().encode(str)])));
@@ -6205,7 +6222,7 @@ function sendAppOpen(reason){
   var __fg=(typeof document!=='undefined'&&document.visibilityState==='visible')?1:0;
   var __g=gestAgeSec();
   /* v268: 理由(r)と 自分の 版(pv)も のせる。あいては「なぜ 増えたか」を 時刻つきで 見られる */
-  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v293'}); }catch(e){}
+  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v296'}); }catch(e){}
   /* v263: アプリを とじて いても 鳴る ように、あいての「ベル用とおりみち」へ 1通だけ おくる。
      この とおりみちは あいてだけが うけとる（こちらには もどらない）。中身は 時刻だけ。 */
   try{ if(peerOpenOn()&&peerKeepOn()&&__r!=='conn') pushPeerOpen(t,__fg,true); }catch(e){}   /* v284: 本物の 起動は 画面判定で 落とさない */   /* v267/v268: 本物の 開封だけ スマホの ベルへ */
@@ -8904,7 +8921,7 @@ var micOn=false, voiceChunkOn=false, micStream=null, audioQ=[], audioEl=null, au
 function stopMic(){
   micOn=false; voiceChunkOn=false;
   if(micStream){ try{ micStream.getTracks().forEach(function(t){ t.stop(); }); }catch(e){} micStream=null; }
-    var cb=$('#btn-call'); if(cb) cb.textContent='電話:オフ';
+    var cb=$('#btn-call'); if(cb) cb.textContent='電話';
   var vb=$('#btn-voice'); if(vb) vb.textContent='声:オフ';
   audioQ=[]; audioBusy=false;
   if(audioEl){ try{ audioEl.pause(); }catch(e){} }
@@ -8980,7 +8997,7 @@ function stopCall(notify){
   var lvv=$('#call-local'); if(lvv) lvv.srcObject=null;
   var cbx=$('#call-box'); if(cbx) cbx.hidden=true;
   var a=$('#rtc-audio'); if(a){ try{ a.srcObject=null; a.remove(); }catch(e){} }
-  var cb=$('#btn-call'); if(cb) cb.textContent='電話:オフ';
+  var cb=$('#btn-call'); if(cb) cb.textContent='電話';
   var bl=$('#btn-live'); if(bl) bl.textContent='ライブ';
   var stt=$('#call-state'); if(stt) stt.textContent='つないでいます…';
   callPanelHide();
@@ -8989,18 +9006,18 @@ function stopCall(notify){
 }
 $('#btn-call').addEventListener('click',async function(){
   if(rtcOn){ stopCall(); return; }
-  if(callMediaCancel) return;
-  if(!(S.phase==='play'&&S.paired)&&!S.linked) return;
-  if(!(window.RTCPeerConnection&&navigator.mediaDevices&&navigator.mediaDevices.getUserMedia)){ this.textContent='電話:不可'; return; }
+  if(callMediaCancel){ try{ toast('マイクの じゅんび中です。すこし まってね。'); }catch(e){} return; }
+  if(!(S.phase==='play'&&S.paired)&&!S.linked){ try{ toast('まだ つながって いません。あいてと つながると 電話できます。'); }catch(e){} return; }
+  if(!(window.RTCPeerConnection&&navigator.mediaDevices&&navigator.mediaDevices.getUserMedia)){ this.textContent='電話 不可'; return; }
   var gm=await getCallMedia(false);
   if(gm&&gm.name==='AbortError') return;
-  if(gm!==true){ this.textContent='電話:不可'; toast('マイクを つかえません（'+((gm&&gm.name)||'')+'）。'); return; }
+  if(gm!==true){ this.textContent='電話 不可'; toast('マイクを つかえません（'+((gm&&gm.name)||'')+'）。'); return; }
   voiceChunkOn=false;
   var self2=this, voiceTicket=callMediaTicket;
-  rtcStart(true).then(function(){ if(voiceTicket!==callMediaTicket) return; self2.textContent='電話:よびだし中…'; toast(peerName()+' を よびだしています…');
+  rtcStart(true).then(function(){ if(voiceTicket!==callMediaTicket) return; self2.textContent='よびだし中…'; toast(peerName()+' を よびだしています…');
       callPanel('ring','発信中…','あいてが でるのを まっています。でない ときは 下の「終了」を おしてください。');
       setTimeout(function(){ if(voiceTicket===callMediaTicket&&rtcOn&&!callVideo&&pc&&pc.connectionState!=='connected'){ stopCall(); toast(peerName()+' は でませんでした。'); } },50000); })
-    .catch(function(e){ if(voiceTicket!==callMediaTicket) return; callDiagLog('rtcStart-voice',e); stopMic(); self2.textContent='電話:不可'; toast('電話を はじめられませんでした（'+(e&&e.name||'')+'）。'); });
+    .catch(function(e){ if(voiceTicket!==callMediaTicket) return; callDiagLog('rtcStart-voice',e); stopMic(); self2.textContent='電話 不可'; toast('電話を はじめられませんでした（'+(e&&e.name||'')+'）。'); });
 });
 /* 通話は いつでも 『どこでも つながる』ように STUN を つかう。
    STUN は『相手の ばしょ』を さがす ためだけ。音声は DTLS-SRTP で 端末どうしが 暗号化する
@@ -9053,7 +9070,7 @@ function rtcStart(isCaller){
     var cb=$('#btn-call');
     var stt=$('#call-state');
     if(pc&&pc.connectionState==='connected'){
-      if(cb) cb.textContent='電話:中';
+      if(cb) cb.textContent='通話中';
       if(stt) stt.textContent='つながりました';
       callPanel('on','通話中','つながって います。おわるときは 下の「終了」を おしてください。');
       paintCallOut();
@@ -9075,7 +9092,7 @@ function rtcStart(isCaller){
     }else if(pc&&rtcOn&&(pc.connectionState==='failed'||pc.connectionState==='disconnected'||pc.connectionState==='closed')){
       /* 直接が きれたら すぐ 中継に もどす（映像が とまらない） */
       try{ var cb3=$('#call-box'); if(cb3) cb3.classList.remove('rtc-ok'); if(callVideo){ Vid.listen(); Vid.start(); } }catch(e){}
-      if(cb) cb.textContent='電話:つなぐ中…';
+      if(cb) cb.textContent='つなぐ中…';
       if(stt) stt.textContent='つなぎなおしています…';
       callPanel('ring','つなぎ直し中…','でんわが きれました。すぐに もどらない ときは「終了」して かけ直してください。');
       if(!fbT) fbT=setTimeout(function(){
@@ -9180,7 +9197,7 @@ async function rtcHandleSdp(m,sdp){
       await answerCurrent().setLocalDescription(ans);
       await waitIce(answerCurrent(),3500);
       rtcSendSdp('answer',JSON.stringify(answerCurrent().localDescription));
-      $('#btn-call').textContent='電話:つなぐ中…';
+      $('#btn-call').textContent='つなぐ中…';
     }else if(m.k==='answer'&&pc&&!pc.remoteDescription){
       await pc.setRemoteDescription(new RTCSessionDescription(sdp));
     }
@@ -9248,7 +9265,7 @@ async function rtcRecvSdp(m){
       var ans=await answerCurrent().createAnswer();
       await answerCurrent().setLocalDescription(ans);
       rtcSendSdp('answer',JSON.stringify(answerCurrent().localDescription));
-      $('#btn-call').textContent='電話:つなぐ中…';
+      $('#btn-call').textContent='つなぐ中…';
       for(var q=0;q<rtcCand.length;q++){ try{ await pc.addIceCandidate(rtcCand[q]); }catch(e){} }
       rtcCand=[];
       note('あいてと こえを つなぎました。イヤホンが おすすめです。','#note2');
@@ -9442,7 +9459,7 @@ function queueChat(txt,at){
   item.msg=msg;
   renderChat(true);
   newStickerFullscreen(msg);
-  if(!S.flushT) S.flushT=setTimeout(function(){ S.flushT=null; flushOutbox(); },60);
+  if(!S.flushT) S.flushT=setTimeout(function(){ S.flushT=null; flushOutbox(); },0);
   return msg;
 }
 /* v181: 通知pushを 中継が 受けとった なら「未読」まで 進める（相手の スマホが 受けとる じゅんびが できた から） */
@@ -9466,26 +9483,33 @@ function flushOutbox(){
   /* v153: 即時路が つなぎなおし中なら 0.3秒ごとに 見る（以前は 3秒 まって いた → つながった 瞬間に 送る） */
   /* v157: 自分の 通知サーバーが あれば 待たずに そちらで 送る（ふつうの https なので 回線に ふさがれにくい） */
   if(Net.coolUntil&&Date.now()<Net.coolUntil&&!(Fast.open&&(FastH.subOk||FastE.subOk))&&!psrvGet()){ if(!S.flushWaitT) S.flushWaitT=setTimeout(function(){ S.flushWaitT=null; flushOutbox(); },300); return; }
-  if(S.flushing) return;
+  /* v296: まえの 送信の 返事を 待たずに つぎも 送る（待つと 1通が おそい とき 全部 つまる）。
+     いま 送っている 最中（S.inflight）の ものだけ はずして、のこりを まとめて 出す */
+  S.inflight=S.inflight||[];
+  var pool=S.outbox.filter(function(it){ return S.inflight.indexOf(it)<0; });
+  if(!pool.length) return;
   /* 1通の 封筒に 入る ぶんだけ まとめる（入りきらないと 送れなかった） */
   var items=[], bytes=0;
-  for(var q=0;q<S.outbox.length&&items.length<8;q++){
-    var sz=new TextEncoder().encode(S.outbox[q].text||'').length+100;
+  for(var q=0;q<pool.length&&items.length<8;q++){
+    var sz=new TextEncoder().encode(pool[q].text||'').length+100;
     if(items.length&&bytes+sz>2600) break;
-    items.push(S.outbox[q]); bytes+=sz;
+    items.push(pool[q]); bytes+=sz;
   }
   var payload=items.map(function(x){ return {text:x.text,at:x.at,mid:x.mid}; });
   var msgs=items.map(function(x){ return x.msg; }).filter(Boolean);
   S.flushing=true;
+  S.inflight=S.inflight.concat(items);
   var same=S.flushEnv&&S.flushEnv.items.length===items.length&&items.every(function(x,i){ return x===S.flushEnv.items[i]; });
   var onDoneF=function(ok){
-    if(!privateCurrent(scope)) return;
+    /* v296: scopeが かわっても 印は かならず 消す（のこすと 送信が 二度と 出なく なる） */
+    S.inflight=(S.inflight||[]).filter(function(x){ return items.indexOf(x)<0; });
     S.flushing=false;
+    if(!privateCurrent(scope)) return;
     if(ok){
       S.outbox=S.outbox.filter(function(x){ return items.indexOf(x)<0; });
       outSave();
       msgs.forEach(function(m){ if(m){ m.sent=true; m.delivered=true; m.sentAt=Date.now(); } });
-      if(S.outbox.length) setTimeout(flushOutbox,300);
+      if(S.outbox.length) setTimeout(flushOutbox,40);
     }else{
       msgs.forEach(function(m){ if(m){ m.tries=(m.tries||0)+1; } });
       setTimeout(flushOutbox,1500);
@@ -9495,7 +9519,7 @@ function flushOutbox(){
   };
   var envSent=same?Net.sendEnv(S.flushEnv.env,onDoneF):Net.send({t:'chats',items:payload},onDoneF);
   if(envSent&&envSent.n){ if(!same) S.flushEnv={items:items.slice(),env:envSent}; msgs.forEach(function(m){ m.n=envSent.n; m.env=envSent; }); }
-  if(!envSent) S.flushing=false;
+  if(!envSent){ S.flushing=false; S.inflight=S.inflight.filter(function(x){ return items.indexOf(x)<0; }); }
 }
 function submitChat(){
   try{ if(Net.topic) Fast.probe(); }catch(e){}
