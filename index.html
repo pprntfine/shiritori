@@ -890,7 +890,7 @@ body.in-play .leave-row{display:none!important}
 .msg .bubble.sticker-b{font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif;font-size:76px!important;line-height:1.25!important;padding:6px 10px!important;min-width:96px;box-sizing:border-box;background:transparent!important;border:0!important;box-shadow:none!important}
 .msg .bubble.sticker-b::before,.msg .bubble.sticker-b::after{display:none!important;content:none!important}
 /* v226: 見えているスタンプを自動で繰り返す。入力欄や本文の位置は動かさない。 */
-.msg .bubble.sticker-animated{font-size:52px!important;white-space:nowrap;padding:10px!important}
+.msg .bubble.sticker-animated{font-size:52px!important;white-space:nowrap;padding:10px!important;overflow:visible!important}
 .sticker-motion{display:inline-block;transform-origin:center;vertical-align:middle}
 .sticker-motion{animation-duration:1500ms;animation-iteration-count:infinite;animation-timing-function:ease-in-out;animation-play-state:paused}
 .sticker-motion-active .sticker-motion.is-visible{animation-play-state:running}
@@ -906,6 +906,23 @@ body.in-play .leave-row{display:none!important}
 @keyframes sticker-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
 @keyframes sticker-sway{0%,100%{transform:rotate(0)}25%{transform:rotate(-7deg)}75%{transform:rotate(7deg)}}
 @keyframes sticker-spark{0%,100%{transform:scale(1) rotate(0)}35%{transform:scale(1.1) rotate(-5deg)}65%{transform:scale(1.04) rotate(5deg)}}
+/* v293: きのこ用の あたらしい 動き（そだつ・あるく・はしる・ばくそう など） */
+.sticker-motion[data-motion="grow"]{animation-name:sticker-grow;animation-duration:2400ms;animation-timing-function:cubic-bezier(.34,1.4,.5,1)}
+.sticker-motion[data-motion="walk"]{animation-name:sticker-walk;animation-duration:1200ms}
+.sticker-motion[data-motion="dash"]{animation-name:sticker-dash;animation-duration:900ms;animation-timing-function:linear}
+.sticker-motion[data-motion="rage"]{animation-name:sticker-rage;animation-duration:620ms;animation-timing-function:linear}
+.sticker-motion[data-motion="stomp"]{animation-name:sticker-stomp;animation-duration:900ms}
+.sticker-motion[data-motion="jelly"]{animation-name:sticker-jelly;animation-duration:1300ms}
+.sticker-motion[data-motion="spin"]{animation-name:sticker-spin;animation-duration:1700ms;animation-timing-function:linear}
+.sticker-motion[data-motion="hop"]{animation-name:sticker-hop;animation-duration:1050ms}
+@keyframes sticker-grow{0%,100%{transform:scale(1)}55%{transform:scale(1.85)}75%{transform:scale(1.62)}}
+@keyframes sticker-walk{0%,100%{transform:translateX(0) rotate(0)}25%{transform:translateX(-7px) rotate(-5deg)}75%{transform:translateX(7px) rotate(5deg)}}
+@keyframes sticker-dash{0%{transform:translateX(-30px) rotate(-8deg) scale(1.05)}50%{transform:translateX(30px) rotate(8deg) scale(1.15)}100%{transform:translateX(-30px) rotate(-8deg) scale(1.05)}}
+@keyframes sticker-rage{0%,100%{transform:translate(0,0) rotate(0) scale(1.1)}20%{transform:translate(-4px,2px) rotate(-9deg) scale(1.2)}40%{transform:translate(5px,-3px) rotate(10deg) scale(1.12)}60%{transform:translate(-5px,-2px) rotate(-11deg) scale(1.24)}80%{transform:translate(4px,3px) rotate(9deg) scale(1.14)}}
+@keyframes sticker-stomp{0%,100%{transform:scale(1,1)}30%{transform:scale(1.18,.78) translateY(4px)}55%{transform:scale(.94,1.12) translateY(-6px)}}
+@keyframes sticker-jelly{0%,100%{transform:skewX(0) scaleX(1)}25%{transform:skewX(-10deg) scaleX(1.1)}75%{transform:skewX(10deg) scaleX(.92)}}
+@keyframes sticker-spin{0%{transform:rotate(0) scale(1)}50%{transform:rotate(180deg) scale(1.12)}100%{transform:rotate(360deg) scale(1)}}
+@keyframes sticker-hop{0%,100%{transform:translateY(0) scale(1,1)}30%{transform:translateY(0) scale(1.12,.88)}60%{transform:translateY(-16px) scale(.94,1.1)}80%{transform:translateY(0) scale(1.1,.9)}}
 @media(prefers-reduced-motion:reduce){.sticker-motion{animation:none!important;transform:none!important}.sticker-fullscreen{display:none!important}}
 </style>
 </head>
@@ -935,7 +952,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v291</b></p>
+      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v293</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1009,7 +1026,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v291</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v293</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -1816,7 +1833,7 @@ function discardPrivateWork(){
   if(typeof photoBuf!=='undefined') Object.keys(photoBuf).forEach(function(k){ clearTimeout(photoBuf[k].timer); });
   if(typeof S!=='undefined'&&S&&S.chat){
     S.flushEnv=null; S.flushing=false;
-    S.chat.forEach(function(m){ if(m.photo||m.file){ clearTimeout(m.__w); m.__w=0; if(!m.sent) m.cancelled=true; } });
+    S.chat.forEach(function(m){ if(m.photo||m.file){ clearTimeout(m.__w); m.__w=0; if(!m.sent&&!m.photo&&!m.file) m.cancelled=true; } });   /* v292: しゃしんは けさず のこす（つながったら おくりなおす） */
   }
   photoBuf={}; photoSent={}; photoURL={}; photoAgain={}; photoAsk={}; photoChunkFall={}; photoChunkAt={}; photoDone={}; photoScopes=Object.create(null);
   if(typeof Vid!=='undefined'&&Vid){ try{ Vid.stop(); Vid.stopListen(); }catch(e){} }
@@ -2215,7 +2232,7 @@ var Net={
     if(fastOk){
       /* v267: 相手が いま つながって いるなら 保存は いらない（1日に 250通の わくを 節約） */
       var __live=0; try{ __live=+(window.__zgsPeerLive||0)||0; }catch(e){}
-      if(!(env&&env.t==='chats'&&__live&&Date.now()-__live<70000)) this.postStore(body,scope);
+      if((env&&env.__forceStore)||!(env&&env.t==='chats'&&__live&&Date.now()-__live<70000)) this.postStore(body,scope);
       return true;
     }
     /* v182: つうちサーバー(psrv)が あれば トーク・とりけしは その直接路を 先に 待つ。
@@ -6188,7 +6205,7 @@ function sendAppOpen(reason){
   var __fg=(typeof document!=='undefined'&&document.visibilityState==='visible')?1:0;
   var __g=gestAgeSec();
   /* v268: 理由(r)と 自分の 版(pv)も のせる。あいては「なぜ 増えたか」を 時刻つきで 見られる */
-  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v291'}); }catch(e){}
+  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v293'}); }catch(e){}
   /* v263: アプリを とじて いても 鳴る ように、あいての「ベル用とおりみち」へ 1通だけ おくる。
      この とおりみちは あいてだけが うけとる（こちらには もどらない）。中身は 時刻だけ。 */
   try{ if(peerOpenOn()&&peerKeepOn()&&__r!=='conn') pushPeerOpen(t,__fg,true); }catch(e){}   /* v284: 本物の 起動は 画面判定で 落とさない */   /* v267/v268: 本物の 開封だけ スマホの ベルへ */
@@ -6674,7 +6691,7 @@ function renderChat(forceBottom){
       pbub.appendChild(pim);
       var pmeta=document.createElement('div'); pmeta.className='meta';
       /* v248: 45秒 たっても おくれていない しゃしんは「送信中」の ままに しない（やりなおし できる ように） */
-      if(mine&&!m.sent&&!m.failed&&typeof m.at==='number'&&Date.now()-m.at>45000){
+      if(mine&&!m.sent&&!m.failed&&!m.__chunked&&!m.waiting&&typeof m.at==='number'&&Date.now()-m.at>45000){
         m.failed=true;
         if(m.__w){ try{ clearTimeout(m.__w); }catch(e){} m.__w=0; }
       }
@@ -6758,8 +6775,10 @@ function metaText(m,mine,at,groupEnd){
     try{ if(m.rad&&vanishOn()){ var lf2=m.rad+VANISH_MS-Date.now(); vs=lf2>0?('・あと'+Math.max(1,Math.ceil(lf2/60000))+'分で きえる'):'・まもなく きえる'; } }catch(e){}
     return '既読 '+tm+vs;
   }
-  if(m.acked) return '未読 '+tm;
-  return '送信済み '+tm;   /* v152: 中継所まで とどいた（相手の スマホが 受けとると「未読」に かわる） */
+  /* v292: 「未読」は あいてが うけとった 証拠（受領証）が ある ときだけ。中継所に 着いた だけ では 出さない */
+  if(m.peerAck) return 'とどいた・未読 '+tm;
+  if(m.acked) return 'おくった（まだ とどいて いない かも）'+tm;
+  return '送信中…'+tm;   /* v292: 中継所の 返事だけでは 「とどいた」と 言わない */
 }
 function scrollChatBottom(){
   var box=$('#chat-log'); if(!box) return;
@@ -7724,7 +7743,8 @@ var STICKER_CATEGORIES=[
   {name:'くらし',items:[['☕','ひと休み'],['🍵','お茶どうぞ'],['🍚','ごはんだよ'],['🍰','おやつの時間'],['🛁','お風呂の時間'],['🛌','休憩中'],['🏠','ただいま'],['🛍️','お買い物'],['💻','作業中'],['📚','勉強中'],['🎵','ごきげん'],['☔','雨だね']]},
   {name:'大人の気分',items:[['😘','キスを送る'],['💋','キスマーク'],['😉','ウインク'],['😳','照れちゃう'],['🥰','うっとり'],['😍','見とれちゃう'],['😚','そっとキス'],['😙','キスの気分'],['💘','心を射抜かれた'],['💕','寄り添うハート'],['💞','通じ合うハート'],['👀','見つめてる']]},
   {name:'動くハート',items:[['😘❤️','熱いキス','pulse'],['💓💓','ドキドキ','pulse'],['🥰💕','もっと一緒に','sway'],['😍💖','大好き','spark'],['💋❤️','キスを重ねて','bob'],['😚💗','やさしいキス','sway'],['🫶💞','ずっとそばに','pulse'],['😉💘','君に夢中','spark'],['💑💕','寄り添いたい','bob'],['💏💖','二人のキス','sway'],['💝✨','恋のきらめき','spark'],['💌💓','会いたいな','bob']]},
-  {name:'全画面',items:[['❤️💕❤️','広がるハート','pulse',['❤️','💕','💗']],['😘💋✨','キスの風','sway',['😘','💋','💕']],['✨💖✨','星のきらめき','spark',['✨','💖','🌟']],['🎉🎊✨','お祝いの花吹雪','bob',['🎉','🎊','✨']],['🌸💕🌸','桜の便り','sway',['🌸','💕','🌸']],['🫶💗🫶','大切なあなたへ','pulse',['🫶','💗','💕']],['🌈✨🌈','虹の祝福','spark',['🌈','✨','💖']],['💐🌼💐','花束をどうぞ','bob',['💐','🌼','🌷']],['👏🌟👏','いっぱいの拍手','sway',['👏','🌟','✨']],['🎈🎉🎈','風船のお祝い','bob',['🎈','🎉','🎊']],['💌💕💌','想いを届ける','pulse',['💌','💕','💗']],['🌙⭐✨','おやすみの星','spark',['🌙','⭐','✨']],['🎆✨🎆','花火の夜','pulse',['🎆','✨','🎇']],['🌠💫🌠','流れ星の願い','spark',['🌠','✨','💫']],['❄️⛄❄️','ゆきのあした','sway',['❄️','⛄','❄️']],['🌻☀️🌻','ひだまりの花','pulse',['🌻','☀️','🌼']],['🌺🌴🌺','南の島から','bob',['🌺','🌴','🐬']],['🐬🌊🐬','海のなかまたち','sway',['🐬','🌊','🐠']],['🍀✨🍀','しあわせのクローバー','pulse',['🍀','✨','💛']],['🎁🎀🎁','プレゼントだよ','bob',['🎁','🎀','✨']],['🍰🍓🍰','おいしいおしらせ','pulse',['🍰','🍓','🍩']],['🎠💫🎠','めぐるゆめ','sway',['🎠','💫','🎡']],['🌷💗🌷','春のありがとう','bob',['🌷','💗','💐']],['👑✨👑','きょうの主役','spark',['👑','✨','🎉']],['🏰✨🏰','ゆめのおしろ','bob',['🏰','✨','👑']],['🐝🍯🐝','はちみつの時間','sway',['🐝','🍯','🌼']],['🎐✨🎐','ふうりんのなつ','pulse',['🎐','✨','🌊']],['🏮✨🏮','まつりの夜','spark',['🏮','✨','🎆']],['💜✨💜','むらさきの想い','spark',['💜','✨','💫']],['💛🌼💛','ひかりの花束','pulse',['💛','🌼','🌻']],['💙🌊💙','うみのしあわせ','sway',['💙','🌊','🐬']],['✈️☁️✈️','そらのたび','bob',['✈️','☁️','🌍']],['🌍✨🌍','せかいのおいわい','spark',['🌍','✨','🎉']],['🎶🎤🎶','みんなのうた','bob',['🎶','🎤','🎵']],['🍮✨🍮','とびきりのデザート','sway',['🍮','✨','🍰']],['🎋✨🎋','たんざくの願い','spark',['🎋','✨','🌠']]]}
+  {name:'きのこ',items:[['🍄‍🟫','ぐんぐん そだつ','grow'],['🍄‍🟫','のっしのっし','walk'],['🍄‍🟫','かけあし きのこ','dash'],['🍄‍🟫','きのこ ばくそう','rage'],['🍄‍🟫','どすんどすん','stomp'],['🍄‍🟫','ぷるぷる きのこ','jelly'],['🍄‍🟫','くるくる きのこ','spin'],['🍄‍🟫','ぴょんぴょん','hop'],['🍄‍🟫🍄‍🟫','きのこ ふたり','walk'],['🍄‍🟫🍄‍🟫🍄‍🟫','ぞろぞろ きのこ','dash'],['🍄‍🟫💥','きのこ ばくはつ','rage'],['🍄‍🟫✨','きのこ きらきら','spark']]},
+  {name:'全画面',items:[['🍄‍🟫🍄‍🟫🍄‍🟫','きのこ だいばくそう','rage',['🍄‍🟫','🍄‍🟫','💥']],['❤️💕❤️','広がるハート','pulse',['❤️','💕','💗']],['😘💋✨','キスの風','sway',['😘','💋','💕']],['✨💖✨','星のきらめき','spark',['✨','💖','🌟']],['🎉🎊✨','お祝いの花吹雪','bob',['🎉','🎊','✨']],['🌸💕🌸','桜の便り','sway',['🌸','💕','🌸']],['🫶💗🫶','大切なあなたへ','pulse',['🫶','💗','💕']],['🌈✨🌈','虹の祝福','spark',['🌈','✨','💖']],['💐🌼💐','花束をどうぞ','bob',['💐','🌼','🌷']],['👏🌟👏','いっぱいの拍手','sway',['👏','🌟','✨']],['🎈🎉🎈','風船のお祝い','bob',['🎈','🎉','🎊']],['💌💕💌','想いを届ける','pulse',['💌','💕','💗']],['🌙⭐✨','おやすみの星','spark',['🌙','⭐','✨']],['🎆✨🎆','花火の夜','pulse',['🎆','✨','🎇']],['🌠💫🌠','流れ星の願い','spark',['🌠','✨','💫']],['❄️⛄❄️','ゆきのあした','sway',['❄️','⛄','❄️']],['🌻☀️🌻','ひだまりの花','pulse',['🌻','☀️','🌼']],['🌺🌴🌺','南の島から','bob',['🌺','🌴','🐬']],['🐬🌊🐬','海のなかまたち','sway',['🐬','🌊','🐠']],['🍀✨🍀','しあわせのクローバー','pulse',['🍀','✨','💛']],['🎁🎀🎁','プレゼントだよ','bob',['🎁','🎀','✨']],['🍰🍓🍰','おいしいおしらせ','pulse',['🍰','🍓','🍩']],['🎠💫🎠','めぐるゆめ','sway',['🎠','💫','🎡']],['🌷💗🌷','春のありがとう','bob',['🌷','💗','💐']],['👑✨👑','きょうの主役','spark',['👑','✨','🎉']],['🏰✨🏰','ゆめのおしろ','bob',['🏰','✨','👑']],['🐝🍯🐝','はちみつの時間','sway',['🐝','🍯','🌼']],['🎐✨🎐','ふうりんのなつ','pulse',['🎐','✨','🌊']],['🏮✨🏮','まつりの夜','spark',['🏮','✨','🎆']],['💜✨💜','むらさきの想い','spark',['💜','✨','💫']],['💛🌼💛','ひかりの花束','pulse',['💛','🌼','🌻']],['💙🌊💙','うみのしあわせ','sway',['💙','🌊','🐬']],['✈️☁️✈️','そらのたび','bob',['✈️','☁️','🌍']],['🌍✨🌍','せかいのおいわい','spark',['🌍','✨','🎉']],['🎶🎤🎶','みんなのうた','bob',['🎶','🎤','🎵']],['🍮✨🍮','とびきりのデザート','sway',['🍮','✨','🍰']],['🎋✨🎋','たんざくの願い','spark',['🎋','✨','🌠']]]}
 ];
 var STICKERS=[],STICKER_NAMES=[];
 STICKER_CATEGORIES.forEach(function(category){ category.items.forEach(function(item){ STICKERS.push(item[0]); STICKER_NAMES.push(item[1]); }); });
@@ -7743,7 +7763,7 @@ STICKER_CATEGORIES.forEach(function(category,index){
   var gentle=index<6?stickerGentleMotions[index].split(' '):null;
   category.items.forEach(function(item,i){ stickerMotionMap.set(item[0],item[2]||gentle[i]); });
 });
-STICKER_CATEGORIES[7].items.forEach(function(item){ stickerFullscreenMap.set(item[0],item[3]); });
+STICKER_CATEGORIES.forEach(function(c){ if(c.name==='全画面') c.items.forEach(function(item){ stickerFullscreenMap.set(item[0],item[3]); }); });
 var stickerMotionObserver=null,stickerFullscreenLayer=null,stickerFullscreenTimer=null,stickerFullscreenWatch=null;
 /* 起動前の中継履歴と復元中の受信では全画面を出さない。電文は変更しない。 */
 var stickerEffectsStartedAt=Date.now();
@@ -8171,8 +8191,36 @@ function attachmentLink(m,position){
 /* v115: 写真は あんごうした 1つの ファイルとして おくる（かけらに わけない ので とちゅうで 欠けない） */
 function dataURLBytes(u){ var b=atob(String(u).split(',')[1]||''), a=new Uint8Array(b.length); for(var i=0;i<b.length;i++) a[i]=b.charCodeAt(i); return a; }
 function bytesDataURL(a,mime){ var s='',CH=0x8000; for(var i=0;i<a.length;i+=CH) s+=String.fromCharCode.apply(null,a.subarray(i,i+CH)); return 'data:'+(mime||'image/jpeg')+';base64,'+btoa(s); }
+/* v292: つながって いない だけの ときは 失敗に せず、つながるまで 待って 自動で おくる */
+function photoWaitRetry(msg,why){
+  if(!msg||!privateCurrent(msg.__privateScope)) return;
+  msg.waiting=true; msg.failed=false;
+  if(msg.__w){ try{ clearTimeout(msg.__w); }catch(e){} msg.__w=0; }
+  try{ note(why||'あいてが つながるのを まって います。つながったら じどうで おくります。','#note2'); }catch(e){}
+  if(S.tab==='chat') renderChat(true);
+}
+function photoQueueTick(){
+  try{
+    if(!Net.topic||!Net.key) return;
+    var now=Date.now();
+    for(var i=0;i<S.chat.length;i++){
+      var m=S.chat[i];
+      if(!m||!m.photo||m.from!==S.me.id||m.sent||m.cancelled) continue;
+      if(!m.waiting&&!m.failed) continue;
+      if(!m.data||String(m.data).length<32) continue;
+      if(now-(m.__qt||0)<8000) continue;
+      if((m.qt||0)>=40) continue;                      /* 約5分 ためして だめなら 手で */
+      if(m.failed&&(m.qt||0)>=6) continue;   /* 失敗は 6回まで じどう。あとは 手で */
+      m.qt=(m.qt||0)+1; m.__qt=now; m.failed=false; m.waiting=true;
+      try{ sendPhoto(m,0); }catch(e){}
+      return;                                          /* 1まいずつ 順番に */
+    }
+  }catch(e){}
+}
+setInterval(photoQueueTick,5000);
 function photoGiveUp(msg,why){
   if(!msg||!privateCurrent(msg.__privateScope)) return;
+  if(/つながって いません|つながって いない/.test(String(why||''))){ photoWaitRetry(msg,why); return; }
   msg.failed=true;
   if(msg.__w){ try{ clearTimeout(msg.__w); }catch(e){} msg.__w=0; }
   try{ note(why||'しゃしんを そうしん できませんでした。ふきだしの「もういちど おくる」を おして ください。','#note2'); }catch(e){}
@@ -9481,6 +9529,31 @@ function resendUnacked(all){
   if(any&&S.tab==='chat') renderChat(true);
 }
 setInterval(function(){ try{ if(Net.topic) resendUnacked(false); }catch(e){} },2000);
+/* v292: あいての 受領証が 来ない トークは、同じ 番号の まま 1分おきに おくりなおす（あいては mid で 重複を すてる） */
+function resendMineUnacked(){
+  try{
+    if(!Net.topic||!Net.key) return;
+    if(typeof privateReady==='function'&&!privateReady()) return;
+    var now=Date.now(), n=0;
+    for(var i=S.chat.length-1;i>=0&&n<3;i--){
+      var m=S.chat[i];
+      if(!m||m.sys||m.from!==S.me.id) continue;
+      if(m.read||m.peerAck||!m.n||m.sent===false||m.cancelled) continue;
+      if(!m.text||m.photo||m.file) continue;
+      if(now-(m.at||0)>2*60*60*1000) continue;
+      if((m.rt||0)>=8) continue;
+      if(now-(m.rl||0)<60000) continue;
+      var env={v:V,n:m.n,from:S.me.id,t:'chats',items:[{text:m.text,at:m.at,mid:(typeof messageId==='function'?messageId(m):(m.pid||''))}]};
+      try{ if(!bindOutbound(env,false)) continue; }catch(e){ continue; }
+      m.rt=(m.rt||0)+1; m.rl=now; env.__forceStore=1;   /* v292: 再送は かならず 中継所に のこす */
+      try{ Net.resendEnv(env); }catch(e){}
+      n++;
+    }
+    if(n&&S.tab==='chat') renderChat(true);
+  }catch(e){}
+}
+setInterval(function(){ if(document.visibilityState==='visible') resendMineUnacked(); },30000);
+document.addEventListener('visibilitychange',function(){ if(!document.hidden){ setTimeout(resendMineUnacked,2500); setTimeout(photoQueueTick,3000); } });
 /* 未達トークの再送：あいての端末に届く(受領証が返る)まで、送り側の端末だけが保持する */
 function resendUndelivered(){
   if((S.phase!=='play'||!S.paired)&&!S.linked) return;
@@ -10098,7 +10171,7 @@ case 'ack':
         var touched=[];
         for(var ai=0;ai<S.chat.length;ai++){
           var am=S.chat[ai];
-          if(am&&!am.sys&&am.from===S.me.id&&am.n&&am.n===n&&!am.acked){ am.acked=true; am.delivered=true; touched.push(am.n); }
+          if(am&&!am.sys&&am.from===S.me.id&&am.n&&am.n===n&&!am.peerAck){ am.peerAck=true; am.acked=true; am.delivered=true; am.rt=9; touched.push(am.n); }
         }
         /* v233: 受領も 行の 表示だけ かきかえる（作り直しを さける） */
         if(touched.length){ persistChat(); if(S.tab==='chat'&&!updateMsgMeta(touched)) renderChat(true); }
@@ -11260,6 +11333,7 @@ body.selmode #chat-log .msg:after{display:none!important}
   setTimeout(boot,1500); setInterval(ensure,4000);
 })();
 </script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"08b344934bdd416db94053d34eb889d8","spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"08b344934bdd416db94053d34eb889d8","spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
