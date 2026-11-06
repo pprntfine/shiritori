@@ -978,7 +978,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v312</b></p>
+      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v313</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1052,7 +1052,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v312</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v313</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -6153,7 +6153,7 @@ async function resumeConnect(silent){
     startPing(); startWatch(); if(S.isHost) startFullWatch();
     /* v111: hi2 は 送らない */
     try{ renderChat(true); }catch(e){}
-    if(!silent){ show('play'); document.querySelector('.bar').classList.add('compact'); setTab('chat'); try{ if(S.sealed&&Net.key) setLock(true,'暗号化'); }catch(e){} }   /* v184: もどした ときも かぎランプを つける（あんごうは 有効・ランプだけ 消えていた） */
+    if(!silent){ show('play'); document.querySelector('.bar').classList.add('compact'); setTab('game'); try{ if(S.sealed&&Net.key) setLock(true,'暗号化'); }catch(e){} }   /* v313: ひらき直しは トップ画面から */   /* v184: もどした ときも かぎランプを つける（あんごうは 有効・ランプだけ 消えていた） */
     setTimeout(function(){ try{ bgPushSetup(); }catch(e){} },2000);
     setTimeout(drainInbox,600);
     try{ paintTopicTag(); }catch(e){}
@@ -6303,7 +6303,7 @@ function sendAppOpen(reason){
   var __fg=(typeof document!=='undefined'&&document.visibilityState==='visible')?1:0;
   var __g=gestAgeSec();
   /* v268: 理由(r)と 自分の 版(pv)も のせる。あいては「なぜ 増えたか」を 時刻つきで 見られる */
-  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v312'}); }catch(e){}
+  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v313'}); }catch(e){}
   /* v263: アプリを とじて いても 鳴る ように、あいての「ベル用とおりみち」へ 1通だけ おくる。
      この とおりみちは あいてだけが うけとる（こちらには もどらない）。中身は 時刻だけ。 */
   try{ if(peerOpenOn()&&peerKeepOn()&&__r!=='conn') pushPeerOpen(t,__fg,true); }catch(e){}   /* v284: 本物の 起動は 画面判定で 落とさない */   /* v267/v268: 本物の 開封だけ スマホの ベルへ */
@@ -9800,11 +9800,25 @@ $('#btn-eject').addEventListener('click',function(){
   setTimeout(resetToWait,900);
 });
 document.addEventListener('visibilitychange',function(){
-  /* v117: ホーム画面などに もどったら トップ画面に して おく（つながりと 受信は そのまま） */
+  /* v117/v313: ホーム画面などに もどったら トップ画面に して おく（つながりと 受信は そのまま） */
   if(document.visibilityState==='hidden'){
     S._hiddenAt=Date.now();
+    S._wasTab=S.tab;   /* v313: はなれた ときの 画面を おぼえる */
+    return;
   }
-  if(document.visibilityState==='visible') maybeSendRead(true);   /* v232: もどってきたら なくなった 既読も 立て直す（見えている時だけは 関数の 中で 確かめる） */
+  maybeSendRead(true);   /* v232: もどってきたら なくなった 既読も 立て直す */
+  /* v313: ホームから もどったら トップ画面から やり直す（通話・ライブ・写真を 見ている ときは そのまま） */
+  try{
+    var busy=(function(){
+      var cb=$('#call-box'); if(cb&&!cb.hidden) return true;
+      var lb=$('#live-box'); if(lb&&!lb.hidden) return true;
+      var qm=$('#qr-modal'); if(qm&&qm.classList.contains('on')) return true;
+      var pm=$('#prof-modal'); if(pm&&pm.classList.contains('on')) return true;
+      if(camStream) return true;
+      return false;
+    })();
+    if(!busy&&S.phase==='play'&&S.tab==='chat'){ setTab('game'); appNav.sync(); }
+  }catch(e){}
 });
 window.addEventListener('pageshow',function(e){ if(e.persisted) appNav.sync(); });
 $('#btn-quit').addEventListener('click',function(){
