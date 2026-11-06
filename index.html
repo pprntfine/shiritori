@@ -559,6 +559,34 @@ label,.lead,.hint{color:#6B7280!important}
 #call-center.on #call-big{background:rgba(10,107,67,.66);border-color:rgba(255,255,255,.34)}
 #call-center.on #call-big .dot{background:#5CE39B}
 #call-center.call-ring #call-big .dot{animation:callPulse .95s ease-in-out infinite}
+/* v309: よびだし中を もっと わかりやすく */
+#call-ringicon{display:none;position:relative;width:148px;height:148px;margin-bottom:6px;align-items:center;justify-items:center}
+#call-center.call-ring #call-ringicon{display:grid}
+#call-ringicon i{position:absolute;inset:0;border-radius:50%;background:rgba(6,199,85,.30);animation:ringWave 1.9s ease-out infinite}
+#call-ringicon i:nth-child(2){animation-delay:.65s}
+#call-ringicon b{position:relative;width:92px;height:92px;border-radius:50%;background:linear-gradient(160deg,#19D66B,#04A94A);
+  display:grid;place-items:center;font-size:2.3rem;box-shadow:0 10px 26px rgba(6,199,85,.42);animation:ringShake 1.2s ease-in-out infinite}
+@keyframes ringWave{0%{transform:scale(.74);opacity:.55}70%{transform:scale(1.62);opacity:0}100%{opacity:0}}
+@keyframes ringShake{0%,100%{transform:rotate(0)}25%{transform:rotate(-10deg)}75%{transform:rotate(10deg)}}
+#call-peer{display:none;color:#fff;font-size:1.5rem;font-weight:900;margin:0 0 2px;text-shadow:0 2px 12px rgba(0,0,0,.6)}
+#call-center.call-ring #call-peer{display:block}
+#call-count{display:none;color:#FFD37A;font-size:.9rem;font-weight:900}
+/* v310: よびだし中（黄）・つながった（緑）・きれた（赤）を 色でも 見分ける */
+#call-center.call-ring #call-big{background:rgba(120,86,10,.62);border-color:rgba(255,211,122,.55)}
+#call-center.call-ring #call-big .dot{background:#FFD37A}
+#call-center.call-on #call-big{background:rgba(10,107,67,.80);border-color:rgba(92,227,155,.65)}
+#call-center.call-on #call-big .dot{background:#5CE39B}
+/* v310: きれた ことを 大きく 出す（3.5秒で きえる。タップでも とじる） */
+#call-hit{position:fixed;inset:0;z-index:9998;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:14px;background:rgba(8,12,16,.92);color:#fff;text-align:center;padding:24px;animation:hitIn .22s ease-out}
+#call-hit[hidden]{display:none}
+#call-hit .hit-ic{width:104px;height:104px;border-radius:50%;display:grid;place-items:center;font-size:2.6rem;
+  background:linear-gradient(160deg,#F2636B,#C41F28);box-shadow:0 12px 30px rgba(229,50,59,.35)}
+#call-hit.hit-ok .hit-ic{background:linear-gradient(160deg,#19D66B,#04A94A);box-shadow:0 12px 30px rgba(6,199,85,.35)}
+#call-hit .hit-tx{font-size:1.5rem;font-weight:900;line-height:1.35}
+#call-hit .hit-sub{font-size:.82rem;color:rgba(255,255,255,.72);line-height:1.7}
+@keyframes hitIn{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}
+#call-center.call-ring #call-count{display:block}
 @keyframes callPulse{0%,100%{opacity:.25;transform:scale(.78)}50%{opacity:1;transform:scale(1.3)}}
 #call-elapsed{color:#fff;font-size:1.7rem;font-weight:900;font-variant-numeric:tabular-nums;
   letter-spacing:.06em;text-shadow:0 2px 12px rgba(0,0,0,.65)}
@@ -952,7 +980,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v307</b></p>
+      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v310</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1026,7 +1054,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v307</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v310</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -1200,9 +1228,12 @@ body.in-play .leave-row{display:none!important}
     <button id="call-spk" type="button">受話口</button>
   </div>
   <div id="call-center" hidden>
+    <div id="call-ringicon"><i></i><i></i><b>📞</b></div>
+    <div id="call-peer"></div>
     <div id="call-big"><span class="dot"></span>つないでいます…</div>
     <div id="call-elapsed" hidden>00:00</div>
     <div id="call-sub" hidden></div>
+    <div id="call-count"></div>
     <button id="call-end-big" type="button">終了</button>
   </div>
   <span id="call-time" class="ig-time">00:00</span>
@@ -6274,7 +6305,7 @@ function sendAppOpen(reason){
   var __fg=(typeof document!=='undefined'&&document.visibilityState==='visible')?1:0;
   var __g=gestAgeSec();
   /* v268: 理由(r)と 自分の 版(pv)も のせる。あいては「なぜ 増えたか」を 時刻つきで 見られる */
-  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v307'}); }catch(e){}
+  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v310'}); }catch(e){}
   /* v263: アプリを とじて いても 鳴る ように、あいての「ベル用とおりみち」へ 1通だけ おくる。
      この とおりみちは あいてだけが うけとる（こちらには もどらない）。中身は 時刻だけ。 */
   try{ if(peerOpenOn()&&peerKeepOn()&&__r!=='conn') pushPeerOpen(t,__fg,true); }catch(e){}   /* v284: 本物の 起動は 画面判定で 落とさない */   /* v267/v268: 本物の 開封だけ スマホの ベルへ */
@@ -8814,10 +8845,27 @@ async function getCallMedia(wantVideo){
 var callOutMode='earpiece', callOutState='';
 try{ if(localStorage.getItem('zg_call_out')==='speaker') callOutMode='speaker'; }catch(e){}
 function callOutLabel(m){ return m==='speaker'?'スピーカー':'受話口'; }
+/* v309: よびだし中の のこり秒を 出す */
+var callRingT=null, callRingEnd=0;
+function stopRingCount(){ if(callRingT){ clearTimeout(callRingT); callRingT=null; } }
+function startRingCount(sec){
+  stopRingCount(); callRingEnd=Date.now()+sec*1000;
+  var tick=function(){
+    var left=Math.max(0,Math.ceil((callRingEnd-Date.now())/1000));
+    var ct=document.getElementById('call-count');
+    if(ct) ct.textContent = left>0 ? ('あと '+left+'秒で きれます') : 'でませんでした';
+    if(left<=0){ callRingT=null; return; }
+    callRingT=setTimeout(tick,500);
+  };
+  tick();
+}
 function callPanel(kind,big,sub){
   var c=$('#call-center'), b=$('#call-big'), s=$('#call-sub'), t=$('#call-elapsed');
   if(!c||!b) return;
   c.hidden=false;
+  var pn=document.getElementById('call-peer');
+  if(pn) pn.textContent=(kind==='ring'||kind==='on')?peerName():'';
+  if(kind==='ring') startRingCount(50); else stopRingCount();
   c.classList.toggle('call-ring',kind==='ring');
   c.classList.toggle('on',kind==='on');
   b.textContent='';
@@ -8827,7 +8875,26 @@ function callPanel(kind,big,sub){
   if(t) t.hidden=(kind!=='on');
   var st=$('#call-state'); if(st) st.textContent=big;
 }
-function callPanelHide(){ var c=$('#call-center'); if(c) c.hidden=true; }
+function callPanelHide(){ stopRingCount(); var c=$('#call-center'); if(c) c.hidden=true; }
+/* v310: 「きれた」を はっきり 出す。reason= me / peer / noanswer / lost */
+var callHitT=null, callHitEl=null;
+function callEndShow(reason){
+  try{
+    var TXT={me:'でんわを きりました',peer:'あいてが でんわを きりました',noanswer:'でませんでした',lost:'つながりが きれました'};
+    var ICO={me:'📴',peer:'📴',noanswer:'📵',lost:'⚠️'};
+    var SUB={me:'',peer:'',noanswer:'あいては でられませんでした。あとで かけ直して ください。',lost:'でんぱの わるい ところかも しれません。かけ直して ください。'};
+    var e=callHitEl;
+    if(!e){ e=document.createElement('div'); e.id='call-hit'; e.hidden=true; document.body.appendChild(e); callHitEl=e;
+      e.addEventListener('click',function(){ callEndHide(); }); }
+    var ok=(reason==='me'||reason==='peer');
+    e.classList.toggle('hit-ok',ok);
+    e.innerHTML='<div class="hit-ic">'+(ICO[reason]||'📴')+'</div><div class="hit-tx">'+(TXT[reason]||'でんわを おわりました')+'</div>'+(SUB[reason]?('<div class="hit-sub">'+SUB[reason]+'</div>'):'');
+    e.hidden=false;
+    if(callHitT) clearTimeout(callHitT);
+    callHitT=setTimeout(function(){ callEndHide(); },ok?2600:4200);
+  }catch(err){}
+}
+function callEndHide(){ if(callHitT){ clearTimeout(callHitT); callHitT=null; } if(callHitEl) callHitEl.hidden=true; }
 function callAudioEls(){
   var out=[], a=$('#rtc-audio'), r=$('#call-remote');
   if(a) out.push(a); if(r) out.push(r);
@@ -9108,7 +9175,7 @@ function ensureRtcAudio(){
   if(!a){ a=document.createElement('audio'); a.id='rtc-audio'; a.autoplay=true; a.style.display='none'; document.body.appendChild(a); }
   return a;
 }
-function stopCall(notify){
+function stopCall(notify,reason){
   var __wasOn=!!(rtcOn||callOn||(function(){ var b=$('#call-box'); return b&&!b.hidden; })());
   cancelCallMedia(); callBusy=false; closeCallAsk(); closeLiveAsk(); appNav.dismiss('call-box');
   rtcOn=false; callOn=false;
@@ -9132,7 +9199,7 @@ function stopCall(notify){
   var bl=$('#btn-live'); if(bl) bl.textContent='ライブ';
   var stt=$('#call-state'); if(stt) stt.textContent='つないでいます…';
   callPanelHide();
-  if(__wasOn&&notify!==false){ try{ toast('通話を おわりました。'); }catch(e){} }
+  if(__wasOn&&notify!==false){ try{ callEndShow(reason||'me'); }catch(e){} }
   if(notify!==false) try{ Net.send({t:'rtc-bye'}); }catch(e){}
 }
 $('#btn-call').addEventListener('click',async function(){
@@ -9145,9 +9212,10 @@ $('#btn-call').addEventListener('click',async function(){
   if(gm!==true){ this.textContent='電話 不可'; toast('マイクを つかえません（'+((gm&&gm.name)||'')+'）。'); return; }
   voiceChunkOn=false;
   var self2=this, voiceTicket=callMediaTicket;
+  try{ callPush(); }catch(e){}
   rtcStart(true).then(function(){ if(voiceTicket!==callMediaTicket) return; self2.textContent='よびだし中…'; toast(peerName()+' を よびだしています…');
-      callPanel('ring','発信中…','あいてが でるのを まっています。でない ときは 下の「終了」を おしてください。');
-      setTimeout(function(){ if(voiceTicket===callMediaTicket&&rtcOn&&!callVideo&&pc&&pc.connectionState!=='connected'){ stopCall(); toast(peerName()+' は でませんでした。'); } },50000); })
+      callPanel('ring','よびだし中…','あいてが でると つながります。やめるときは 赤い「終了」を おして ください。');
+      setTimeout(function(){ if(voiceTicket===callMediaTicket&&rtcOn&&!callVideo&&pc&&pc.connectionState!=='connected'){ stopCall(true,'noanswer'); } },50000); })
     .catch(function(e){ if(voiceTicket!==callMediaTicket) return; callDiagLog('rtcStart-voice',e); stopMic(); self2.textContent='電話 不可'; toast('電話を はじめられませんでした（'+(e&&e.name||'')+'）。'); });
 });
 /* 通話は いつでも 『どこでも つながる』ように STUN を つかう。
@@ -9203,7 +9271,7 @@ function rtcStart(isCaller){
     if(pc&&pc.connectionState==='connected'){
       if(cb) cb.textContent='通話中';
       if(stt) stt.textContent='つながりました';
-      callPanel('on','通話中','つながって います。おわるときは 下の「終了」を おしてください。');
+      callPanel('on','つながりました','通話中です。おわるときは 赤い「終了」を おして ください。');
       paintCallOut();
       if(fbT){ clearTimeout(fbT); fbT=0; }
       tuneSenders();
@@ -9225,7 +9293,7 @@ function rtcStart(isCaller){
       try{ var cb3=$('#call-box'); if(cb3) cb3.classList.remove('rtc-ok'); if(callVideo){ Vid.listen(); Vid.start(); } }catch(e){}
       if(cb) cb.textContent='つなぐ中…';
       if(stt) stt.textContent='つなぎなおしています…';
-      callPanel('ring','つなぎ直し中…','でんわが きれました。すぐに もどらない ときは「終了」して かけ直してください。');
+      callPanel('ring','つなぎ直し中…','でんわが きれました。もどらない ときは 赤い「終了」で かけ直して ください。');
       if(!fbT) fbT=setTimeout(function(){
         fbT=0;
         if(!rtcOn) return;
@@ -10281,12 +10349,12 @@ Net.onMsg=function(m){
     case 'rtc-bye':
       if(m.from===S.me.id) break;
       closeCallAsk();
-      stopCall(false);
+      stopCall(true,'peer');   /* v310: あいてが きった ことを 大きく 出す */
       break;
     case 'call-no':
       if(m.from===S.me.id) break;
       if(rtcOn&&!callVideo){
-        stopCall(false);
+        stopCall(true,'noanswer');   /* v310 */
         toast(m.r==='busy'?(peerName()+' は でませんでした。'):(m.r==='mic'?(peerName()+' の マイクが つかえませんでした。'):(peerName()+' に ことわられました。')));
       }
       break;
@@ -10757,6 +10825,20 @@ async function bgPushSetup(){
   }catch(e){ bgPushFail++; pushStateSet(false,'とうろく できません（'+(e&&e.name||'エラー')+'）'); }
 }
 var bellLast=0, bellCount=0, bellT=null;
+/* v308: でんわの よびだしを 相手の スマホへ とどける（とじていても 長い バイブで なる） */
+async function callPush(){
+  try{
+    var t=await bellTopic(); if(!t) return false;
+    var payload='zgcall:'+Date.now();
+    if(psrvGet()){
+      try{ var j=await psrvPush(t,payload); if(j&&j.ok&&((j.send|0)>0||(j.sent|0)>0)) return true; }catch(e){}
+    }
+    try{
+      var r=await fetch('https://ntfy.sh/'+t,{method:'POST',headers:{'Content-Type':'text/plain','Priority':'max','Tags':'phone'},body:payload});
+      return !!(r&&r.ok);
+    }catch(e){ return false; }
+  }catch(e){ return false; }
+}
 async function ringBell(){
   /* v121: 送った 数を 数える。0.8秒 まとめて「いま 未読 何通か」を 合図に のせる */
   bellCount++;
@@ -10872,7 +10954,7 @@ async function drainInbox(){
   setInterval(function(){ if(Date.now()-t0>30000){ t0=Date.now(); } },1000);
 })();
 document.addEventListener('visibilitychange',function(){ if(!document.hidden){ setTimeout(drainInbox,100); try{ if(Date.now()-(window.__bgLast||0)>3600000){ window.__bgLast=Date.now(); bgPushSetup(); } }catch(e){} } });
-try{ navigator.serviceWorker&&navigator.serviceWorker.addEventListener('message',function(e){ if(e.data==='zg-new'){ try{ drainInbox(); }catch(_e){} [250,700,1500,3000].forEach(function(ms){ setTimeout(function(){ try{ drainInbox(); }catch(_e){} },ms); }); try{ peerOpenSweep(); }catch(_e){} } else if(e.data&&typeof e.data==='object'&&e.data.swver){ var sv=document.getElementById('swver'); if(sv) sv.textContent=e.data.swver; } }); }catch(e){}
+try{ navigator.serviceWorker&&navigator.serviceWorker.addEventListener('message',function(e){ if(e.data==='zg-call'){ try{ toast('📞 でんわが きて います。アプリを ひらいた まま まって ください。'); }catch(_e){} try{ if(navigator.vibrate) navigator.vibrate([600,250,600,250,600]); }catch(_e){} try{ notifyIncoming(); }catch(_e){} } else if(e.data==='zg-new'){ try{ drainInbox(); }catch(_e){} [250,700,1500,3000].forEach(function(ms){ setTimeout(function(){ try{ drainInbox(); }catch(_e){} },ms); }); try{ peerOpenSweep(); }catch(_e){} } else if(e.data&&typeof e.data==='object'&&e.data.swver){ var sv=document.getElementById('swver'); if(sv) sv.textContent=e.data.swver; } }); }catch(e){}
 async function ringBellOld(){
   /* あいての 端末が とじて いても 通知が とどく ように「ベル」だけ ならす（1分に 1回まで） */
   if(Date.now()-bellLast<5000) return;

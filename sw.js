@@ -10,7 +10,7 @@ self.addEventListener('install', function(e){ self.skipWaiting(); });
 self.addEventListener('activate', function(e){ e.waitUntil((async function(){ await self.clients.claim(); try { var n0 = await cntRead(); await badgeSet(n0); } catch (err) {} })()); });
 
 var unread = 0;
-var SW_VERSION = 'sw153';
+var SW_VERSION = 'sw154';
 var PAW = 'data:image/png;base64,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';
 
 function idbOpen(){
@@ -89,6 +89,20 @@ async function handlePush(raw){
   var txt = pickText(raw);
   var om = /^zgo:(\d+)$/.exec(txt);
   if (om) { return handlePeerOpen(parseInt(om[1], 10)); }
+  /* v154: でんわの よびだし。とじていても 長めの バイブで しらせる */
+  var zc = /^zgcall:(\d+)$/.exec(txt);
+  if (zc) {
+    try {
+      await self.registration.showNotification('📞 でんわが きて います', {
+        body: 'タップして でて ください',
+        tag: 'mtg-call', renotify: true, silent: false, requireInteraction: true,
+        vibrate: [700,300,700,300,700,300,700,300,700,300,700],
+        icon: './icon-paw-192.png', badge: './icon-paw-192.png',
+        data: { app:'zg', zgcall: parseInt(zc[1],10) }
+      });
+    } catch (err) {}
+    return;
+  }
   var isTest = txt.indexOf('zg-test') >= 0;
   /* 本文つき: 'zgm:件数:あんごう文' / 数字だけの 合図 'zgn:件数' は v126 では つかわない（通知も ださない） */
   var mm = /^zgm:(\d+):([\s\S]+)$/.exec(txt);
@@ -170,7 +184,21 @@ self.addEventListener('push', function(e){
 });
 
 self.addEventListener('notificationclick', function(e){
+  var isCall = !!(e.notification && e.notification.data && e.notification.data.zgcall);
   e.notification.close();
+  /* v154: でんわの しらせを タップしたら、ひらいて いる 画面に つたえる */
+  if (isCall) {
+    e.waitUntil((async function(){
+      try {
+        var lc = await self.clients.matchAll({type:'window', includeUncontrolled:true});
+        for (var ic=0; ic<lc.length; ic++) { try { lc[ic].postMessage('zg-call'); } catch (err) {} }
+        for (var fc=0; fc<lc.length; fc++) { if (lc[fc].visibilityState==='visible' && 'focus' in lc[fc]) return lc[fc].focus(); }
+        if (lc.length && 'focus' in lc[0]) return lc[0].focus();
+      } catch (err) {}
+      if (self.clients.openWindow) return self.clients.openWindow('./');
+    })());
+    return;
+  }
   unread = 0;
   e.waitUntil((async function(){
     await cntSave(0);
