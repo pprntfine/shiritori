@@ -982,7 +982,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v316</b></p>
+      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v317</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1056,7 +1056,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v316</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v317</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -6315,7 +6315,7 @@ function sendAppOpen(reason){
   var __fg=(typeof document!=='undefined'&&document.visibilityState==='visible')?1:0;
   var __g=gestAgeSec();
   /* v268: 理由(r)と 自分の 版(pv)も のせる。あいては「なぜ 増えたか」を 時刻つきで 見られる */
-  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v316'}); }catch(e){}
+  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v317'}); }catch(e){}
   /* v263: アプリを とじて いても 鳴る ように、あいての「ベル用とおりみち」へ 1通だけ おくる。
      この とおりみちは あいてだけが うけとる（こちらには もどらない）。中身は 時刻だけ。 */
   try{ if(peerOpenOn()&&peerKeepOn()&&__r!=='conn') pushPeerOpen(t,__fg,true); }catch(e){}   /* v284: 本物の 起動は 画面判定で 落とさない */   /* v267/v268: 本物の 開封だけ スマホの ベルへ */
@@ -11288,6 +11288,7 @@ function igHeartFly(x){
 setTimeout(async function(){ try{ await outRestore(); S.outbox=S.outbox||outLoad(); if(S.outbox.length){ flushOutbox(); } }catch(e){} },3000);
 /* 起動：ペアの きおくが あれば しずかに つなぐ（メッセージ・通知は とどく） */
 setTimeout(function(){ try{ if(pairHasKeys()&&!Net.topic) resumeConnect(true); }catch(e){} },1200);
+setTimeout(function(){ backToLobbyIfIdle(); },2600);   /* v317: ひらき直しの あとも トップ画面 */
 
 /* 起動 */
 if(isLocalFile()){
@@ -11351,6 +11352,22 @@ window.addEventListener('pagehide',function(){ Net.close(); });
 })();
 show('lobby'); setTab('game'); setNet('off'); setLock(false,'鍵なし');   /* v315: 起動は トップ画面・ゲームの タブから */
 setTimeout(function(){ backToLobbyIfIdle(); },1600);   /* v316: あとから プレイ画面に なっても トップへ もどす */
+/* v317: 見ばり。クイズが はじまって いないのに プレイ画面（あいてを まっています…）が 出て いたら、
+   1.2秒ごとに しらべて トップ画面へ もどす。どの 道すじから 出ても なおる。 */
+setInterval(function(){
+  try{
+    if(document.visibilityState!=='visible') return;
+    if(S.phase!=='play') return;
+    if(S.qz||S.over||S.pending) return;          /* クイズ中・けっか・まち は そのまま */
+    if(S.tab!=='game') return;                    /* トークを 見て いる ときは さわらない */
+    var cb=$('#call-box'); if(cb&&!cb.hidden) return;
+    var lb=$('#live-box'); if(lb&&!lb.hidden) return;
+    var qm=$('#qr-modal'); if(qm&&qm.classList.contains('on')) return;
+    var pm=$('#prof-modal'); if(pm&&pm.classList.contains('on')) return;
+    if(camStream) return;
+    show('lobby'); setTab('game'); appNav.sync();
+  }catch(e){}
+},1200);
 appNav.init();
 new MutationObserver(function(){ appNav.changed(); }).observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['class','hidden']});
 window.addEventListener('pagehide',function(){ closeCam(); stopCall(false); });
