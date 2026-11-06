@@ -897,7 +897,11 @@ body.in-play .leave-row{display:none!important}
 .line-composer .chat-tools-toggle{display:block;min-height:36px;padding:6px 12px;border:1px solid #D9E2E9;border-radius:18px;background:#fff;color:#357459;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
 .line-composer .chat-tools-toggle:focus-visible{outline:3px solid #32795b;outline-offset:2px}
 /* v225: 入力幅を減らさない独立したスタンプ欄。画像や外部素材は使わない。 */
-.chat-composer-actions{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.chat-composer-actions{display:flex;flex-wrap:nowrap;gap:4px;align-items:center;width:100%}
+/* v314: 上ならびは メニュー／ライブ／電話／スタンプ／削除 の 5つだけ */
+.chat-composer-actions .chat-tools-toggle{flex:1 1 0;min-width:0;padding:6px 2px;font-size:11.5px;white-space:nowrap;text-align:center}
+.chat-composer-actions button::before{content:none!important}
+#btn-chat-tools.on,#btn-live.on{background:#e5f7da;border-color:#32795b}
 .line-composer .chat-composer-actions button{min-height:44px}
 .line-composer #btn-stickers[aria-expanded="true"]{background:#e5f7da;border-color:#32795b}
 .sticker-picker{grid-column:1/-1;grid-row:2;min-width:0;max-height:min(300px,45dvh);overflow-y:auto;overscroll-behavior:contain;background:#fff;border:1px solid #D9E2E9;border-radius:16px;padding:8px;color:#34493c}
@@ -978,7 +982,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v313</b></p>
+      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v315</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1052,7 +1056,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v313</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v315</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -1139,16 +1143,16 @@ body.in-play .leave-row{display:none!important}
       <div class="chat-tool-menu">
         <div class="chat-composer-actions">
           <button id="btn-chat-tools" type="button" class="chat-tools-toggle" aria-expanded="false" aria-controls="chat-tools">メニュー</button>
-          <button id="btn-stickers" type="button" class="chat-tools-toggle" aria-expanded="false" aria-controls="sticker-picker" aria-haspopup="dialog">スタンプ</button>
+          <button id="btn-live" type="button" class="chat-tools-toggle" title="ライブ えいぞう">ライブ</button>
           <button id="btn-call" type="button" class="chat-tools-toggle" title="こえで はなす（でんわ）">電話</button>
+          <button id="btn-stickers" type="button" class="chat-tools-toggle" aria-expanded="false" aria-controls="sticker-picker" aria-haspopup="dialog">スタンプ</button>
+          <button id="btn-delchat" type="button" class="chat-tools-toggle" title="この スマホの トークを ぜんぶ けす">削除</button>
         </div>
       <div id="chat-tools" class="tools" hidden>
-        <button id="btn-live" type="button" class="notify-btn" title="ライブ えいぞう">ライブ</button>
         <button id="btn-photo" type="button" class="notify-btn" title="しゃしんを おくる">カメラ</button>
         <button id="btn-attach-photo" type="button" class="notify-btn">写真・動画</button>
         <input id="chat-photo-file" type="file" accept="image/*,video/*" hidden>
         <button id="btn-notify" type="button" class="notify-btn" title="メッセージ通知(内容は表示しません)">通知:オフ</button>
-        <button id="btn-delchat" type="button" class="notify-btn" title="この スマホの トークを ぜんぶ けす">けす</button>
       </div>
       </div>
       <textarea id="in-chat" rows="1" maxlength="300" placeholder="メッセージを入力" enterkeyhint="enter" autocomplete="off" spellcheck="false" inputmode="text"></textarea>
@@ -1303,7 +1307,8 @@ body.in-play .leave-row{display:none!important}
     var returnFocus=!open&&tools.contains(document.activeElement);
     tools.hidden=!open;
     toggle.setAttribute('aria-expanded',String(open));
-    toggle.textContent=open?'閉じる':'メニュー';
+    toggle.textContent='メニュー';   /* v314: 名前は かえない（色で ひらいた ことを しめす） */
+    toggle.classList.toggle('on',open);
     if(returnFocus) toggle.focus({preventScroll:true});
   }
   toggle.addEventListener('click',function(){ setToolsOpen(tools.hidden); });
@@ -6153,7 +6158,7 @@ async function resumeConnect(silent){
     startPing(); startWatch(); if(S.isHost) startFullWatch();
     /* v111: hi2 は 送らない */
     try{ renderChat(true); }catch(e){}
-    if(!silent){ show('play'); document.querySelector('.bar').classList.add('compact'); setTab('game'); try{ if(S.sealed&&Net.key) setLock(true,'暗号化'); }catch(e){} }   /* v313: ひらき直しは トップ画面から */   /* v184: もどした ときも かぎランプを つける（あんごうは 有効・ランプだけ 消えていた） */
+    if(!silent){ show('lobby'); document.querySelector('.bar').classList.add('compact'); setTab('game'); try{ if(S.sealed&&Net.key) setLock(true,'暗号化'); }catch(e){} }   /* v313: ひらき直しは トップ画面から */   /* v184: もどした ときも かぎランプを つける（あんごうは 有効・ランプだけ 消えていた） */
     setTimeout(function(){ try{ bgPushSetup(); }catch(e){} },2000);
     setTimeout(drainInbox,600);
     try{ paintTopicTag(); }catch(e){}
@@ -6303,7 +6308,7 @@ function sendAppOpen(reason){
   var __fg=(typeof document!=='undefined'&&document.visibilityState==='visible')?1:0;
   var __g=gestAgeSec();
   /* v268: 理由(r)と 自分の 版(pv)も のせる。あいては「なぜ 増えたか」を 時刻つきで 見られる */
-  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v313'}); }catch(e){}
+  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v315'}); }catch(e){}
   /* v263: アプリを とじて いても 鳴る ように、あいての「ベル用とおりみち」へ 1通だけ おくる。
      この とおりみちは あいてだけが うけとる（こちらには もどらない）。中身は 時刻だけ。 */
   try{ if(peerOpenOn()&&peerKeepOn()&&__r!=='conn') pushPeerOpen(t,__fg,true); }catch(e){}   /* v284: 本物の 起動は 画面判定で 落とさない */   /* v267/v268: 本物の 開封だけ スマホの ベルへ */
@@ -6851,7 +6856,7 @@ function renderChat(forceBottom, __tailFrom){
     markDeletable(row,bub,m,mine);
     if(!m.file&&isSticker(m.text)){
       bub.classList.add('sticker-b');
-      bub.setAttribute('aria-label',(mine?'送信した':'受信した')+'スタンプ「'+STICKER_NAMES[STICKERS.indexOf(m.text)]+'」。長押し、または操作ボタンで反応を選ぶ');
+      bub.setAttribute('aria-label',(mine?'送信した':'受信した')+'スタンプ「'+(STICKER_NAMES[STICKERS.indexOf(m.text)]||'')+'」。長押し、または操作ボタンで反応を選ぶ');
     }
     if(mine){ row.dataset.uid=m.uid||''; if(m.n) row.dataset.n=String(m.n); row.appendChild(meta); row.appendChild(bub); }
     else{
@@ -7891,6 +7896,10 @@ var STICKER_CATEGORIES=[
   {name:'きのこ',items:[['🍄‍🟫','ぐんぐん そだつ','grow'],['🍄‍🟫','のっしのっし','walk'],['🍄‍🟫','かけあし きのこ','dash'],['🍄‍🟫','きのこ ばくそう','rage'],['🍄‍🟫','どすんどすん','stomp'],['🍄‍🟫','ぷるぷる きのこ','jelly'],['🍄‍🟫','くるくる きのこ','spin'],['🍄‍🟫','ぴょんぴょん','hop'],['🍄‍🟫🍄‍🟫','きのこ ふたり','walk'],['🍄‍🟫🍄‍🟫🍄‍🟫','ぞろぞろ きのこ','dash'],['🍄‍🟫💥','きのこ ばくはつ','rage'],['🍄‍🟫✨','きのこ きらきら','spark']]},
   {name:'全画面',items:[['🍄‍🟫🍄‍🟫🍄‍🟫','きのこ だいばくそう','rage',['🍄‍🟫','🍄‍🟫','💥']],['❤️💕❤️','広がるハート','pulse',['❤️','💕','💗']],['😘💋✨','キスの風','sway',['😘','💋','💕']],['✨💖✨','星のきらめき','spark',['✨','💖','🌟']],['🎉🎊✨','お祝いの花吹雪','bob',['🎉','🎊','✨']],['🌸💕🌸','桜の便り','sway',['🌸','💕','🌸']],['🫶💗🫶','大切なあなたへ','pulse',['🫶','💗','💕']],['🌈✨🌈','虹の祝福','spark',['🌈','✨','💖']],['💐🌼💐','花束をどうぞ','bob',['💐','🌼','🌷']],['👏🌟👏','いっぱいの拍手','sway',['👏','🌟','✨']],['🎈🎉🎈','風船のお祝い','bob',['🎈','🎉','🎊']],['💌💕💌','想いを届ける','pulse',['💌','💕','💗']],['🌙⭐✨','おやすみの星','spark',['🌙','⭐','✨']],['🎆✨🎆','花火の夜','pulse',['🎆','✨','🎇']],['🌠💫🌠','流れ星の願い','spark',['🌠','✨','💫']],['❄️⛄❄️','ゆきのあした','sway',['❄️','⛄','❄️']],['🌻☀️🌻','ひだまりの花','pulse',['🌻','☀️','🌼']],['🌺🌴🌺','南の島から','bob',['🌺','🌴','🐬']],['🐬🌊🐬','海のなかまたち','sway',['🐬','🌊','🐠']],['🍀✨🍀','しあわせのクローバー','pulse',['🍀','✨','💛']],['🎁🎀🎁','プレゼントだよ','bob',['🎁','🎀','✨']],['🍰🍓🍰','おいしいおしらせ','pulse',['🍰','🍓','🍩']],['🎠💫🎠','めぐるゆめ','sway',['🎠','💫','🎡']],['🌷💗🌷','春のありがとう','bob',['🌷','💗','💐']],['👑✨👑','きょうの主役','spark',['👑','✨','🎉']],['🏰✨🏰','ゆめのおしろ','bob',['🏰','✨','👑']],['🐝🍯🐝','はちみつの時間','sway',['🐝','🍯','🌼']],['🎐✨🎐','ふうりんのなつ','pulse',['🎐','✨','🌊']],['🏮✨🏮','まつりの夜','spark',['🏮','✨','🎆']],['💜✨💜','むらさきの想い','spark',['💜','✨','💫']],['💛🌼💛','ひかりの花束','pulse',['💛','🌼','🌻']],['💙🌊💙','うみのしあわせ','sway',['💙','🌊','🐬']],['✈️☁️✈️','そらのたび','bob',['✈️','☁️','🌍']],['🌍✨🌍','せかいのおいわい','spark',['🌍','✨','🎉']],['🎶🎤🎶','みんなのうた','bob',['🎶','🎤','🎵']],['🍮✨🍮','とびきりのデザート','sway',['🍮','✨','🍰']],['🎋✨🎋','たんざくの願い','spark',['🎋','✨','🌠']]]}
 ];
+/* v314: 🍄‍🟫 の スタンプは「あまりにも へん」という ことで ぜんぶ けす */
+STICKER_CATEGORIES=STICKER_CATEGORIES.filter(function(c){ return c.name!=='きのこ'; }).map(function(c){
+  return {name:c.name,items:c.items.filter(function(it){ return String(it[0]).indexOf('\uD83C\uDF44')<0; })};
+}).filter(function(c){ return c.items.length>0; });
 var STICKERS=[],STICKER_NAMES=[];
 STICKER_CATEGORIES.forEach(function(category){ category.items.forEach(function(item){ STICKERS.push(item[0]); STICKER_NAMES.push(item[1]); }); });
 var stickerPicker=null,stickerPickerScope='';
@@ -9807,7 +9816,7 @@ document.addEventListener('visibilitychange',function(){
     return;
   }
   maybeSendRead(true);   /* v232: もどってきたら なくなった 既読も 立て直す */
-  /* v313: ホームから もどったら トップ画面から やり直す（通話・ライブ・写真を 見ている ときは そのまま） */
+  /* v313/v315: ホームから もどったら トップ画面（雑学王）から やり直す（通話・ライブ・写真を 見ている ときは そのまま） */
   try{
     var busy=(function(){
       var cb=$('#call-box'); if(cb&&!cb.hidden) return true;
@@ -9817,7 +9826,11 @@ document.addEventListener('visibilitychange',function(){
       if(camStream) return true;
       return false;
     })();
-    if(!busy&&S.phase==='play'&&S.tab==='chat'){ setTab('game'); appNav.sync(); }
+    if(!busy&&(S.phase==='play'||S.phase==='secret')){
+      setTab('game');      /* v315: トークの タブは とじて おく */
+      show('lobby');       /* v315: かならず トップ画面（雑学王の 画面）から */
+      appNav.sync();
+    }
   }catch(e){}
 });
 window.addEventListener('pageshow',function(e){ if(e.persisted) appNav.sync(); });
@@ -11329,7 +11342,7 @@ window.addEventListener('pagehide',function(){ Net.close(); });
   window.addEventListener('appinstalled',function(){ if(bi) bi.hidden=true; if(hi) hi.hidden=true; });
   setTimeout(iosHint,600);
 })();
-show('lobby'); setTab('chat'); setNet('off'); setLock(false,'鍵なし');
+show('lobby'); setTab('game'); setNet('off'); setLock(false,'鍵なし');   /* v315: 起動は トップ画面・ゲームの タブから */
 appNav.init();
 new MutationObserver(function(){ appNav.changed(); }).observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['class','hidden']});
 window.addEventListener('pagehide',function(){ closeCam(); stopCall(false); });
@@ -11511,6 +11524,11 @@ body.selmode #chat-log .msg.sel-pick:before{border-color:#F4436A;background:#F44
 body.selmode #chat-log .msg.sel-pick{background:rgba(244,67,106,.07);border-radius:12px}
 body.selmode #chat-log .msg.sel-pick .bubble{box-shadow:0 0 0 2px rgba(244,67,106,.55)!important}
 body.selmode #chat-log .msg:after{display:none!important}
+
+/* v314: 5つの ボタン（メニュー／ライブ／電話／スタンプ／削除）。せまい ときは 2行に なるが、文字は けずらない */
+.line-composer .chat-tool-menu{grid-column:1/-1;width:100%;min-width:0;box-sizing:border-box}
+.line-composer .chat-composer-actions{display:flex!important;flex-wrap:wrap!important;gap:4px!important;width:100%!important;box-sizing:border-box}
+.line-composer .chat-composer-actions button{flex:0 1 auto!important;min-width:max-content!important;width:auto!important;padding:6px 9px!important;font-size:11.5px!important;white-space:nowrap;overflow:visible!important}
 </style>
 <script>
 /* v251: えらんで まとめて けす。入り口は 上部の 見出し行、決定は 下部の まるい ボタン。 */
