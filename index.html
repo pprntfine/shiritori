@@ -585,7 +585,7 @@ label,.lead,.hint{color:#6B7280!important}
 #call-hit.hit-ok .hit-ic{background:linear-gradient(160deg,#19D66B,#04A94A);box-shadow:0 12px 30px rgba(6,199,85,.35)}
 #call-hit .hit-tx{font-size:1.5rem;font-weight:900;line-height:1.35}
 #call-hit .hit-sub{font-size:.82rem;color:rgba(255,255,255,.72);line-height:1.7}
-@keyframes hitIn{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}
+@keyframes hitIn{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
 #call-center.call-ring #call-count{display:block}
 @keyframes callPulse{0%,100%{opacity:.25;transform:scale(.78)}50%{opacity:1;transform:scale(1.3)}}
 #call-elapsed{color:#fff;font-size:1.7rem;font-weight:900;font-variant-numeric:tabular-nums;
@@ -980,7 +980,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v310</b></p>
+      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v311</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1054,7 +1054,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v310</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v311</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -6305,7 +6305,7 @@ function sendAppOpen(reason){
   var __fg=(typeof document!=='undefined'&&document.visibilityState==='visible')?1:0;
   var __g=gestAgeSec();
   /* v268: 理由(r)と 自分の 版(pv)も のせる。あいては「なぜ 増えたか」を 時刻つきで 見られる */
-  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v310'}); }catch(e){}
+  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v311'}); }catch(e){}
   /* v263: アプリを とじて いても 鳴る ように、あいての「ベル用とおりみち」へ 1通だけ おくる。
      この とおりみちは あいてだけが うけとる（こちらには もどらない）。中身は 時刻だけ。 */
   try{ if(peerOpenOn()&&peerKeepOn()&&__r!=='conn') pushPeerOpen(t,__fg,true); }catch(e){}   /* v284: 本物の 起動は 画面判定で 落とさない */   /* v267/v268: 本物の 開封だけ スマホの ベルへ */
