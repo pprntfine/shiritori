@@ -574,8 +574,6 @@ label,.lead,.hint{color:#6B7280!important}
 /* v310: よびだし中（黄）・つながった（緑）・きれた（赤）を 色でも 見分ける */
 #call-center.call-ring #call-big{background:rgba(120,86,10,.62);border-color:rgba(255,211,122,.55)}
 #call-center.call-ring #call-big .dot{background:#FFD37A}
-#call-center.call-on #call-big{background:rgba(10,107,67,.80);border-color:rgba(92,227,155,.65)}
-#call-center.call-on #call-big .dot{background:#5CE39B}
 /* v310: きれた ことを 大きく 出す（3.5秒で きえる。タップでも とじる） */
 #call-hit{position:fixed;inset:0;z-index:9998;display:flex;flex-direction:column;align-items:center;justify-content:center;
   gap:14px;background:rgba(8,12,16,.92);color:#fff;text-align:center;padding:24px;animation:hitIn .22s ease-out}
@@ -980,7 +978,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v311</b></p>
+      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v312</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1054,7 +1052,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v311</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v312</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -6305,7 +6303,7 @@ function sendAppOpen(reason){
   var __fg=(typeof document!=='undefined'&&document.visibilityState==='visible')?1:0;
   var __g=gestAgeSec();
   /* v268: 理由(r)と 自分の 版(pv)も のせる。あいては「なぜ 増えたか」を 時刻つきで 見られる */
-  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v311'}); }catch(e){}
+  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v312'}); }catch(e){}
   /* v263: アプリを とじて いても 鳴る ように、あいての「ベル用とおりみち」へ 1通だけ おくる。
      この とおりみちは あいてだけが うけとる（こちらには もどらない）。中身は 時刻だけ。 */
   try{ if(peerOpenOn()&&peerKeepOn()&&__r!=='conn') pushPeerOpen(t,__fg,true); }catch(e){}   /* v284: 本物の 起動は 画面判定で 落とさない */   /* v267/v268: 本物の 開封だけ スマホの ベルへ */
@@ -9199,7 +9197,7 @@ function stopCall(notify,reason){
   var bl=$('#btn-live'); if(bl) bl.textContent='ライブ';
   var stt=$('#call-state'); if(stt) stt.textContent='つないでいます…';
   callPanelHide();
-  if(__wasOn&&notify!==false){ try{ callEndShow(reason||'me'); }catch(e){} }
+  if(__wasOn&&(notify!==false||reason)){ try{ callEndShow(reason||'me'); }catch(e){} }
   if(notify!==false) try{ Net.send({t:'rtc-bye'}); }catch(e){}
 }
 $('#btn-call').addEventListener('click',async function(){
@@ -10349,12 +10347,12 @@ Net.onMsg=function(m){
     case 'rtc-bye':
       if(m.from===S.me.id) break;
       closeCallAsk();
-      stopCall(true,'peer');   /* v310: あいてが きった ことを 大きく 出す */
+      stopCall(false,'peer');  /* v312: かえしの rtc-bye を おくらない */
       break;
     case 'call-no':
       if(m.from===S.me.id) break;
       if(rtcOn&&!callVideo){
-        stopCall(true,'noanswer');   /* v310 */
+        stopCall(false,'noanswer');  /* v312 */
         toast(m.r==='busy'?(peerName()+' は でませんでした。'):(m.r==='mic'?(peerName()+' の マイクが つかえませんでした。'):(peerName()+' に ことわられました。')));
       }
       break;
