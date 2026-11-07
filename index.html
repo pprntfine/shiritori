@@ -982,7 +982,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v327</b></p>
+      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v329</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1056,7 +1056,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v327</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v329</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -3088,7 +3088,8 @@ $('#peek').addEventListener('keydown',function(e){ if(e.key==='Enter'||e.key==='
 /* =================================================================
    6. ロビー
    ================================================================= */
-function myName(){ return 'ぶー'; }
+/* v329: プロフで 決めた 自分の 名前を 使う（かためて 「ぶー」に して いた ため、入室の 合図も いつも ぶー だった） */
+function myName(){ try{ if(window.PROF&&PROF.me&&typeof PROF.me.name==='string'){ var n=PROF.me.name.trim().slice(0,12); if(n) return n; } }catch(e){} return 'ぶー'; }
 function busy(on,msg,el){
   S.busy=!!on;
   $('#btn-create').disabled=!!on;
@@ -6373,7 +6374,7 @@ function sendAppOpen(reason){
   var __fg=(typeof document!=='undefined'&&document.visibilityState==='visible')?1:0;
   var __g=gestAgeSec();
   /* v268: 理由(r)と 自分の 版(pv)も のせる。あいては「なぜ 増えたか」を 時刻つきで 見られる */
-  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v327'}); }catch(e){}
+  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v329'}); }catch(e){}
   /* v263: アプリを とじて いても 鳴る ように、あいての「ベル用とおりみち」へ 1通だけ おくる。
      この とおりみちは あいてだけが うけとる（こちらには もどらない）。中身は 時刻だけ。 */
   try{ if(peerOpenOn()&&peerKeepOn()&&__r!=='conn') pushPeerOpen(t,__fg,true); }catch(e){}   /* v284: 本物の 起動は 画面判定で 落とさない */   /* v267/v268: 本物の 開封だけ スマホの ベルへ */
@@ -6471,8 +6472,12 @@ function plogLoadMine(){ return plogLoad(); }
 function plogClean(){
   try{
     var l=plogLoad(),me=S.me&&S.me.id,o=[];
-    for(var i=0;i<l.length;i++){ var e=l[i]; if(!e) continue; if(me&&e.f&&e.f===me) continue; o.push(e); }
-    if(o.length!==l.length){ plogSave(o); }
+    var __mn=''; try{ __mn=myName(); }catch(e0){}
+    var __chg=0;
+    for(var i=0;i<l.length;i++){ var e=l[i]; if(!e) continue; if(me&&e.f&&e.f===me) continue;
+      if(e.pn&&__mn&&e.pn===__mn){ delete e.pn; __chg=1; }   /* v328: 自分自身の 名前は あいての 名前では ない */
+      o.push(e); }
+    if(o.length!==l.length||__chg){ plogSave(o); }
     return o;
   }catch(e){ return plogLoad(); }
 }
@@ -6568,7 +6573,7 @@ function plogNoteMsg(at,mid,recvAt){
         e.marr=Math.max(e.marr||0,rcv);
         if(typeof e.dly!=='number'||Math.abs(dly)>Math.abs(e.dly)) e.dly=dly;   /* いちばん 大きい ずれ を のこす */
         if(mid){ e.mids=e.mids||[]; e.mids.push(mid); if(e.mids.length>20) e.mids=e.mids.slice(-20); }
-        if(!e.pn&&S.opp&&S.opp.name) e.pn=String(S.opp.name);   /* v327 */
+        if(!e.pn){ var __pn2=''; try{ __pn2=String(peerName()||''); }catch(e2){}; if(__pn2&&__pn2!==myName()) e.pn=__pn2; }   /* v328 */
         if(!e.f&&S.opp&&S.opp.id) e.f=String(S.opp.id);
         if(!e.pv&&peerVersion(S.peerVer)) e.pv=peerVersion(S.peerVer);
         plogSave(l); plogRender(); return;
@@ -6578,7 +6583,8 @@ function plogNoteMsg(at,mid,recvAt){
     if(raw!==null) rec.mt=raw;
     if(mid) rec.mids=[mid];
     if(S.opp&&S.opp.id) rec.f=S.opp.id;
-    if(S.opp&&S.opp.name) rec.pn=String(S.opp.name);   /* v327: あいての 名前と 版も のこす */
+    var __pn3=''; try{ __pn3=String(peerName()||''); }catch(e3){}; if(__pn3===myName()) __pn3='';
+    if(__pn3) rec.pn=__pn3;   /* v328: あいての 名前と 版も のこす */
     if(peerVersion(S.peerVer)) rec.pv=peerVersion(S.peerVer);
     l.push(rec); if(l.length>100) l=l.slice(-100);
     plogSave(l); plogRender();
@@ -6631,7 +6637,9 @@ function plogAdd(kind,at,proof,meta){
     /* v327: 出し手は つねに あいて。自分を 入れて いた ため、読みこみ時に「自分の 記録」として 消えて いた */
     var __pf=(meta&&meta.f)?String(meta.f):((S.opp&&S.opp.id)?String(S.opp.id):'');
     if(__pf&&(!S.me||__pf!==S.me.id)) rec.f=__pf;
-    var __pn=(S.opp&&S.opp.name)?String(S.opp.name):'';   /* v327: あいての 名前も 1件ごとに のこす */
+    /* v328: 名前は プロフで 交換した あいての 名前（peerName）。S.opp.name は 入室の 合図の 名前で、
+       アプリに かためて 入って いる「ぶー」に なって しまう ため 使わない */
+    var __pn=''; try{ __pn=String(peerName()||''); }catch(e){}; if(__pn===myName()) __pn='';
     if(__pn) rec.pn=__pn;
     if(meta){ if(meta.r) rec.r=String(meta.r); if(peerVersion(meta.pv)) rec.pv=peerVersion(meta.pv); if(meta.rt) rec.rt=meta.rt; if(meta.f&&(!S.me||String(meta.f)!==S.me.id)) rec.f=String(meta.f); }
     l.push(rec); if(l.length>100) l=l.slice(-100);
