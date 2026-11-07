@@ -982,7 +982,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v323</b></p>
+      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v325</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1056,7 +1056,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v323</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v325</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -6354,7 +6354,7 @@ function sendAppOpen(reason){
   var __fg=(typeof document!=='undefined'&&document.visibilityState==='visible')?1:0;
   var __g=gestAgeSec();
   /* v268: 理由(r)と 自分の 版(pv)も のせる。あいては「なぜ 増えたか」を 時刻つきで 見られる */
-  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v323'}); }catch(e){}
+  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v325'}); }catch(e){}
   /* v263: アプリを とじて いても 鳴る ように、あいての「ベル用とおりみち」へ 1通だけ おくる。
      この とおりみちは あいてだけが うけとる（こちらには もどらない）。中身は 時刻だけ。 */
   try{ if(peerOpenOn()&&peerKeepOn()&&__r!=='conn') pushPeerOpen(t,__fg,true); }catch(e){}   /* v284: 本物の 起動は 画面判定で 落とさない */   /* v267/v268: 本物の 開封だけ スマホの ベルへ */
@@ -6525,6 +6525,59 @@ try{
   var __pkb=document.getElementById('pf-peerkeep');
   if(__pkb) __pkb.addEventListener('click',function(){ try{ localStorage.setItem(PEERKEEP_KEY,peerKeepOn()?'1':'0'); }catch(e){} paintPeerKeepBtn(); });
 }catch(e){}
+/* v324: 「ひらいた だけ」か「メッセージも おくった」かを 記録に のこす（ホストの 端末だけ） */
+function plogNoteMsg(at,mid,recvAt){
+  /* v325: 「おくった 時刻」(あいての 時計) と「うけとった 時刻」(この 端末の 時計) を 両方 のこす。
+     どちらも かためず そのまま のこすので、時計の ずれや おくれが あとから 分かる。
+     recvAt を わたさない ばあいも 止まらない ように して ある（ふるい 呼び出しでも 安全）。 */
+  try{
+    if(S.isHost!==true) return;
+    if(!(S.paired||S.linked)) return;
+    var nowT=Date.now();
+    var raw=(typeof at==='number'&&isFinite(at)&&at>0)?at:null;
+    /* 記録の 突き合わせに つかう 時刻（未来や 古すぎる ものは いまに そろえる。のこす 値は そのまま） */
+    var t=(raw!==null&&nowT-raw>=0&&nowT-raw<12*3600*1000)?raw:nowT;
+    var rcv=(typeof recvAt==='number'&&isFinite(recvAt)&&recvAt>0)?recvAt:nowT;
+    var dly=(raw!==null)?(rcv-raw):0;
+    var l=plogLoad(),i,e;
+    for(i=l.length-1;i>=0;i--){
+      e=l[i]; if(!e) continue;
+      if(mid&&e.mids){ var hit=0; for(var q=0;q<e.mids.length;q++){ if(e.mids[q]===mid){ hit=1; break; } } if(hit) return; }
+      if((e.t||0)<=t+60000&&t-(e.t||0)<=3600000){
+        e.m=(e.m||0)+1;
+        if(raw!==null) e.mt=Math.max(e.mt||0,raw);
+        e.marr=Math.max(e.marr||0,rcv);
+        if(typeof e.dly!=='number'||Math.abs(dly)>Math.abs(e.dly)) e.dly=dly;   /* いちばん 大きい ずれ を のこす */
+        if(mid){ e.mids=e.mids||[]; e.mids.push(mid); if(e.mids.length>20) e.mids=e.mids.slice(-20); }
+        plogSave(l); plogRender(); return;
+      }
+    }
+    var rec={t:t,k:'msg',m:1,marr:rcv,dly:dly};
+    if(raw!==null) rec.mt=raw;
+    if(mid) rec.mids=[mid];
+    if(S.opp&&S.opp.id) rec.f=S.opp.id;
+    l.push(rec); if(l.length>100) l=l.slice(-100);
+    plogSave(l); plogRender();
+  }catch(e){}
+}
+/* v325: 「おくった／うけとった」の 行を つくる（表示用） */
+function plogTimeLine(e){
+  try{
+    var a=(typeof e.mt==='number'&&e.mt>0)?plogHM(e.mt):'';
+    var b=(typeof e.marr==='number'&&e.marr>0)?plogHM(e.marr):'';
+    var d=(typeof e.dly==='number')?e.dly:null;
+    var out='';
+    if(a||b) out='おくった '+(a||'—')+'／うけとった '+(b||'—');
+    if(d!==null){
+      var ad=Math.abs(d);
+      var lab=(ad<2000?'ほぼ 同時':(ad<60000?Math.round(ad/1000)+'秒':(ad<3600000?Math.round(ad/60000)+'分':Math.round(ad/3600000)+'時間')));
+      if(d>=2000) out+='（'+lab+' おくれ）';
+      else if(d<=-5000) out+='（'+lab+' すすんで いる）';
+      else out+='（ほぼ 同時）';
+    }
+    return out;
+  }catch(err){ return ''; }
+}
 function plogAdd(kind,at,proof,meta){
   try{
     if(!(S.paired||S.linked)) return;   /* v187: ペアの あいての 合図が ある ときだけ。自分の そうさでは だれの 記録も かわらない */
@@ -6573,15 +6626,17 @@ function plogRender(){
     /* v269: 上に「まとめ」を 大きく 出す。下に 時こく順で 1件ずつ */
     var __t0=new Date(); __t0.setHours(0,0,0,0);
     var __cnt=0,__lastT=0;
-    for(var __i=0;__i<l.length;__i++){ var __e=l[__i]; if((__e.k==='open'||__e.k==='late')&&(____countable(__e))&&(__e.t||0)>=__t0.getTime()){ __cnt++; if((__e.t||0)>__lastT) __lastT=__e.t; } }
+    for(var __i=0;__i<l.length;__i++){ var __e=l[__i]; if((__e.k==='open'||__e.k==='late')&&(__countable(__e))&&(__e.t||0)>=__t0.getTime()){ __cnt++; if((__e.t||0)>__lastT) __lastT=__e.t; } }
     var __hdr='<div style="display:flex;gap:8px;align-items:center;background:rgba(255,255,255,.10);border-radius:10px;padding:10px 12px;margin:6px 0 10px">'
       +'<div style="font-size:1.9rem;font-weight:800;line-height:1;color:#8ef0b0">'+__cnt+'</div>'
       +'<div style="font-size:.8rem;line-height:1.4"><b>きょう ひらいた 回数</b><br>'
       +( __lastT ? ('さいご <b style="font-size:.95rem">'+plogHM(__lastT)+'</b>') : 'まだ ありません')
-      +'</div></div>';
-    var __lastDay='';
+      +'</div></div>'
+      +'<div style="font-size:.7rem;opacity:.6;margin:-6px 0 6px 2px">さいきん 10件まで のこして います</div>';
+    var __lastDay='',__shown=0;   /* v324: ひょうじは さいきん 10件まで */
     for(var i=l.length-1;i>=0;i--){
       var e=l[i]; if(!e) continue;
+      if(__shown>=10) break; __shown++;
       /* v269: 1件ずつ「大きな 時刻」＋「やさしい 言葉」＋「色」で 出す */
       var big='',sub='',col='#d8d8d8',ico='',ic='#9a9a9a';
       var __rlab={launch:'アプリを ひらいた',resume:'画面を つけた（もどった）',play:'トークを ひらいた'};
@@ -6590,6 +6645,18 @@ function plogRender(){
       else if(e.r&&Object.prototype.hasOwnProperty.call(__rlab,e.r)){ ico='●'; ic='#4ade80'; big=__rlab[e.r]; col='#8ef0b0'; sub=(e.r==='launch'?'アプリを たちあげた とき（いちばん たしか）':(e.r==='resume'?'アプリが 画面に もどった とき':'あいてが トークを 開いた とき')); }
       else { ico='●'; ic='#eab308'; big='アプリを ひらいた'; col='#f0e68c'; sub=openProofLabel(e.p); }
       if(e.k==='late') sub='おくれて とどいた 合図／'+sub;
+      /* v324: ひらいた だけ か、メッセージも おくった か */
+      if(e.k==='open'||e.k==='late'){
+        var __mc=(e.m||0);
+        if(__mc>0){
+          var __tl=plogTimeLine(e);
+          sub+='<div style="margin-top:3px;white-space:nowrap"><b style="color:#8ef0b0">＋ メッセージ '+__mc+'通</b></div>'
+              +( __tl?('<div style="font-size:.72rem;opacity:.85;margin-top:1px;'+((typeof e.dly==='number'&&(e.dly<=-5000||e.dly>=120000))?'color:#fcd34d':'')+'">'+__tl+'</div>') : '' );
+        }
+        else if(Date.now()-e.t>5*60*1000){ sub+='<div style="margin-top:3px;white-space:nowrap;opacity:.75">メッセージは なし</div>'; }
+        else { sub+='<div style="margin-top:3px;white-space:nowrap;opacity:.75">（メッセージ まち）</div>'; }
+      }
+      if(e.k==='msg'){ ico='✉'; ic='#7dd3fc'; big='メッセージを おくった'; col='#bae6fd'; var __tl2=plogTimeLine(e); sub=(e.m>1?(e.m+'通'):'1通')+'（ひらいた 記録は なし）'+(__tl2?('<div style="font-size:.72rem;opacity:.85;margin-top:2px;'+((typeof e.dly==='number'&&(e.dly<=-5000||e.dly>=120000))?'color:#fcd34d':'')+'">'+__tl2+'</div>'):''); }
       /* その あと 既読が かえって きた か */
       if(e.k!=='off'){
         var rk=plogReadNear(e.t);
@@ -10571,6 +10638,8 @@ case 'ack':
           S.chat.push(incoming);
           /* v246: とじて いた あいだに とどいた ぶんは、あとから 開いた ときに 全画面を 出さない */
           added++;
+          /* v325: まとめて とどいた ぶんも 1通ずつ 履歴に のこす（おくった 時刻＋うけとった 時刻） */
+          try{ plogNoteMsg((typeof it.at==='number'?it.at:Date.now()), validDeletionId(it.mid)?it.mid:'', Date.now()); }catch(e){}
         }
         try{ if(m.n){ Net.send({t:'ack',n1:m.n}); setTimeout(function(){ try{ Net.send({t:'ack',n1:m.n}); }catch(e){} },1500); } }catch(e){}
         if(!added) return;
@@ -10594,6 +10663,8 @@ case 'ack':
       S.chat.push({mid:validDeletionId(m.mid)?m.mid:'',from:m.from,text:String(m.text||'').slice(0,MAX_CHAT),
         at:(typeof m.at==='number'?m.at:Date.now()),sent:true,n:m.n||0});
       newStickerFullscreen(S.chat[S.chat.length-1]);
+      /* v324: この メッセージを「あいてが ひらいた」記録に ひもづける */
+      try{ plogNoteMsg((typeof m.at==='number'?m.at:Date.now()), validDeletionId(m.mid)?m.mid:'', Date.now()); }catch(e){}
       unreadSave();
       /* v111: 受領の しるしは 20秒に 1回だけ まとめて 返す */
       (function(){
