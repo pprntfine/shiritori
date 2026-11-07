@@ -982,7 +982,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v325</b></p>
+      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v326</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1056,7 +1056,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v325</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v326</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -3049,7 +3049,7 @@ function setAppBadgeCount(n){
 /* v128: アプリを ひらいた ときに まちがった バッジを かならず けす（けす 仕事を 誰も していなかった ため） */
 function appBadgeSync(){ try{ setAppBadgeCount(S.unread||0); }catch(e){} }
 [300,1500,5000].forEach(function(ms){ setTimeout(appBadgeSync,ms); });
-document.addEventListener('visibilitychange',function(){ if(!document.hidden){ setTimeout(appBadgeSync,150); try{ peerOpenSweep(); }catch(e){} if(S.tab==='chat') swClearNotifs(); try{ sendAppOpen('resume'); }catch(e){} } });   /* v142/v268: もどった ときも 消す */
+document.addEventListener('visibilitychange',function(){ if(!document.hidden){ setTimeout(appBadgeSync,150); try{ peerOpenSweep(); }catch(e){} if(S.tab==='chat') swClearNotifs(); try{ sendAppOpen('resume'); }catch(e){} try{ setTimeout(resumeToTop,120); }catch(e){} } });   /* v326: もどったら トップへ */   /* v142/v268: もどった ときも 消す */
 /* v178: 画面を もどした ときは ためた 分を すぐ とりにいく（さいだい 20秒 の まちを なくす） */
 document.addEventListener('visibilitychange',function(){
   if(document.hidden) return;
@@ -3060,7 +3060,7 @@ document.addEventListener('visibilitychange',function(){
 });
 /* v179: 回線が もどった・画面を もう いちど 出した ときも 同じ（休み の あいだに ためた 分を 秒で 出す） */
 window.addEventListener('online',function(){ try{ Net.poll(); }catch(e){} try{ if(!Net.open){ Net.retry=0; Net.closeStream(); Net.openStream(); } }catch(e){} try{ Fast.kick(); }catch(e){} try{ drainInbox(); }catch(e){} });
-window.addEventListener('pageshow',function(){ try{ Net.poll(); }catch(e){} try{ Fast.kick(); }catch(e){} try{ drainInbox(); }catch(e){} });
+window.addEventListener('pageshow',function(){ try{ Net.poll(); }catch(e){} try{ Fast.kick(); }catch(e){} try{ drainInbox(); }catch(e){} try{ setTimeout(resumeToTop,120); }catch(e){} });   /* v326: もどったら トップへ */
 /* v178: つながったまま 90秒 うごきの ない 中継（ゾンビ）は みはりして つなぎなおす */
 setInterval(function(){
   try{ if(Net.open&&Date.now()-(Net.lastAlive||0)>30000){ Net.open=false; Net.closeStream(); Net.startPoll(); Net.openStream(); } }catch(e){}
@@ -3559,6 +3559,25 @@ function backToLobbyIfIdle(){
     if(S.phase==='play'&&!S.qz&&!S.over){ show('lobby'); setTab('game'); appNav.sync(); return true; }
   }catch(e){}
   return false;
+}
+/* v326: ホームボタンなどで アプリから はなれて、また もどって きた ときは トップ画面（ゲームの タブ）へ もどす。
+   クイズ中・けっか画面・まちの 画面・でんわ・ライブ・窓が あいて いる ときは さわらない。 */
+function resumeToTop(){
+  try{
+    if(document.visibilityState!=='visible') return false;
+    if(S.phase!=='play') return false;                  /* もう トップ等 */
+    if(S.tab!=='chat') return false;                    /* トークを 見て いない ときは そのまま */
+    if(S.qz||S.over||S.pending) return false;           /* クイズ中・けっか・まち は そのまま */
+    if(!S.linked) return false;                         /* ペアが ない ときは トークも 出ない */
+    var cb=$('#call-box'); if(cb&&!cb.hidden) return false;
+    var lb=$('#live-box'); if(lb&&!lb.hidden) return false;
+    var qm=$('#qr-modal'); if(qm&&qm.classList.contains('on')) return false;
+    var pm=$('#prof-modal'); if(pm&&pm.classList.contains('on')) return false;
+    if(document.querySelector('#mem-box')) return false;  /* めも を 見て いる ときは さわらない */
+    if(camStream) return false;
+    show('lobby'); setTab('game'); appNav.sync();
+    return true;
+  }catch(e){ return false; }
 }
 function resetToWait(){
   stopPing(); stopWatch(); stopFullWatch(); probeCancel();
@@ -6354,7 +6373,7 @@ function sendAppOpen(reason){
   var __fg=(typeof document!=='undefined'&&document.visibilityState==='visible')?1:0;
   var __g=gestAgeSec();
   /* v268: 理由(r)と 自分の 版(pv)も のせる。あいては「なぜ 増えたか」を 時刻つきで 見られる */
-  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v325'}); }catch(e){}
+  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v326'}); }catch(e){}
   /* v263: アプリを とじて いても 鳴る ように、あいての「ベル用とおりみち」へ 1通だけ おくる。
      この とおりみちは あいてだけが うけとる（こちらには もどらない）。中身は 時刻だけ。 */
   try{ if(peerOpenOn()&&peerKeepOn()&&__r!=='conn') pushPeerOpen(t,__fg,true); }catch(e){}   /* v284: 本物の 起動は 画面判定で 落とさない */   /* v267/v268: 本物の 開封だけ スマホの ベルへ */
