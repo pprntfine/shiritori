@@ -982,7 +982,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v326</b></p>
+      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v327</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1056,7 +1056,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v326</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v327</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -6373,7 +6373,7 @@ function sendAppOpen(reason){
   var __fg=(typeof document!=='undefined'&&document.visibilityState==='visible')?1:0;
   var __g=gestAgeSec();
   /* v268: 理由(r)と 自分の 版(pv)も のせる。あいては「なぜ 増えたか」を 時刻つきで 見られる */
-  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v326'}); }catch(e){}
+  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v327'}); }catch(e){}
   /* v263: アプリを とじて いても 鳴る ように、あいての「ベル用とおりみち」へ 1通だけ おくる。
      この とおりみちは あいてだけが うけとる（こちらには もどらない）。中身は 時刻だけ。 */
   try{ if(peerOpenOn()&&peerKeepOn()&&__r!=='conn') pushPeerOpen(t,__fg,true); }catch(e){}   /* v284: 本物の 起動は 画面判定で 落とさない */   /* v267/v268: 本物の 開封だけ スマホの ベルへ */
@@ -6568,6 +6568,9 @@ function plogNoteMsg(at,mid,recvAt){
         e.marr=Math.max(e.marr||0,rcv);
         if(typeof e.dly!=='number'||Math.abs(dly)>Math.abs(e.dly)) e.dly=dly;   /* いちばん 大きい ずれ を のこす */
         if(mid){ e.mids=e.mids||[]; e.mids.push(mid); if(e.mids.length>20) e.mids=e.mids.slice(-20); }
+        if(!e.pn&&S.opp&&S.opp.name) e.pn=String(S.opp.name);   /* v327 */
+        if(!e.f&&S.opp&&S.opp.id) e.f=String(S.opp.id);
+        if(!e.pv&&peerVersion(S.peerVer)) e.pv=peerVersion(S.peerVer);
         plogSave(l); plogRender(); return;
       }
     }
@@ -6575,6 +6578,8 @@ function plogNoteMsg(at,mid,recvAt){
     if(raw!==null) rec.mt=raw;
     if(mid) rec.mids=[mid];
     if(S.opp&&S.opp.id) rec.f=S.opp.id;
+    if(S.opp&&S.opp.name) rec.pn=String(S.opp.name);   /* v327: あいての 名前と 版も のこす */
+    if(peerVersion(S.peerVer)) rec.pv=peerVersion(S.peerVer);
     l.push(rec); if(l.length>100) l=l.slice(-100);
     plogSave(l); plogRender();
   }catch(e){}
@@ -6597,6 +6602,17 @@ function plogTimeLine(e){
     return out;
   }catch(err){ return ''; }
 }
+/* v327: 1件ごとに「その とき の あいて」を 出す（名前・版） */
+function plogPeerLine(e){
+  try{
+    var nm=(e.pn&&String(e.pn).trim())?String(e.pn).trim():'';
+    var pv=peerVersion(e.pv);
+    var o='';
+    if(nm) o='あいて <b>'+recordEscape(nm)+'</b>';
+    if(pv) o+=(o?'　':'')+'版 <b>'+recordEscape(pv)+'</b>';
+    return o;
+  }catch(err){ return ''; }
+}
 function plogAdd(kind,at,proof,meta){
   try{
     if(!(S.paired||S.linked)) return;   /* v187: ペアの あいての 合図が ある ときだけ。自分の そうさでは だれの 記録も かわらない */
@@ -6612,8 +6628,12 @@ function plogAdd(kind,at,proof,meta){
       }
     }
     var rec={t:t,k:kind,p:proof||''};
-    if(S.me&&S.me.id) rec.f=S.me.id;   /* v269: 出し手は つねに あいて（自分なら 読みこみ時に 消える） */
-    if(meta){ if(meta.r) rec.r=String(meta.r); if(peerVersion(meta.pv)) rec.pv=peerVersion(meta.pv); if(meta.rt) rec.rt=meta.rt; if(meta.f) rec.f=meta.f; }
+    /* v327: 出し手は つねに あいて。自分を 入れて いた ため、読みこみ時に「自分の 記録」として 消えて いた */
+    var __pf=(meta&&meta.f)?String(meta.f):((S.opp&&S.opp.id)?String(S.opp.id):'');
+    if(__pf&&(!S.me||__pf!==S.me.id)) rec.f=__pf;
+    var __pn=(S.opp&&S.opp.name)?String(S.opp.name):'';   /* v327: あいての 名前も 1件ごとに のこす */
+    if(__pn) rec.pn=__pn;
+    if(meta){ if(meta.r) rec.r=String(meta.r); if(peerVersion(meta.pv)) rec.pv=peerVersion(meta.pv); if(meta.rt) rec.rt=meta.rt; if(meta.f&&(!S.me||String(meta.f)!==S.me.id)) rec.f=String(meta.f); }
     l.push(rec); if(l.length>100) l=l.slice(-100);
     plogSave(l); plogRender();
   }catch(e){}
@@ -6676,6 +6696,7 @@ function plogRender(){
         else { sub+='<div style="margin-top:3px;white-space:nowrap;opacity:.75">（メッセージ まち）</div>'; }
       }
       if(e.k==='msg'){ ico='✉'; ic='#7dd3fc'; big='メッセージを おくった'; col='#bae6fd'; var __tl2=plogTimeLine(e); sub=(e.m>1?(e.m+'通'):'1通')+'（ひらいた 記録は なし）'+(__tl2?('<div style="font-size:.72rem;opacity:.85;margin-top:2px;'+((typeof e.dly==='number'&&(e.dly<=-5000||e.dly>=120000))?'color:#fcd34d':'')+'">'+__tl2+'</div>'):''); }
+      var __pl=plogPeerLine(e); if(__pl) sub+='<div style="font-size:.7rem;opacity:.68;margin-top:2px">'+__pl+'</div>';   /* v327 */
       /* その あと 既読が かえって きた か */
       if(e.k!=='off'){
         var rk=plogReadNear(e.t);
@@ -6696,7 +6717,7 @@ function plogRender(){
         +'<div style="flex:1;min-width:0"><div style="font-weight:700;font-size:.95rem;color:'+col+'"><span style="color:'+ic+'">'+ico+'</span> '+big+'</div>'
         +'<div style="font-size:.78rem;opacity:.8;line-height:1.45;margin-top:2px">'+sub+'</div></div></div>';
     }
-    var __ft='<div style="margin-top:10px;padding-top:6px;border-top:1px solid rgba(255,255,255,.18);font-size:.68rem;opacity:.55;line-height:1.5">あいず 自分 '+recordEscape(deviceTag(S.me.id))+'／あいて '+recordEscape(deviceTag(S.opp&&S.opp.id))+'</div>';
+    var __ft='<div style="margin-top:10px;padding-top:6px;border-top:1px solid rgba(255,255,255,.18);font-size:.68rem;opacity:.55;line-height:1.5">あいず 自分 '+recordEscape(deviceTag(S.me.id))+'／いまの あいて '+recordEscape(deviceTag(S.opp&&S.opp.id))+'</div>';
     b.innerHTML=__hdr+(h||'<div style="opacity:.7">まだ きろくは ありません</div>')+(l.length?__ft:'');
   }catch(e){}
 }
