@@ -982,7 +982,7 @@ body.in-play .leave-row{display:none!important}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v332</b></p>
+      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v336</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1056,7 +1056,7 @@ body.in-play .leave-row{display:none!important}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v332</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v336</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -2299,6 +2299,23 @@ var Net={
          これまでは 水がめ(5秒に 1こ)で 止められ、かけら送りが 1こずつ 待たされて いた */
       if(__ns&&fastOk) return true;
       /* v282: かけらは 即時路(MQTT)だけを つかう。中継所の 制限中でも とおす */
+      /* v336: 即時路が つながって いない とき、かけらを 中継所の 小さい POST で おくる。
+         これが 無いと、MQTT が ふさがれた 回線では しゃしんが 絶対に とどかない */
+      if(__ns&&!fastOk){
+        if(this.coolUntil&&Date.now()<this.coolUntil) return false;
+        if(!this.allow(1)) return false;
+        try{
+          var ac4=(typeof AbortController!=='undefined')?new AbortController():null;
+          var tmo4=setTimeout(function(){ try{ if(ac4) ac4.abort(); }catch(e){} },12000);
+          var r4;
+          if(ac4) privateAborts.add(ac4);
+          try{ r4=await fetch('https://ntfy.sh/'+scope.topic,{method:'POST',headers:{'Content-Type':'text/plain'},body:body,signal:ac4?ac4.signal:undefined}); }
+          finally{ clearTimeout(tmo4); if(ac4) privateAborts.delete(ac4); }
+          if(!outboundCurrent(scope)) return false;
+          if(r4.status===429||r4.status===503){ this.hit429(45000); return false; }
+          return !!r4.ok;
+        }catch(e){ return false; }
+      }
       if(this.coolUntil&&Date.now()<this.coolUntil) return __ns?fastOk:false;
       if(!(env.t==='chats'?this.allowChat():this.allow(typeof prio==='number'?prio:1))) return __ns?fastOk:false;
       if(!__ns) this.postStore(body,scope); return true;
@@ -2446,7 +2463,7 @@ var Net={
           else { try{ photoDiagPush('おくり','ばしょが わからない'); }catch(e){} }
         }
       }catch(e){}
-      if(r.status===429||r.status===503){ this.hit429(45000); this.noPutUntil=Date.now()+10*60*1000; return false; }   /* v282: 10分 休む */
+      if(r.status===429||r.status===503){ this.hit429(45000); this.noPutUntil=Date.now()+90*1000; return false; }   /* v282: 10分 休む */
       if(r.status===413){ try{ note('しゃしんが 大きすぎて おくれません。','#note2'); }catch(e){} return false; }
       return !!r.ok;
     }catch(e){ return false; }
@@ -6126,7 +6143,7 @@ async function chatSaveNow(){
   chatSaving=true;
   try{
     var __ps=[];
-    var list=S.chat.filter(function(m){ return m&&!m.sys&&!messageDeleted(m)&&(m.text||m.data); }).map(function(m){
+    var list=S.chat.filter(function(m){ return m&&!m.sys&&!messageDeleted(m)&&(m.text||m.data||m.photo||m.file); }   /* v335: 中身が 欠けても 行は のこす */).map(function(m){
       var __pt=!!(m.photo||m.file);
       if(__pt&&m.data){ var __k=photoKeyOf(m); if(__k) __ps.push({k:__k,v:m.data,l:m.data.length,m:m}); }
       return {mid:m.mid||'',f:m.from,t:m.text||'',p:m.photo?1:0,pd:__pt?1:0,d:'',file:m.file?1:0,fn:m.fileName||'',fs:m.fileSize||0,failed:m.failed?1:0,a:m.at||0,n:m.n||0,s:m.sent===false?0:1,k:m.acked?1:0,r:m.read?1:0,ra:m.rad||0,u:m.pid||''};
@@ -6161,7 +6178,7 @@ async function chatRestore(sk){
     if(!Net.seenN) Net.seenN=new Set();
     var have={}; S.chat.forEach(function(m){ if(m&&!m.sys) have[m.mid ? m.from+':mid:'+m.mid : m.from+':'+(m.n||0)+':'+(m.text||m.pid||'')]=1; });
     list.forEach(function(it){
-      if(!it||!(it.t||it.d)) return;
+      if(!it||!(it.t||it.d||it.p||it.pd||it.file)) return;   /* v335: しゃしん・ファイルを よみこみで 捨てない */
       var key=it.mid ? it.f+':mid:'+it.mid : it.f+':'+(it.n||0)+':'+(it.t||it.u||'');
       if(have[key]) return; have[key]=1;
       var m={mid:it.mid||'',from:it.f,at:it.a||Date.now(),n:it.n||0,sent:!!it.s,acked:!!it.k,read:!!it.r,rad:it.ra||0,uid:String(++UID)};
@@ -6374,7 +6391,7 @@ function sendAppOpen(reason){
   var __fg=(typeof document!=='undefined'&&document.visibilityState==='visible')?1:0;
   var __g=gestAgeSec();
   /* v268: 理由(r)と 自分の 版(pv)も のせる。あいては「なぜ 増えたか」を 時刻つきで 見られる */
-  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v332'}); }catch(e){}
+  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v336'}); }catch(e){}
   /* v263: アプリを とじて いても 鳴る ように、あいての「ベル用とおりみち」へ 1通だけ おくる。
      この とおりみちは あいてだけが うけとる（こちらには もどらない）。中身は 時刻だけ。 */
   try{ if(peerOpenOn()&&peerKeepOn()&&__r!=='conn') pushPeerOpen(t,__fg,true); }catch(e){}   /* v284: 本物の 起動は 画面判定で 落とさない */   /* v267/v268: 本物の 開封だけ スマホの ベルへ */
@@ -6982,9 +6999,16 @@ function renderChat(forceBottom, __tailFrom){
       });
       bindImageViewerTap(pim);   /* v231: タップで全画面表示 */
       pbub.appendChild(pim);
+      if(!m.data){   /* v335: 中身が 無い ときは 破けた 絵 では なく 文字で */
+        pim.style.display='none';
+        var pl=document.createElement('div');
+        pl.style.cssText='padding:10px 12px;font-size:.8rem;line-height:1.5;color:#5b6b63;background:#eef3ef;border-radius:10px';
+        pl.textContent='しゃしんを よみこめません（この 端末に のこって いません）';
+        pbub.appendChild(pl);
+      }
       var pmeta=document.createElement('div'); pmeta.className='meta';
       /* v248: 45秒 たっても おくれていない しゃしんは「送信中」の ままに しない（やりなおし できる ように） */
-      if(mine&&!m.sent&&!m.failed&&!m.__chunked&&!m.waiting&&typeof m.at==='number'&&Date.now()-m.at>45000){
+      if(mine&&!m.sent&&!m.failed&&!m.__chunked&&!m.waiting&&typeof m.at==='number'&&Date.now()-m.at>75000){
         m.failed=true;
         if(m.__w){ try{ clearTimeout(m.__w); }catch(e){} m.__w=0; }
       }
@@ -7377,7 +7401,7 @@ function photoChunkStart(id,d,minGap){
   return true;
 }   /* v267: おくった 写真を おぼえて おく（とどかなかった 分を おくりなおす） */
 /* v273: 写真は「1回で おくれる 大きさ」に おさめてから 送る。かけら送りは 保険で、1800文字ずつ・最大2000かけら・120万文字まで */
-var PHOTO_CHUNK_PIECE=3000, PHOTO_SOFT_MAX=40000, PHOTO_HARD_MAX=1200000, PHOTO_TGT_WEBP=22000;   /* v304: かけら 23→8こ */
+var PHOTO_CHUNK_PIECE=1200, PHOTO_SOFT_MAX=20000, PHOTO_HARD_MAX=1200000, PHOTO_TGT_WEBP=15000;   /* v304: かけら 23→8こ */
 var PHOTO_HQ_WEBP=140000, PHOTO_HQ_SOFT=190000, PHOTO_HQ_MAXSIDE=1600, PHOTO_FULL_MAXSIDE=1280;   /* v306 */   /* v305: タップ用の (たか)画質 */
 /* v288: WebP が つかえる 端末なら WebP で 作りなおす（同じ 見た目で 3〜4割 小さく → かけらが 減って 速い） */
 var WEBP_OK=null;
@@ -8536,6 +8560,52 @@ setInterval(photoQueueTick,5000);
 function photoGiveUp(msg,why){
   if(!msg||!privateCurrent(msg.__privateScope)) return;
   if(/つながって いません|つながって いない/.test(String(why||''))){ photoWaitRetry(msg,why); return; }
+  /* v334: あきらめる 前に、もっと 小さく して もう 一度（最大2回）。
+     でんぱが 細い ところでも 小さい 写真なら 通る ことが 多い */
+  if(!msg.sent&&!msg.cancelled&&(msg.__shrink||0)<2&&String(msg.data||'').length>8000){
+    msg.__shrink=(msg.__shrink||0)+1;
+    if(msg.__w){ try{ clearTimeout(msg.__w); }catch(e){} msg.__w=0; }
+    msg.__chunked=false; msg.__chunkAt=0; msg.failed=false; msg.__wait=0;
+    try{ delete photoChunkAt[String(msg.pid||'')]; }catch(e){}
+    try{ note('しゃしんを もっと 小さく して、もう いちど おくります…','#note2'); }catch(e){}
+    photoShrinkMore(msg).then(function(ok2){
+      if(!privateCurrent(msg.__privateScope)||msg.sent||msg.cancelled) return;
+      if(!ok2){ photoGiveUpFail(msg,why); return; }
+      try{ sendPhoto(msg,0); }catch(e){ photoGiveUpFail(msg,why); }
+    },function(){ photoGiveUpFail(msg,why); });
+    return;
+  }
+  photoGiveUpFail(msg,why);
+}
+/* v334: 写真を さらに 小さく 作りなおす（長い 辺 720px・画質 0.45） */
+function photoShrinkMore(msg){
+  return new Promise(function(res){
+    try{
+      var src=String((msg&&msg.data)||'');
+      if(src.slice(0,11)!=='data:image/'){ res(false); return; }
+      var im=new Image();
+      im.onerror=function(){ res(false); };
+      im.onload=function(){
+        try{
+          var w0=im.naturalWidth||im.width,h0=im.naturalHeight||im.height;
+          if(!w0||!h0){ res(false); return; }
+          var lim=720, sc=Math.min(1,lim/Math.max(w0,h0));
+          var c=document.createElement('canvas');
+          c.width=Math.max(1,Math.round(w0*sc)); c.height=Math.max(1,Math.round(h0*sc));
+          var ctx=c.getContext('2d'); if(!ctx){ res(false); return; }
+          ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,c.width,c.height);
+          ctx.drawImage(im,0,0,c.width,c.height);
+          var out=c.toDataURL(canWebP()?'image/webp':'image/jpeg',0.45);
+          if(!out||out.slice(0,11)!=='data:image/'||out.length>=src.length){ res(false); return; }
+          msg.data=out; msg.__fitted=1; res(true);
+        }catch(e){ res(false); }
+      };
+      im.src=src;
+    }catch(e){ res(false); }
+  });
+}
+function photoGiveUpFail(msg,why){
+  if(!msg||!privateCurrent(msg.__privateScope)) return;
   msg.failed=true;
   if(msg.__w){ try{ clearTimeout(msg.__w); }catch(e){} msg.__w=0; }
   try{ note(why||'しゃしんを そうしん できませんでした。ふきだしの「もういちど おくる」を おして ください。','#note2'); }catch(e){}
@@ -8544,6 +8614,8 @@ function photoGiveUp(msg,why){
 function retryPhoto(msg){
   if(!msg||msg.sent) return;
   msg.failed=false;
+  msg.__chunked=false; msg.__chunkAt=0; msg.__wait=0;
+  try{ delete photoChunkAt[String(msg.pid||'')]; }catch(e){}
   if(msg.__w){ try{ clearTimeout(msg.__w); }catch(e){} msg.__w=0; }
   if(S.tab==='chat') renderChat(true);
   sendPhoto(msg,0);
@@ -8866,6 +8938,34 @@ $('#live-img').addEventListener('click',function(){
   if(liveOn) Net.send({t:'live-ctl',on:true,dark:liveDark});
 });
 
+/* v336: おくれなかった しゃしんを 自分で やりなおす（人が おさなくても とどく ように） */
+var photoAutoT=null, photoAutoN=0;
+function photoAutoRetry(force){
+  try{
+    if(!Net.topic||!Net.key) return;
+    if(typeof privateReady==='function'&&!privateReady()) return;
+    var n=0;
+    for(var i=0;i<S.chat.length;i++){
+      var m=S.chat[i];
+      if(!m||m.sys||!m.photo||m.from!==S.me.id||m.sent||m.cancelled) continue;
+      if((m.__auto||0)>=6) continue;
+      if(force) m.__auto=0;
+      m.__auto=(m.__auto||0)+1;
+      m.failed=false; m.__chunked=false; m.__chunkAt=0; m.__wait=0;
+      try{ delete photoChunkAt[String(m.pid||'')]; }catch(e){}
+      try{ sendPhoto(m,0); }catch(e){}
+      if(++n>=2) break;   /* 一度に 2まいまで（回線を あけない） */
+    }
+    if(n&&S.tab==='chat'){ try{ renderChat(true); }catch(e){} }
+  }catch(e){}
+}
+function photoAutoStart(){
+  if(photoAutoT) return;
+  photoAutoT=setInterval(function(){ try{ photoAutoRetry(false); }catch(e){} },30000);
+}
+try{ window.addEventListener('online',function(){ setTimeout(function(){ try{ photoAutoRetry(true); }catch(e){} },1500); }); }catch(e){}
+try{ document.addEventListener('visibilitychange',function(){ if(!document.hidden) setTimeout(function(){ try{ photoAutoRetry(false); }catch(e){} },1200); }); }catch(e){}
+try{ photoAutoStart(); }catch(e){}
 function toast(msg){
   var t=document.getElementById('toast');
   if(!t){ t=document.createElement('div'); t.id='toast'; document.body.appendChild(t); }
