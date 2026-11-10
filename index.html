@@ -1028,7 +1028,7 @@ body.zg-bg .msg .bubble{box-shadow:0 2px 7px rgba(20,30,40,.26)}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v375</b></p>
+      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v376</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1102,7 +1102,7 @@ body.zg-bg .msg .bubble{box-shadow:0 2px 7px rgba(20,30,40,.26)}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v375</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v376</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -6171,7 +6171,7 @@ function pairLoad(){
     var v=localStorage.getItem(PAIR_KEY); if(!v) return null;
     var o=JSON.parse(v);
     if(!o||!o.sid) return null;
-    if(o.exp&&Date.now()>o.exp){ localStorage.removeItem(PAIR_KEY); return null; }
+    if(o.exp&&Date.now()>o.exp){ try{ o.exp=Date.now()+7776000000; localStorage.setItem(PAIR_KEY,JSON.stringify(o)); }catch(e){} }
     pairTouch();
     return o;
   }catch(e){ return null; }
@@ -6478,7 +6478,7 @@ function sendAppOpen(reason){
   var __fg=(typeof document!=='undefined'&&document.visibilityState==='visible')?1:0;
   var __g=gestAgeSec();
   /* v268: 理由(r)と 自分の 版(pv)も のせる。あいては「なぜ 増えたか」を 時刻つきで 見られる */
-  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v375'}); }catch(e){}
+  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v376'}); }catch(e){}
   /* v263: アプリを とじて いても 鳴る ように、あいての「ベル用とおりみち」へ 1通だけ おくる。
      この とおりみちは あいてだけが うけとる（こちらには もどらない）。中身は 時刻だけ。 */
   try{ if(peerOpenOn()&&peerKeepOn()&&__r!=='conn') pushPeerOpen(t,__fg,true); }catch(e){}   /* v284: 本物の 起動は 画面判定で 落とさない */   /* v267/v268: 本物の 開封だけ スマホの ベルへ */
@@ -12317,6 +12317,22 @@ var startFromPlay = false;
       }catch(e){}
     });
   }
+})();
+</script>
+
+<script>
+/* v376: ペア復帰の 保険（本体が とちゅうで 止まっても ここは うごく） */
+(function(){
+  function has(){ try{ return (typeof pairHasKeys==='function')?pairHasKeys():false; }catch(e){ return false; } }
+  setTimeout(function(){
+    try{ if(has() && !(Net.topic&&S.paired)){ if(typeof resumeAttempt==='function') resumeAttempt(); else if(typeof resumeConnect==='function') resumeConnect(true); } }catch(e){}
+  },2000);
+  setTimeout(function(){
+    try{
+      if(!has()) toast('この 端末に ペアの きろくが ありません。あたらしい ファイルでは のこらない ことが あります');
+      else if(!(Net.topic&&S.paired)) toast('まえの 部屋の きろくは あります。つなぎなおして います…');
+    }catch(e){}
+  },6000);
 })();
 </script>
 </body>
