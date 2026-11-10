@@ -1012,7 +1012,7 @@ body.zg-bg .msg .bubble{box-shadow:0 2px 7px rgba(20,30,40,.26)}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v348</b></p>
+      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v353</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1086,7 +1086,7 @@ body.zg-bg .msg .bubble{box-shadow:0 2px 7px rgba(20,30,40,.26)}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v348</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v353</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -1177,6 +1177,7 @@ body.zg-bg .msg .bubble{box-shadow:0 2px 7px rgba(20,30,40,.26)}
           <button id="btn-call" type="button" class="chat-tools-toggle" title="こえで はなす（でんわ）">電話</button>
           <button id="btn-stickers" type="button" class="chat-tools-toggle" aria-expanded="false" aria-controls="sticker-picker" aria-haspopup="dialog">スタンプ</button>
           <button id="btn-delchat" type="button" class="chat-tools-toggle" title="この スマホの トークを ぜんぶ けす">削除</button>
+          <button id="btn-quiz" type="button" class="chat-tools-toggle" title="雑学クイズの 画面に きりかえる">クイズ</button>
         </div>
       <div id="chat-tools" class="tools" hidden>
         <button id="btn-photo" type="button" class="notify-btn" title="しゃしんを おくる">カメラ</button>
@@ -6438,7 +6439,7 @@ function sendAppOpen(reason){
   var __fg=(typeof document!=='undefined'&&document.visibilityState==='visible')?1:0;
   var __g=gestAgeSec();
   /* v268: 理由(r)と 自分の 版(pv)も のせる。あいては「なぜ 増えたか」を 時刻つきで 見られる */
-  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v348'}); }catch(e){}
+  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v353'}); }catch(e){}
   /* v263: アプリを とじて いても 鳴る ように、あいての「ベル用とおりみち」へ 1通だけ おくる。
      この とおりみちは あいてだけが うけとる（こちらには もどらない）。中身は 時刻だけ。 */
   try{ if(peerOpenOn()&&peerKeepOn()&&__r!=='conn') pushPeerOpen(t,__fg,true); }catch(e){}   /* v284: 本物の 起動は 画面判定で 落とさない */   /* v267/v268: 本物の 開封だけ スマホの ベルへ */
@@ -12126,6 +12127,74 @@ function boot(){ try{ apply(); ui(); }catch(e){} }
 if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot); else boot();
 document.addEventListener('visibilitychange',function(){ if(!document.hidden && lastDay!==todayKey()) apply(); });
 setInterval(function(){ if(lastDay!==todayKey()) apply(); },60000);
+})();
+</script>
+
+<script>
+/* v351: 「クイズ」ボタン。トークの 画面から、その場で 雑学クイズへ きりかえる。
+   たいせん中に おして 対戦が 止まらないように、進行中の ときは 画面を かえない。 */
+var startFromPlay = false;
+(function(){
+  var btn = document.getElementById('btn-quiz');
+  if(!btn) return;
+
+  function closePanels(){
+    try{
+      var t = document.getElementById('chat-tools'); if(t){ t.hidden = true; }
+      var tb = document.getElementById('btn-chat-tools'); if(tb){ tb.setAttribute('aria-expanded','false'); }
+      var pk = document.getElementById('sticker-picker'); if(pk){ pk.hidden = true; }
+      var sb = document.getElementById('btn-stickers'); if(sb){ sb.setAttribute('aria-expanded','false'); }
+    }catch(e){}
+  }
+
+  function toast(msg){
+    var old = document.getElementById('quiz-toast');
+    if(old && old.parentNode){ old.parentNode.removeChild(old); }
+    var d = document.createElement('div');
+    d.id = 'quiz-toast';
+    d.setAttribute('role','status');
+    d.textContent = msg;
+    d.style.cssText = 'position:fixed;left:50%;bottom:92px;transform:translateX(-50%);z-index:99998;max-width:86%;padding:11px 16px;border-radius:14px;background:rgba(28,44,35,.93);color:#fff;font-size:13px;line-height:1.55;text-align:center;box-shadow:0 8px 20px rgba(0,0,0,.22)';
+    document.body.appendChild(d);
+    setTimeout(function(){ if(d.parentNode){ d.parentNode.removeChild(d); } }, 3000);
+  }
+
+  function matchRunning(){
+    try{
+      if(!window.S) return false;
+      if(S.qz && !S.over) return true;      /* 2人対戦が すすんで いる */
+      if(S.pending) return true;            /* 入室の もうしこみ中 */
+      if(S.joinReq) return true;
+    }catch(e){}
+    return false;
+  }
+
+  btn.addEventListener('click', function(ev){
+    try{ ev.preventDefault(); }catch(e){}
+    closePanels();
+    if(matchRunning()){
+      toast('いま たいせん中です。おわってから クイズへ いけます。');
+      return;
+    }
+    var st = document.getElementById('btn-solo');
+    if(st){ startFromPlay = true; st.click(); }
+  });
+
+  /* クイズを とじた とき、トークの 画面に もどす（トップ経由に しない） */
+  var back = document.getElementById('sq-back');
+  if(back){
+    back.addEventListener('click', function(){
+      try{
+        if(!startFromPlay) return;
+        startFromPlay = false;
+        if(!window.S) return;
+        if(!S.linked) return;                /* ペアが なければ ふつうに トップへ */
+        show('play');
+        if(typeof setTab === 'function'){ setTab('chat'); }
+        if(window.appNav && appNav.sync){ appNav.sync(); }
+      }catch(e){}
+    });
+  }
 })();
 </script>
 </body>
