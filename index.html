@@ -1021,7 +1021,7 @@ body.zg-bg .msg .bubble{box-shadow:0 2px 7px rgba(20,30,40,.26)}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v356</b></p>
+      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v357</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1055,6 +1055,13 @@ body.zg-bg .msg .bubble{box-shadow:0 2px 7px rgba(20,30,40,.26)}
           <input id="in-secret" maxlength="24" placeholder="あいことば 6もじ いじょう" autocomplete="off">
         </label>
         <button id="btn-join" class="chalk-btn" type="button">部屋にはいる</button>
+        <details id="tak-box" style="margin-top:12px">
+          <summary style="cursor:pointer;font-size:.76rem;color:#A6B3A3">ひきつぎ（べつの ファイルに うつす）</summary>
+          <p style="font-size:.72rem;line-height:1.7;color:#A6B3A3;margin:8px 0">つながって いた 部屋の かぎを、この ファイルに うつします。まえの ファイルで「コードを コピー」→ ここで「コードを はる」。</p>
+          <button id="btn-tak-copy" class="chalk-btn" type="button" style="margin-top:4px">コードを コピー</button>
+          <button id="btn-tak-paste" class="chalk-btn" type="button" style="margin-top:8px">コードを はる</button>
+          <p id="tak-note" style="font-size:.72rem;line-height:1.6;color:#A6B3A3;margin:8px 0"></p>
+        </details>
         <details>
           <summary style="cursor:pointer;font-size:.76rem;color:#A6B3A3">招待リンクを はりつける</summary>
           <label class="fld" style="margin-top:10px"><span>招待リンク</span>
@@ -1095,7 +1102,7 @@ body.zg-bg .msg .bubble{box-shadow:0 2px 7px rgba(20,30,40,.26)}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v356</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v357</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -6446,7 +6453,7 @@ function sendAppOpen(reason){
   var __fg=(typeof document!=='undefined'&&document.visibilityState==='visible')?1:0;
   var __g=gestAgeSec();
   /* v268: 理由(r)と 自分の 版(pv)も のせる。あいては「なぜ 増えたか」を 時刻つきで 見られる */
-  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v356'}); }catch(e){}
+  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v357'}); }catch(e){}
   /* v263: アプリを とじて いても 鳴る ように、あいての「ベル用とおりみち」へ 1通だけ おくる。
      この とおりみちは あいてだけが うけとる（こちらには もどらない）。中身は 時刻だけ。 */
   try{ if(peerOpenOn()&&peerKeepOn()&&__r!=='conn') pushPeerOpen(t,__fg,true); }catch(e){}   /* v284: 本物の 起動は 画面判定で 落とさない */   /* v267/v268: 本物の 開封だけ スマホの ベルへ */
@@ -11719,7 +11726,21 @@ function igHeartFly(x){
 /* 送信待ちが のこって いれば 復元して 送る */
 setTimeout(async function(){ try{ await outRestore(); S.outbox=S.outbox||outLoad(); if(S.outbox.length){ flushOutbox(); } }catch(e){} },3000);
 /* 起動：ペアの きおくが あれば しずかに つなぐ（メッセージ・通知は とどく） */
-setTimeout(function(){ try{ if(pairHasKeys()&&!Net.topic) resumeConnect(true); }catch(e){} },1200);
+/* v357: つながって いた 部屋に もどる（3回 ためす） */
+(function(){
+  var tried=0;
+  var go=function(){
+    try{
+      if(Net.topic) return;
+      if(!pairHasKeys()) return;
+      if(tried>=3) return;
+      tried++;
+      resumeConnect(true).then(function(ok){ if(!ok&&tried<3) setTimeout(go,2500); });
+    }catch(e){}
+  };
+  setTimeout(go,1200);
+  setTimeout(function(){ if(!Net.topic) go(); },5000);
+})();
 setTimeout(function(){ backToLobbyIfIdle(); },2600);   /* v320: ひらき直しの あとも トップ画面 */
 
 /* 起動 */
@@ -11734,6 +11755,37 @@ if(isLocalFile()){
   try{ $('#btn-create').textContent='部屋をつくる'; }catch(e){}
 }
 window.addEventListener('pagehide',function(){ Net.close(); });
+/* v357: ペアの かぎ（90日）を べつの ファイルへ うつす */
+(function(){
+  function enc(o){ return btoa(unescape(encodeURIComponent(JSON.stringify(o)))); }
+  function dec(t){ return JSON.parse(decodeURIComponent(escape(atob(String(t||'').replace(/\s+/g,''))))); }
+  function say(m){ var el=document.getElementById('tak-note'); if(el) el.textContent=m; }
+  var c=document.getElementById('btn-tak-copy');
+  if(c) c.addEventListener('click',function(){
+    var p=null; try{ p=pairLoad(); }catch(e){}
+    if(!p||!p.rk||!p.sk||!p.topic){ say('この ファイルには まだ かぎが ありません。'); return; }
+    var code=enc(p);
+    var done=function(){ say('コピーしました。あたらしい ファイルの「コードを はる」に はりつけて ください。'); };
+    try{
+      if(navigator.clipboard&&navigator.clipboard.writeText){
+        navigator.clipboard.writeText(code).then(done,function(){ prompt('この コードを コピーして ください',code); });
+      } else { prompt('この コードを コピーして ください',code); }
+    }catch(e){ prompt('この コードを コピーして ください',code); }
+  });
+  var ps=document.getElementById('btn-tak-paste');
+  if(ps) ps.addEventListener('click',function(){
+    var t=null;
+    try{ t=prompt('まえの ファイルで コピーした コードを はりつけて ください'); }catch(e){ return; }
+    if(!t) return;
+    var o=null;
+    try{ o=dec(t); }catch(e){ say('コードが よめませんでした。もう いちど コピーして ください。'); return; }
+    if(!o||!o.rk||!o.sk||!o.topic){ say('コードの 中身が たりません。'); return; }
+    try{ localStorage.setItem(PAIR_KEY,JSON.stringify(o)); }catch(e){ say('保存できませんでした。'); return; }
+    say('うつしました。つなぎなおして います…');
+    try{ resumeConnect(false).then(function(ok){ say(ok?'つながりました。':'つなげませんでした。あいてが ひらいているか ためして ください。'); }); }
+    catch(e){ say('つなぎなおせませんでした。'); }
+  });
+})();
 /* --- アプリとして つかう(PWA) --- */
 (function(){
   var bi=document.getElementById('btn-install'), hi=document.getElementById('install-hint');
