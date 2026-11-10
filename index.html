@@ -290,8 +290,8 @@ option{background:#12312A;color:#1F2430}
 @media (prefers-reduced-motion:reduce){.bob{animation:none}}
 .line-composer .tools{flex-wrap:wrap;overflow-x:visible}
 .line-composer .tools button{flex-shrink:0}
-.photo-b{padding:4px}
-.photo-msg{display:block;max-width:min(62vw,260px);max-height:300px;border-radius:12px}
+.photo-b{padding:4px;overflow:hidden;box-sizing:border-box}
+.photo-msg{display:block;width:auto;height:auto;max-width:100%;max-width:min(62vw,260px)!important;max-height:300px;border-radius:12px;object-fit:contain}
 .photo-retry{margin-top:6px;padding:6px 10px;border-radius:999px;border:1px solid currentColor;background:transparent;color:inherit;font:inherit;font-size:12px;cursor:pointer}
 /* v231: 画像タップの全画面表示。暗い背景に写真だけを原尺の比率のまま出す。保存などの操作は置かない。 */
 .img-viewer{position:fixed;inset:0;z-index:9000;display:none;background:rgba(6,14,12,.94);touch-action:none;overscroll-behavior:contain}
@@ -1012,7 +1012,7 @@ body.zg-bg .msg .bubble{box-shadow:0 2px 7px rgba(20,30,40,.26)}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v345</b></p>
+      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v347</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1086,7 +1086,7 @@ body.zg-bg .msg .bubble{box-shadow:0 2px 7px rgba(20,30,40,.26)}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v345</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v347</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -6438,7 +6438,7 @@ function sendAppOpen(reason){
   var __fg=(typeof document!=='undefined'&&document.visibilityState==='visible')?1:0;
   var __g=gestAgeSec();
   /* v268: 理由(r)と 自分の 版(pv)も のせる。あいては「なぜ 増えたか」を 時刻つきで 見られる */
-  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v345'}); }catch(e){}
+  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v347'}); }catch(e){}
   /* v263: アプリを とじて いても 鳴る ように、あいての「ベル用とおりみち」へ 1通だけ おくる。
      この とおりみちは あいてだけが うけとる（こちらには もどらない）。中身は 時刻だけ。 */
   try{ if(peerOpenOn()&&peerKeepOn()&&__r!=='conn') pushPeerOpen(t,__fg,true); }catch(e){}   /* v284: 本物の 起動は 画面判定で 落とさない */   /* v267/v268: 本物の 開封だけ スマホの ベルへ */
@@ -8769,9 +8769,10 @@ function sendPhoto(msg,tries){
   if(!msg.__w) msg.__w=privateLater(__wd,60000,msg.__privateScope);
   /* v287: つながって いる あいだは、中継所への 大きな PUT(最大45秒)を まつ より
      即時路の かけらで 送る ほうが ずっと 速い */
-  /* v345: 40,000 → 8,000。ふだんの しゃしんも はじめから かけら送り（1回おくりの 45秒待ちを さける） */
+  /* v347: かけら送りは 即時路(Fast)が つながって いなくても つかう。
+     かけらは 文字と 同じ 通り道(HTTP)で 流れる ので、文字が とどく 相手なら とどく */
   if((msg.data||'').length>8000&&typeof photoChunkBegin==='function'&&typeof sendPhotoChunks==='function'
-     &&typeof Fast!=='undefined'&&Fast.open&&Fast.subOk&&photoChunkBegin(msg.pid,msg.data)){
+     &&photoChunkBegin(msg.pid,msg.data)){
     msg.__chunked=true; msg.__chunkAt=Date.now();
     /* v343: ここで 見張り番を 消すと、かけら送りが 止まった とき 永久に「送信中」に なる。
        消さずに のこし、かけら送りの あいだは 30秒ごとに 見まわす */
@@ -8813,7 +8814,8 @@ function sendPhoto(msg,tries){
         });
       }catch(e){}
     }
-    else if(tries<10&&!photoChunkFall[msg.pid]){   /* v285: かけら送りが はじまって いたら にじゅう送信 しない */
+    else if(photoChunkFall[msg.pid]){   /* v347: かけら送りが 進行中。ここで あきらめると、とどいて いても「失敗」に 見える */ }
+    else if(tries<10){
       /* v247: 中継所の 回数制限(429)の あいだは、あけすぎず 待ちすぎず やりなおす */
       var wait=Math.min(15000,2500*(tries+1));
       if(Net.coolUntil&&Net.coolUntil>Date.now()) wait=Math.max(wait,Net.coolUntil-Date.now()+2000);
