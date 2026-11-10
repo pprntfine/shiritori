@@ -1012,7 +1012,7 @@ body.zg-bg .msg .bubble{box-shadow:0 2px 7px rgba(20,30,40,.26)}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v343</b></p>
+      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v345</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1086,7 +1086,7 @@ body.zg-bg .msg .bubble{box-shadow:0 2px 7px rgba(20,30,40,.26)}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v343</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v345</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -6438,7 +6438,7 @@ function sendAppOpen(reason){
   var __fg=(typeof document!=='undefined'&&document.visibilityState==='visible')?1:0;
   var __g=gestAgeSec();
   /* v268: 理由(r)と 自分の 版(pv)も のせる。あいては「なぜ 増えたか」を 時刻つきで 見られる */
-  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v343'}); }catch(e){}
+  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v345'}); }catch(e){}
   /* v263: アプリを とじて いても 鳴る ように、あいての「ベル用とおりみち」へ 1通だけ おくる。
      この とおりみちは あいてだけが うけとる（こちらには もどらない）。中身は 時刻だけ。 */
   try{ if(peerOpenOn()&&peerKeepOn()&&__r!=='conn') pushPeerOpen(t,__fg,true); }catch(e){}   /* v284: 本物の 起動は 画面判定で 落とさない */   /* v267/v268: 本物の 開封だけ スマホの ベルへ */
@@ -7430,7 +7430,7 @@ function notifyIncoming(){
   try{ var n=new Notification('雑学王',opt); n.onclick=function(){ try{ window.focus(); }catch(e){} try{ n.close(); }catch(e){} }; }catch(e){}
 }
 /* しゃしん：カメラでとって あんごうチャンクで そうしんする(きろくには のこらない) */
-var PHOTO_PIECE=1300, PHOTO_MAXSIDE=760, photoBuf={}, photoSent={}, photoURL={}, photoAgain={}, photoSentHQ={}, photoAsk={}, photoChunkFall={}, photoChunkAt={}, photoDone={};
+var PHOTO_PIECE=1300, PHOTO_MAXSIDE=1000, photoBuf={}, photoSent={}, photoURL={}, photoAgain={}, photoSentHQ={}, photoAsk={}, photoChunkFall={}, photoChunkAt={}, photoDone={};
 /* v285: かけら送りを はじめる 窓口は ここ 1つだけ。
    同じ 写真を 2とおりの 道から 同時に おくると、あいてに 2まい とどいて しまう。 */
 function photoChunkBegin(id,d,minGap){
@@ -7448,8 +7448,8 @@ function photoChunkStart(id,d,minGap){
   return true;
 }   /* v267: おくった 写真を おぼえて おく（とどかなかった 分を おくりなおす） */
 /* v273: 写真は「1回で おくれる 大きさ」に おさめてから 送る。かけら送りは 保険で、1800文字ずつ・最大2000かけら・120万文字まで */
-var PHOTO_CHUNK_PIECE=1200, PHOTO_SOFT_MAX=20000, PHOTO_HARD_MAX=1200000, PHOTO_TGT_WEBP=15000;   /* v304: かけら 23→8こ */
-var PHOTO_HQ_WEBP=140000, PHOTO_HQ_SOFT=190000, PHOTO_HQ_MAXSIDE=1600, PHOTO_FULL_MAXSIDE=1280;   /* v306 */   /* v305: タップ用の (たか)画質 */
+var PHOTO_CHUNK_PIECE=1200, PHOTO_SOFT_MAX=20000, PHOTO_HARD_MAX=1200000, PHOTO_TGT_WEBP=35000;   /* v304: かけら 23→8こ */
+var PHOTO_HQ_WEBP=60000, PHOTO_HQ_SOFT=190000, PHOTO_HQ_MAXSIDE=1280, PHOTO_FULL_MAXSIDE=1280;   /* v306 */   /* v305: タップ用の (たか)画質 */
 /* v288: WebP が つかえる 端末なら WebP で 作りなおす（同じ 見た目で 3〜4割 小さく → かけらが 減って 速い） */
 var WEBP_OK=null;
 function canWebP(){ if(WEBP_OK!==null) return WEBP_OK; try{ var c=document.createElement('canvas'); c.width=2; c.height=2; WEBP_OK=(String(c.toDataURL('image/webp',0.7)).indexOf('data:image/webp')===0); }catch(e){ WEBP_OK=false; } return WEBP_OK; }
@@ -8636,13 +8636,13 @@ function photoShrinkMore(msg){
         try{
           var w0=im.naturalWidth||im.width,h0=im.naturalHeight||im.height;
           if(!w0||!h0){ res(false); return; }
-          var lim=720, sc=Math.min(1,lim/Math.max(w0,h0));
+          var lim=900, sc=Math.min(1,lim/Math.max(w0,h0));
           var c=document.createElement('canvas');
           c.width=Math.max(1,Math.round(w0*sc)); c.height=Math.max(1,Math.round(h0*sc));
           var ctx=c.getContext('2d'); if(!ctx){ res(false); return; }
           ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,c.width,c.height);
           ctx.drawImage(im,0,0,c.width,c.height);
-          var out=c.toDataURL(canWebP()?'image/webp':'image/jpeg',0.45);
+          var out=c.toDataURL(canWebP()?'image/webp':'image/jpeg',0.55);
           if(!out||out.slice(0,11)!=='data:image/'||out.length>=src.length){ res(false); return; }
           msg.data=out; msg.__fitted=1; res(true);
         }catch(e){ res(false); }
@@ -8682,16 +8682,23 @@ function photoFitURL(url,mode){
         try{
           var qs=[0.72,0.62,0.55,0.48,0.42,0.36,0.30], ss=[1,0.88,0.76,0.66,0.56];
           var w0=im.naturalWidth||im.width, h0=im.naturalHeight||im.height, best=url;
+          /* v344: まんなかを 4:3 で きり出す（まわりを すてる かわりに、おなじ おもさで はっきり） */
+          var cw=w0, ch=h0, cx=0, cy=0;
+          if(!hq&&w0>0&&h0>0){
+            var ta=4/3, sa=w0/h0;
+            if(sa>ta+0.01){ cw=Math.round(h0*ta); cx=Math.round((w0-cw)/2); }
+            else if(sa<ta-0.01){ ch=Math.round(w0/ta); cy=Math.round((h0-ch)/2); }
+          }
           for(var si=0;si<ss.length;si++){
             var lim=Math.max(1,Math.round(MAXS*ss[si]));
-            var sc=Math.min(1,lim/Math.max(1,Math.max(w0,h0)));
+            var sc=Math.min(1,lim/Math.max(1,Math.max(cw,ch)));
             for(var qi=0;qi<qs.length;qi++){
               var c=document.createElement('canvas');
-              c.width=Math.max(1,Math.round(w0*sc)); c.height=Math.max(1,Math.round(h0*sc));
+              c.width=Math.max(1,Math.round(cw*sc)); c.height=Math.max(1,Math.round(ch*sc));
               var ctx=c.getContext('2d');
               if(!ctx){ res(best); return; }
               ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,c.width,c.height);
-              ctx.drawImage(im,0,0,c.width,c.height);
+              ctx.drawImage(im,cx,cy,cw,ch,0,0,c.width,c.height);
               var out=c.toDataURL(web?'image/webp':'image/jpeg',qs[qi]);
               if(out.length<best.length) best=out;
               if(out.length<=TGT){ res(out); return; }
@@ -8762,7 +8769,8 @@ function sendPhoto(msg,tries){
   if(!msg.__w) msg.__w=privateLater(__wd,60000,msg.__privateScope);
   /* v287: つながって いる あいだは、中継所への 大きな PUT(最大45秒)を まつ より
      即時路の かけらで 送る ほうが ずっと 速い */
-  if((msg.data||'').length>40000&&typeof photoChunkBegin==='function'&&typeof sendPhotoChunks==='function'
+  /* v345: 40,000 → 8,000。ふだんの しゃしんも はじめから かけら送り（1回おくりの 45秒待ちを さける） */
+  if((msg.data||'').length>8000&&typeof photoChunkBegin==='function'&&typeof sendPhotoChunks==='function'
      &&typeof Fast!=='undefined'&&Fast.open&&Fast.subOk&&photoChunkBegin(msg.pid,msg.data)){
     msg.__chunked=true; msg.__chunkAt=Date.now();
     /* v343: ここで 見張り番を 消すと、かけら送りが 止まった とき 永久に「送信中」に なる。
