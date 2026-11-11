@@ -918,6 +918,10 @@ body.in-play .leave-row{display:none!important}
 .chat-composer-actions .chat-tools-toggle{flex:1 1 0;min-width:0;padding:6px 2px;font-size:11.5px;white-space:nowrap;text-align:center}
 .chat-composer-actions button::before{content:none!important}
 #btn-chat-tools.on,#btn-live.on{background:#e5f7da;border-color:#32795b}
+/* v378: クイズの ボタンを ひと目で 見わけられる ように、ふちを はっきり させる */
+.chat-composer-actions #btn-quiz{border:2px solid #32795b;background:#eef7e7;color:#1f5f45;font-weight:900;box-shadow:inset 0 0 0 1px #fff}
+.chat-composer-actions #btn-quiz:active{background:#d7ecc8}
+.chat-composer-actions #btn-quiz:focus-visible{outline:3px solid #32795b;outline-offset:2px;border-color:#1f5f45}
 .line-composer .chat-composer-actions button{min-height:44px}
 .line-composer #btn-stickers[aria-expanded="true"]{background:#e5f7da;border-color:#32795b}
 .sticker-picker{grid-column:1/-1;grid-row:2;min-width:0;max-height:min(300px,45dvh);overflow-y:auto;overscroll-behavior:contain;background:#fff;border:1px solid #D9E2E9;border-radius:16px;padding:8px;color:#34493c}
@@ -1028,7 +1032,7 @@ body.zg-bg .msg .bubble{box-shadow:0 2px 7px rgba(20,30,40,.26)}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v376</b></p>
+      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v379</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1102,7 +1106,7 @@ body.zg-bg .msg .bubble{box-shadow:0 2px 7px rgba(20,30,40,.26)}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v376</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v379</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -6478,7 +6482,7 @@ function sendAppOpen(reason){
   var __fg=(typeof document!=='undefined'&&document.visibilityState==='visible')?1:0;
   var __g=gestAgeSec();
   /* v268: 理由(r)と 自分の 版(pv)も のせる。あいては「なぜ 増えたか」を 時刻つきで 見られる */
-  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v376'}); }catch(e){}
+  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v379'}); }catch(e){}
   /* v263: アプリを とじて いても 鳴る ように、あいての「ベル用とおりみち」へ 1通だけ おくる。
      この とおりみちは あいてだけが うけとる（こちらには もどらない）。中身は 時刻だけ。 */
   try{ if(peerOpenOn()&&peerKeepOn()&&__r!=='conn') pushPeerOpen(t,__fg,true); }catch(e){}   /* v284: 本物の 起動は 画面判定で 落とさない */   /* v267/v268: 本物の 開封だけ スマホの ベルへ */
@@ -10464,7 +10468,7 @@ Net.onMsg=function(m){
       if(S.joinReq&&S.joinReq.did!==m.from){ notifyHostAccess('ほかの 人が 入室を もとめています'); break; }
       S.joinReq={did:m.from,name:(m.name||'なまえ なし'),pub:m.pub};
           /* v372: ぬしは ボタンを おさなくても そのまま いれる（あいことばを 知って いる 人だけ ここまで 来られる） */
-          setTimeout(function(){ try{ if(S.isHost&&S.joinReq&&S.joinReq.did===m.from&&!S.guest&&!S.paired) approveJoin(); else if(S.isHost&&S.joinReq&&S.guest&&S.guest.did!==S.joinReq.did){ var __r=S.joinReq; S.joinReq=null; showJoinReq(); Net.sendLegacy({t:'full',to:__r.did}); } }catch(e){} },500);
+      /* v377: ぬしが「入れる」を おすまで 入れない（v372の自動承認を やめた） */
       showJoinReq();
       notifyHostAccess('にゃん'+' さんが 入室を もとめています');   /* 人が かくにんしてから いれる */
       break;
@@ -12302,21 +12306,10 @@ var startFromPlay = false;
     if(st){ startFromPlay = true; st.click(); }
   });
 
-  /* クイズを とじた とき、トークの 画面に もどす（トップ経由に しない） */
-  var back = document.getElementById('sq-back');
-  if(back){
-    back.addEventListener('click', function(){
-      try{
-        if(!startFromPlay) return;
-        startFromPlay = false;
-        if(!window.S) return;
-        if(!S.linked) return;                /* ペアが なければ ふつうに トップへ */
-        show('play');
-        if(typeof setTab === 'function'){ setTab('chat'); }
-        if(window.appNav && appNav.sync){ appNav.sync(); }
-      }catch(e){}
-    });
-  }
+  /* v379: クイズの「トップに もどる」は、かならず トップ画面へ もどす。
+     v351では トーク画面へ もどして いたが、メッセージには もどさない ように した。
+     ここで 画面を かえない（既定の show('lobby') を そのまま つかう）。 */
+  startFromPlay = false;
 })();
 </script>
 
