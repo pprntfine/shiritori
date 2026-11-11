@@ -1039,7 +1039,7 @@ body.zg-bg .msg .bubble{box-shadow:0 2px 7px rgba(20,30,40,.26)}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v387</b></p>
+      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v389</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1113,7 +1113,7 @@ body.zg-bg .msg .bubble{box-shadow:0 2px 7px rgba(20,30,40,.26)}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v387</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v389</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -1154,8 +1154,8 @@ body.zg-bg .msg .bubble{box-shadow:0 2px 7px rgba(20,30,40,.26)}
     <!-- 商品ページ（トーク含む） -->
 <section id="s-play" class="screen">
   <div class="players">
-    <div class="pl me" id="pl-me"><span class="tag">ぶー</span><b id="p-me">ぶー</b></div>
-    <div class="pl opp" id="pl-opp"><span class="tag">にゃん</span><b id="p-opp">にゃん</b></div>
+    <div class="pl me" id="pl-me"><span class="tag"></span><b id="p-me"></b></div>
+    <div class="pl opp" id="pl-opp"><span class="tag"></span><b id="p-opp"></b></div>
   </div>
 
   <p id="link-tag" class="link-tag">つうしん あいず ----</p>
@@ -1194,7 +1194,7 @@ body.zg-bg .msg .bubble{box-shadow:0 2px 7px rgba(20,30,40,.26)}
   </div>
 
   <div id="pane-chat" class="pane chatpane on">
-    <div class="lhead"><span class="lh-av" id="lh-av">🐱</span><span class="lh-nm" id="lh-nm">にゃん</span><span class="lh-dot" id="lh-dot"></span><button type="button" id="btn-prof">名前</button><button type="button" id="btn-top2">トップ</button></div>
+    <div class="lhead"><span class="lh-av" id="lh-av">🐱</span><span class="lh-nm" id="lh-nm"></span><span class="lh-dot" id="lh-dot"></span><button type="button" id="btn-prof">名前</button><button type="button" id="btn-top2">トップ</button></div>
     <div id="chat-log" class="line-chat" role="log" aria-live="polite"></div>
     <form id="form-chat" class="line-composer" autocomplete="off">
       <div class="chat-tool-menu">
@@ -3183,7 +3183,7 @@ $('#peek').addEventListener('keydown',function(e){ if(e.key==='Enter'||e.key==='
    6. ロビー
    ================================================================= */
 /* v329: プロフで 決めた 自分の 名前を 使う（かためて 「ぶー」に して いた ため、入室の 合図も いつも ぶー だった） */
-function myName(){ try{ if(window.PROF&&PROF.me&&typeof PROF.me.name==='string'){ var n=PROF.me.name.trim().slice(0,12); if(n) return n; } }catch(e){} return 'ぶー'; }
+function myName(){ try{ if(window.PROF&&PROF.me&&typeof PROF.me.name==='string'){ var n=PROF.me.name.trim().slice(0,12); if(n&&n!=='ぶー') return n; } }catch(e){} return ''; }
 function busy(on,msg,el){
   S.busy=!!on;
   $('#btn-create').disabled=!!on;
@@ -3584,7 +3584,7 @@ function approveJoin(){
       var ps=await pairSecret(hk,req.pub);
       if(epoch!==Net.epoch||!S.guest||S.guest.did!==req.did) return;
       S.sessKey=ps.key; S.sas=ps.tag;
-      var wel={t:'in2',host:'ぶー',to:req.did,hostPub:hpub,pr:S.price||'',ds:S.desc||''};
+      var wel={t:'in2',host:myName(),to:req.did,hostPub:hpub,pr:S.price||'',ds:S.desc||''};
       Net.sendLegacy(wel);
       setTimeout(function(){ if(epoch!==Net.epoch||!S.guest||S.guest.did!==req.did) return; try{ Net.sendLegacy(wel); }catch(e){} },600);
       setTimeout(function(){ if(epoch!==Net.epoch||!S.guest||S.guest.did!==req.did) return; try{ Net.sendLegacy(wel); }catch(e){} },1400);
@@ -3606,7 +3606,7 @@ function approveJoin(){
 /* おなじ かぎを おくりなおす(とどかなかった ときの ため) */
 function resendWelcome(){
   if(!S.pairBox||!S.pairHostPub||!S.pairDid) return false;
-  Net.sendLegacy({t:'welcome',host:'ぶー',hostPub:S.pairHostPub,box:S.pairBox,to:S.pairDid,pr:S.price||'',ds:S.desc||''});
+  Net.sendLegacy({t:'welcome',host:myName(),hostPub:S.pairHostPub,box:S.pairBox,to:S.pairDid,pr:S.price||'',ds:S.desc||''});
   return true;
 }
 /* ロビーから 専用の とおりみちへ 引っこす */
@@ -3715,7 +3715,7 @@ function priceText(v){
 function renderProduct(){
   var nm=S.prodName||S.room||'商品';
   var pr=priceText(S.price);
-  var seller=(S.isHost ? ('ぶー') : (S.opp&&S.opp.name ? S.opp.name : '出品者'));
+  var seller=(S.isHost ? (meName()||'出品者') : (S.opp&&S.opp.name ? S.opp.name : '出品者'));
   if($('#prod-name')) $('#prod-name').textContent=nm;
   if($('#prod-price')) $('#prod-price').textContent=pr;
   if($('#prod-seller')) $('#prod-seller').textContent='出品者: '+seller;
@@ -6491,7 +6491,7 @@ function sendAppOpen(reason){
   var __fg=(typeof document!=='undefined'&&document.visibilityState==='visible')?1:0;
   var __g=gestAgeSec();
   /* v268: 理由(r)と 自分の 版(pv)も のせる。あいては「なぜ 増えたか」を 時刻つきで 見られる */
-  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v387'}); }catch(e){}
+  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v389'}); }catch(e){}
   /* v263: アプリを とじて いても 鳴る ように、あいての「ベル用とおりみち」へ 1通だけ おくる。
      この とおりみちは あいてだけが うけとる（こちらには もどらない）。中身は 時刻だけ。 */
   try{ if(peerOpenOn()&&peerKeepOn()&&__r!=='conn') pushPeerOpen(t,__fg,true); }catch(e){}   /* v284: 本物の 起動は 画面判定で 落とさない */   /* v267/v268: 本物の 開封だけ スマホの ベルへ */
@@ -7155,7 +7155,7 @@ function renderChat(forceBottom, __tailFrom){
       av.className='av'+(cont?' blank':'');
       if(!cont) fillAv(av,PROF.peer,'🐱');
       var col=document.createElement('div'); col.className='incol';
-      if(!cont){ var nmE=document.createElement('span'); nmE.className='nm'; nmE.textContent=peerName(); col.appendChild(nmE); }
+      if(!cont){ var __pnm=peerName(); if(__pnm){ var nmE=document.createElement('span'); nmE.className='nm'; nmE.textContent=__pnm; col.appendChild(nmE); } }   /* v388: 未設定なら 出さない */
       col.appendChild(bub);
       row.appendChild(av); row.appendChild(col); row.appendChild(meta);
     }
@@ -10485,7 +10485,7 @@ Net.onMsg=function(m){
           /* v372: ぬしは ボタンを おさなくても そのまま いれる（あいことばを 知って いる 人だけ ここまで 来られる） */
       /* v377: ぬしが「入れる」を おすまで 入れない（v372の自動承認を やめた） */
       showJoinReq();
-      notifyHostAccess('にゃん'+' さんが 入室を もとめています');   /* 人が かくにんしてから いれる */
+      notifyHostAccess((m.name?String(m.name).slice(0,12)+' さんが':'だれかが')+' 入室を もとめています');   /* v388 */   /* 人が かくにんしてから いれる */
       break;
 
     /* 承認された：端末固有の鍵でセッション鍵を受け取る */
@@ -10503,7 +10503,7 @@ Net.onMsg=function(m){
           if(in2Epoch!==Net.epoch||S.paired) return;
           S.sessKey=ps.key; S.sas=ps.tag;
           stopAnnounce();
-          S.opp={id:m.from,name:'にゃん'};
+          S.opp={id:m.from,name:''};   /* v388: 借りの 名前を 入れない */
           if(m.pr) S.price=String(m.pr);
           if(m.ds) S.desc=String(m.ds);
           if(S.room) S.prodName=S.room;
@@ -10567,7 +10567,7 @@ Net.onMsg=function(m){
           var sk=await sessionKeyFromSid(got.sid);
           stopAnnounce();
           S.paired=true; S.sealed=true;
-          S.opp={id:m.from,name:'にゃん'};
+          S.opp={id:m.from,name:''};   /* v388: 借りの 名前を 入れない */
           Net.setSession(sk);
           note('入室を ゆるされました。','#note2');
           startPlay();
@@ -11505,11 +11505,18 @@ document.addEventListener('visibilitychange',function(){ if(!document.hidden){ t
    ================================================================ */
 var PROF_KEY='mtp_prof_v1';
 var EMOS=['🐷','🐱','🐶','🐰','🐻','🐼','🦊','🐸','🐵','🐧','🐤','🦁','🐯','🐨','🐹','🍄‍🟫','🌸','⭐','🍓','🍙','⚽','🎮','👑','😺'];
-function profLoad(){ try{ var o=JSON.parse(localStorage.getItem(PROF_KEY)||'null'); if(o) return o; }catch(e){} return {me:{name:'ぶー',emo:'🐷',img:''},peer:{name:'にゃん',emo:'🐱',img:''},alias:''}; }
+function profLoad(){
+  try{ var o=JSON.parse(localStorage.getItem(PROF_KEY)||'null');
+    if(o){ /* v388: かためて 入って いた 借りの 名前（ぶー／にゃん）は 未設定と みなす */
+      if(o.me&&o.me.name==='ぶー') o.me.name='';
+      if(o.peer&&o.peer.name==='にゃん') o.peer.name='';
+      return o; }
+  }catch(e){}
+  return {me:{name:'',emo:'🐷',img:''},peer:{name:'',emo:'🐱',img:''},alias:''}; }
 var PROF=profLoad();
 function profSave(){ try{ window.PROF=PROF; }catch(e){} try{ localStorage.setItem(PROF_KEY,JSON.stringify(PROF)); }catch(e){ try{ var c=JSON.parse(JSON.stringify(PROF)); c.peer.img=''; localStorage.setItem(PROF_KEY,JSON.stringify(c)); }catch(_){} } }
-function meName(){ return (PROF.me&&PROF.me.name)||'ぶー'; }
-function peerName(){ return (PROF.peer&&PROF.peer.name)||'にゃん'; } /* v203: よびかた上書きは やめ。あいてが きめた 名前 */
+function meName(){ return (PROF.me&&PROF.me.name)||''; }   /* v388: 未設定なら 空 */
+function peerName(){ return (PROF.peer&&PROF.peer.name)||''; } /* v203: よびかた上書きは やめ。あいてが きめた 名前。v388: 未設定なら 空 */
 function avHTML(p,fb){ if(p&&p.img) return '<img alt="" src="'+p.img+'">'; return (p&&p.emo)||fb; }
 function fillAv(el,p,fb){ if(!el) return; if(p&&p.img){ el.innerHTML=''; var im=document.createElement('img'); im.alt=''; im.src=p.img; el.appendChild(im); } else el.textContent=(p&&p.emo)||fb; }
 function paintProf(){
@@ -11521,7 +11528,8 @@ function sendProf(){
   try{ if(!Net.topic||!Net.key||!(S.paired||S.linked)) return; Net.send({t:'prof',nm:meName(),emo:(PROF.me&&PROF.me.emo)||'🐷',img:(PROF.me&&PROF.me.img)||'',ps:psrvGet()}); }catch(e){}
 }
 function recvProf(m){
-  PROF.peer={name:String(m.nm||'にゃん').slice(0,12),emo:String(m.emo||'🐱').slice(0,8),img:(typeof m.img==='string'&&/^data:image\/jpeg;base64,/.test(m.img)&&m.img.length<9000)?m.img:''};
+  var __pn0=String(m.nm||'').trim().slice(0,12); if(__pn0==='にゃん') __pn0='';   /* v388 */
+  PROF.peer={name:__pn0,emo:String(m.emo||'🐱').slice(0,8),img:(typeof m.img==='string'&&/^data:image\/jpeg;base64,/.test(m.img)&&m.img.length<9000)?m.img:''};
   profSave(); paintProf(); if(S.tab==='chat') renderChat(true);
 }
 (function(){
@@ -11579,7 +11587,7 @@ function recvProf(m){
       try{ if(Notification.permission!=='granted') await Notification.requestPermission(); }catch(e){}
       try{ var ok=await psrvSetup(); $('#pf-psrvh').textContent = ok ? 'つうちサーバー：せってい ずみ ✓' : 'つうちサーバー：とうろくに しっぱい。「通知:オン」を おして から また ほぞん してください。'; }catch(e){}
     }
-    var nm=($('#pf-me-nm').value||'').trim().slice(0,12)||'ぶー';
+    var nm=($('#pf-me-nm').value||'').trim().slice(0,12);   /* v388: 未入力なら 空の まま */
     PROF.me={name:nm,emo:pick,img:img};
     PROF.alias=''; /* v203: あいての よびかたは あいてが きめる */
     profSave(); paintProf(); sendProf(); renderChat(true);
@@ -12099,6 +12107,13 @@ body.selmode #chat-log .msg:after{display:none!important}
 .line-composer .chat-tool-menu{grid-column:1/-1;width:100%;min-width:0;box-sizing:border-box}
 .line-composer .chat-composer-actions{display:flex!important;flex-wrap:wrap!important;gap:4px!important;width:100%!important;box-sizing:border-box}
 .line-composer .chat-composer-actions button{flex:0 1 auto!important;min-width:max-content!important;width:auto!important;padding:6px 9px!important;font-size:11.5px!important;white-space:nowrap;overflow:visible!important}
+
+/* v389: 自分の メッセージを 横長に（行の 幅を つかいきる。自分の ぶんだけ） */
+html body #chat-log .msg.out{align-items:flex-end!important}
+html body #chat-log .msg.out>.bubble,
+html body #chat-log .msg.out>.message-content{flex:1 1 auto!important;min-width:0!important;max-width:88%!important}
+html body #chat-log .msg.out>.message-content{align-items:flex-end!important}
+html body #chat-log .msg.out .bubble{width:100%!important;max-width:100%!important;box-sizing:border-box!important;white-space:normal!important;word-break:normal!important;overflow-wrap:break-word!important;text-align:left!important}
 </style>
 <script>
 /* v251: えらんで まとめて けす。入り口は 上部の 見出し行、決定は 下部の まるい ボタン。 */
