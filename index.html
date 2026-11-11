@@ -1039,7 +1039,7 @@ body.zg-bg .msg .bubble{box-shadow:0 2px 7px rgba(20,30,40,.26)}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v386</b></p>
+      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v387</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1113,7 +1113,7 @@ body.zg-bg .msg .bubble{box-shadow:0 2px 7px rgba(20,30,40,.26)}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v386</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v387</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -6491,7 +6491,7 @@ function sendAppOpen(reason){
   var __fg=(typeof document!=='undefined'&&document.visibilityState==='visible')?1:0;
   var __g=gestAgeSec();
   /* v268: 理由(r)と 自分の 版(pv)も のせる。あいては「なぜ 増えたか」を 時刻つきで 見られる */
-  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v386'}); }catch(e){}
+  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v387'}); }catch(e){}
   /* v263: アプリを とじて いても 鳴る ように、あいての「ベル用とおりみち」へ 1通だけ おくる。
      この とおりみちは あいてだけが うけとる（こちらには もどらない）。中身は 時刻だけ。 */
   try{ if(peerOpenOn()&&peerKeepOn()&&__r!=='conn') pushPeerOpen(t,__fg,true); }catch(e){}   /* v284: 本物の 起動は 画面判定で 落とさない */   /* v267/v268: 本物の 開封だけ スマホの ベルへ */
@@ -12345,32 +12345,18 @@ var startFromPlay = false;
 })();
 </script>
 <script>
-/* v386: iPhoneの ホーム画面アプリ（standalone）では 外部リンクが 同じ 画面のまま 止まる ため、
-   TikTok は「アプリ／ブラウザ」を えらべる ように する（ほかの 画面は そのまま） */
+/* v387: ホーム画面アプリ（standalone）でも TikTok を「1回タップ」で ひらく。
+   standalone では <a target="_blank"> が 無反応に なる ことが ある ため、タップの 中で 直接 ひらく */
 (function(){
   var a=document.getElementById('btn-tiktok'); if(!a) return;
-  var WEB='https://www.tiktok.com/', SHEET='tt-sheet', APP='snssdk1233://';
+  var WEB='https://www.tiktok.com/';
   function standalone(){ try{ return navigator.standalone===true||(window.matchMedia&&(matchMedia('(display-mode: standalone)').matches||matchMedia('(display-mode: fullscreen)').matches)); }catch(e){ return false; } }
-  function close(){ var s=document.getElementById(SHEET); if(s&&s.parentNode) s.parentNode.removeChild(s); }
-  function sheet(){
-    close();
-    var w=document.createElement('div'); w.id=SHEET; w.setAttribute('role','dialog'); w.setAttribute('aria-modal','true'); w.setAttribute('aria-label','TikTokを ひらく');
-    w.style.cssText='position:fixed;left:8px;right:8px;bottom:calc(8px + env(safe-area-inset-bottom));z-index:13000;background:#fff;color:#15241a;border:1px solid #b6c7be;border-radius:18px;box-shadow:0 8px 28px #15241a40;padding:12px 14px;font:inherit';
-    var t=document.createElement('div'); t.textContent='TikTok を ひらく'; t.style.cssText='font-weight:800;font-size:.95rem;margin-bottom:4px';
-    var p=document.createElement('div'); p.textContent='アプリが ひらかない ときは、ブラウザで ひらけます。'; p.style.cssText='font-size:.78rem;color:#526259;margin-bottom:8px;line-height:1.5';
-    var b1=document.createElement('button'); b1.type='button'; b1.textContent='TikTokアプリで ひらく';
-    b1.style.cssText='display:block;width:100%;padding:11px 12px;border-radius:12px;background:#e3f4d6;border:2px solid #2C6B4F;color:#153F2D;font:inherit;font-weight:900;margin-bottom:6px';
-    b1.addEventListener('click',function(){ try{ window.location.href=APP; }catch(e){} });
-    var b2=document.createElement('a'); b2.href=WEB; b2.target='_blank'; b2.rel='noopener noreferrer'; b2.textContent='ブラウザで ひらく';
-    b2.style.cssText='display:block;text-align:center;padding:10px 12px;border-radius:12px;background:#fff;border:1px solid #b6c7be;color:#153F2D;font-weight:800;text-decoration:none;margin-bottom:6px';
-    var b3=document.createElement('button'); b3.type='button'; b3.textContent='とじる';
-    b3.style.cssText='display:block;width:100%;padding:9px 12px;border:0;border-radius:12px;background:#eef2ef;color:#34493c;font:inherit;font-weight:700';
-    b3.addEventListener('click',close);
-    w.appendChild(t); w.appendChild(p); w.appendChild(b1); w.appendChild(b2); w.appendChild(b3); document.body.appendChild(w);
-  }
   a.addEventListener('click',function(e){
-    if(!standalone()) return;
-    e.preventDefault(); sheet();
+    if(!standalone()) return;                 /* ふつうの ブラウザは これまで どおり 1タップで ひらく */
+    e.preventDefault();
+    var w=null; try{ w=window.open(WEB,'_blank'); }catch(err){ w=null; }
+    if(w) return;                             /* 1タップで ひらいた（この アプリの 画面は そのまま） */
+    try{ window.location.href=WEB; }catch(err){}   /* ひらけなかった ときも、もう 1回は おさない */
   });
 })();
 </script>
