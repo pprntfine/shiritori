@@ -1039,7 +1039,7 @@ body.zg-bg .msg .bubble{box-shadow:0 2px 7px rgba(20,30,40,.26)}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v419</b></p>
+      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v420</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1113,7 +1113,7 @@ body.zg-bg .msg .bubble{box-shadow:0 2px 7px rgba(20,30,40,.26)}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v419</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v420</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -6547,7 +6547,7 @@ function sendAppOpen(reason){
   var __fg=(typeof document!=='undefined'&&document.visibilityState==='visible')?1:0;
   var __g=gestAgeSec();
   /* v268: 理由(r)と 自分の 版(pv)も のせる。あいては「なぜ 増えたか」を 時刻つきで 見られる */
-  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v419'}); }catch(e){}
+  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v420'}); }catch(e){}
   /* v263: アプリを とじて いても 鳴る ように、あいての「ベル用とおりみち」へ 1通だけ おくる。
      この とおりみちは あいてだけが うけとる（こちらには もどらない）。中身は 時刻だけ。 */
   try{ if(peerOpenOn()&&peerKeepOn()&&__r!=='conn') pushPeerOpen(t,__fg,true); }catch(e){}   /* v284: 本物の 起動は 画面判定で 落とさない */   /* v267/v268: 本物の 開封だけ スマホの ベルへ */
@@ -12515,7 +12515,7 @@ try{(function(){
     if(BIG){x=(window.innerWidth-sz)/2;y=(window.innerHeight-sz)/2;}
     var tx=null; try{tx=localStorage.getItem('mtp_cm_'+p.img);}catch(e){}
     if(tx===null){tx=(window.TOKUN_CM&&window.TOKUN_CM[p.img])||'';}
-    try{ if(window.TOKUN_BUB&&window.TOKUN_BUB[p.img]){ var bb=window.TOKUN_BUB[p.img]; var mk=document.createElement('div'); mk.style.cssText='position:absolute;left:'+Math.max(0,(bb[0]-0.01)*100)+'%;top:'+Math.max(0,(bb[1]-0.01)*100)+'%;width:'+Math.min(100,(bb[2]+0.02)*100)+'%;height:'+Math.min(100,(bb[3]+0.02)*100)+'%;box-sizing:border-box;background:#fff;border-radius:'+Math.max(4,Math.round(sz*0.045))+'px;display:flex;align-items:center;justify-content:center;text-align:center;overflow:hidden;padding:3%;font-weight:700;color:#222;white-space:pre-wrap;word-break:break-word;line-height:1.2;font-size:'+Math.max(9,Math.round(sz*0.1))+'px'; mk.textContent=tx||''; el.appendChild(mk);if(p.img!=='PEEK'&&window.DOG_STK&&window.DOG_STK[p.img]){try{mk.animate([{transform:'translateY(0)'},{transform:'translateY(-'+Math.max(3,Math.round(sz*0.015))+'px)'}],{duration:1490,iterations:Infinity,direction:'alternate',easing:'ease-in-out'});}catch(e){}} var fs=Math.max(9,Math.round(sz*0.1)); mk.style.fontSize=fs+'px'; var g=0; while(g++<14&&fs>6&&(mk.scrollHeight>mk.clientHeight+1||mk.scrollWidth>mk.clientWidth+1)){fs--;mk.style.fontSize=fs+'px';} } }catch(e){}
+    try{ if(window.TOKUN_BUB&&window.TOKUN_BUB[p.img]){ var bb=window.TOKUN_BUB[p.img]; var mk=document.createElement('div'); mk.style.cssText='position:absolute;left:'+Math.max(0,(bb[0]-0.01)*100)+'%;top:'+Math.max(0,(bb[1]-0.01)*100)+'%;width:'+Math.min(100,(bb[2]+0.02)*100)+'%;height:'+Math.min(100,(bb[3]+0.02)*100)+'%;box-sizing:border-box;background:#fff;border-radius:'+Math.max(4,Math.round(sz*0.045))+'px;display:flex;align-items:center;justify-content:center;text-align:center;overflow:hidden;padding:3%;font-weight:700;color:#222;white-space:pre-wrap;word-break:break-word;line-height:1.2;font-size:'+Math.max(9,Math.round(sz*0.1))+'px'; mk.textContent=tx||''; el.appendChild(mk);if(p.img!=='PEEK'&&window.DOG_STK&&window.DOG_STK[p.img]){try{var kf=[{transform:'translateY(0)'},{transform:'translateY(-'+Math.max(3,Math.round(sz*0.015))+'px)'}],ka={duration:1490,iterations:Infinity,direction:'alternate',easing:'ease-in-out'},im=el.querySelector('img'); if(im)im.animate(kf,ka); mk.animate(kf,ka);}catch(e){}} var fs=Math.max(9,Math.round(sz*0.1)); mk.style.fontSize=fs+'px'; var g=0; while(g++<14&&fs>6&&(mk.scrollHeight>mk.clientHeight+1||mk.scrollWidth>mk.clientWidth+1)){fs--;mk.style.fontSize=fs+'px';} } }catch(e){}
     function setT(v){el.style.transform=(p.flip?'scaleX(-1) ':'')+v;}
     if(p.ent==='peekL'){el.style.left=(-sz*0.55)+'px';el.style.top=y+'px';requestAnimationFrame(function(){requestAnimationFrame(function(){el.style.left='8px';});});}
     else if(p.ent==='peekR'){el.style.left=(window.innerWidth-sz*0.45)+'px';el.style.top=y+'px';requestAnimationFrame(function(){requestAnimationFrame(function(){el.style.left=(window.innerWidth-sz-8)+'px';});});}
