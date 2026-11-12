@@ -1039,7 +1039,7 @@ body.zg-bg .msg .bubble{box-shadow:0 2px 7px rgba(20,30,40,.26)}
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v410</b></p>
+      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v411</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1113,7 +1113,7 @@ body.zg-bg .msg .bubble{box-shadow:0 2px 7px rgba(20,30,40,.26)}
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v410</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v411</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -1356,6 +1356,48 @@ body.zg-bg .msg .bubble{box-shadow:0 2px 7px rgba(20,30,40,.26)}
     <button type="button" class="ph" id="pf-tokun-big" style="padding:4px 14px">オフ</button>
   </div>
   <p style="font-size:.72rem;color:#556;margin:0 0 10px">とー君が トークに ひょっこり あらわれます。オフに すると あらわれません。間隔の ボタンを おすたびに かわります（10秒→15秒→20秒→25秒→なし→連続）。拡大を オンに すると、とー君が 画面いっぱいに 巨大で あらわれ、紙吹雪と クラッカーで だいだんさ します。この 設定は この 端末だけの もので、あいてには つたわりません。</p>
+  <div class="sec">とー君の コメント</div>
+  <div style="display:flex;align-items:center;gap:8px;margin:6px 0">
+    <span style="font-size:.78rem;width:8.5em;flex:none">トラック</span>
+    <input type="text" id="pf-tcm-🐶㉘" maxlength="40" placeholder="コメント" style="flex:1;min-width:0;box-sizing:border-box;padding:7px 9px;border-radius:9px;border:1.5px solid #ddd;font-size:.8rem">
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;margin:6px 0">
+    <span style="font-size:.78rem;width:8.5em;flex:none">バイク</span>
+    <input type="text" id="pf-tcm-🐶㉙" maxlength="40" placeholder="コメント" style="flex:1;min-width:0;box-sizing:border-box;padding:7px 9px;border-radius:9px;border:1.5px solid #ddd;font-size:.8rem">
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;margin:6px 0">
+    <span style="font-size:.78rem;width:8.5em;flex:none">キャンピングカー</span>
+    <input type="text" id="pf-tcm-🐶㉚" maxlength="40" placeholder="コメント" style="flex:1;min-width:0;box-sizing:border-box;padding:7px 9px;border-radius:9px;border:1.5px solid #ddd;font-size:.8rem">
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;margin:6px 0">
+    <span style="font-size:.78rem;width:8.5em;flex:none">オートバイ</span>
+    <input type="text" id="pf-tcm-🐶㉛" maxlength="40" placeholder="コメント" style="flex:1;min-width:0;box-sizing:border-box;padding:7px 9px;border-radius:9px;border:1.5px solid #ddd;font-size:.8rem">
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;margin:6px 0">
+    <span style="font-size:.78rem;width:8.5em;flex:none">筋トレ</span>
+    <input type="text" id="pf-tcm-🐶㉜" maxlength="40" placeholder="コメント" style="flex:1;min-width:0;box-sizing:border-box;padding:7px 9px;border-radius:9px;border:1.5px solid #ddd;font-size:.8rem">
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;margin:6px 0">
+    <span style="font-size:.78rem;width:8.5em;flex:none">ランニング</span>
+    <input type="text" id="pf-tcm-🐶㉝" maxlength="40" placeholder="コメント" style="flex:1;min-width:0;box-sizing:border-box;padding:7px 9px;border-radius:9px;border:1.5px solid #ddd;font-size:.8rem">
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;margin:6px 0">
+    <span style="font-size:.78rem;width:8.5em;flex:none">スケボー</span>
+    <input type="text" id="pf-tcm-🐶㉞" maxlength="40" placeholder="コメント" style="flex:1;min-width:0;box-sizing:border-box;padding:7px 9px;border-radius:9px;border:1.5px solid #ddd;font-size:.8rem">
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;margin:6px 0">
+    <span style="font-size:.78rem;width:8.5em;flex:none">キック</span>
+    <input type="text" id="pf-tcm-🐶㉟" maxlength="40" placeholder="コメント" style="flex:1;min-width:0;box-sizing:border-box;padding:7px 9px;border-radius:9px;border:1.5px solid #ddd;font-size:.8rem">
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;margin:6px 0">
+    <span style="font-size:.78rem;width:8.5em;flex:none">腕立て</span>
+    <input type="text" id="pf-tcm-🐶㊲" maxlength="40" placeholder="コメント" style="flex:1;min-width:0;box-sizing:border-box;padding:7px 9px;border-radius:9px;border:1.5px solid #ddd;font-size:.8rem">
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;margin:6px 0">
+    <span style="font-size:.78rem;width:8.5em;flex:none">たきび</span>
+    <input type="text" id="pf-tcm-🐶㊳" maxlength="40" placeholder="コメント" style="flex:1;min-width:0;box-sizing:border-box;padding:7px 9px;border-radius:9px;border:1.5px solid #ddd;font-size:.8rem">
+  </div>
+  <p style="font-size:.72rem;color:#556;margin:4px 0 10px">入力すると、とー君が あらわれるときに ふきだしで コメントが でます。からっぽに すると でません。この 設定は この 端末だけの ものです。</p>
   <button type="button" class="ph" id="pf-ntest">通知を テストする（10秒後に とどきます。その間に ホーム画面へ）</button>
   <p id="pf-nres" style="font-size:.78rem;color:#556;margin:6px 0 0"></p>
   <button type="button" class="ph" id="pf-ptest">とどけ てんけん（アプリを うしろに まわして 30秒 待つ）</button>
@@ -6505,7 +6547,7 @@ function sendAppOpen(reason){
   var __fg=(typeof document!=='undefined'&&document.visibilityState==='visible')?1:0;
   var __g=gestAgeSec();
   /* v268: 理由(r)と 自分の 版(pv)も のせる。あいては「なぜ 増えたか」を 時刻つきで 見られる */
-  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v410'}); }catch(e){}
+  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v411'}); }catch(e){}
   /* v263: アプリを とじて いても 鳴る ように、あいての「ベル用とおりみち」へ 1通だけ おくる。
      この とおりみちは あいてだけが うけとる（こちらには もどらない）。中身は 時刻だけ。 */
   try{ if(peerOpenOn()&&peerKeepOn()&&__r!=='conn') pushPeerOpen(t,__fg,true); }catch(e){}   /* v284: 本物の 起動は 画面判定で 落とさない */   /* v267/v268: 本物の 開封だけ スマホの ベルへ */
@@ -11644,6 +11686,11 @@ function recvProf(m){
       try{ if(big) localStorage.removeItem('mtp_tokun_big'); else localStorage.setItem('mtp_tokun_big','1'); }catch(e){}
       paintTokun(); toast(big?'ふつうの おおきさに もどしました。':'とー君が 画面いっぱいに 巨大で あらわれます！'); });
     paintTokun(); }
+  if($('#pf-tcm-🐶㉘')){ var CMK=['🐶㉘','🐶㉙','🐶㉚','🐶㉛','🐶㉜','🐶㉝','🐶㉞','🐶㉟','🐶㊲','🐶㊳'];
+    CMK.forEach(function(k){ var inp=document.getElementById('pf-tcm-'+k); if(!inp)return; var key='mtp_cm_'+k;
+      try{ inp.value=localStorage.getItem(key)||''; }catch(e){}
+      inp.addEventListener('input',function(){ try{ if(inp.value) localStorage.setItem(key,inp.value); else localStorage.removeItem(key); }catch(e){} }); });
+  }
   if($('#pf-snd')){ $('#pf-snd').addEventListener('click',function(){
     var on=!sndOn();
     try{ if(on) localStorage.removeItem('mtp_snd_off'); else localStorage.setItem('mtp_snd_off','1'); }catch(e){}
@@ -12459,6 +12506,8 @@ try{(function(){
     var mx=r.left+8,mw=Math.max(40,r.width-sz-16),mh=Math.max(40,r.height-sz-16);
     var x=mx+Math.random()*mw,y=r.top+8+Math.random()*mh;
     if(BIG){x=(window.innerWidth-sz)/2;y=(window.innerHeight-sz)/2;}
+    var bbl=null; var tx=''; try{tx=localStorage.getItem('mtp_cm_'+p.img)||'';}catch(e){}
+    if(tx){bbl=document.createElement('div');bbl.textContent=tx;bbl.style.cssText='position:fixed;z-index:100000;pointer-events:none;max-width:70vw;background:#fff;border:2px solid #2b2b2b;border-radius:16px;padding:7px 12px;font-size:'+(BIG?'1.05rem':'.82rem')+';font-weight:600;color:#222;box-shadow:0 3px 10px rgba(0,0,0,.25);white-space:pre-wrap;word-break:break-word;opacity:0;transition:opacity .4s ease';document.body.appendChild(bbl);(function(){var bw=bbl.offsetWidth,bh=bbl.offsetHeight;var bx=Math.max(8,Math.min(window.innerWidth-bw-8,x+sz/2-bw/2));var by=(BIG?8:Math.max(8,y-bh-10));bbl.style.left=bx+'px';bbl.style.top=by+'px';bbl.style.opacity='1';})();}
     function setT(v){el.style.transform=(p.flip?'scaleX(-1) ':'')+v;}
     if(p.ent==='peekL'){el.style.left=(-sz*0.55)+'px';el.style.top=y+'px';requestAnimationFrame(function(){requestAnimationFrame(function(){el.style.left='8px';});});}
     else if(p.ent==='peekR'){el.style.left=(window.innerWidth-sz*0.45)+'px';el.style.top=y+'px';requestAnimationFrame(function(){requestAnimationFrame(function(){el.style.left=(window.innerWidth-sz-8)+'px';});});}
@@ -12475,7 +12524,7 @@ try{(function(){
       else if(p.exit==='burst'){el.style.transition='all .35s ease-out';setT('scale(2.2)');el.style.opacity='0';}
       else if(p.exit==='unpeekL'){el.style.left=(-sz*0.6)+'px';}
       else if(p.exit==='unpeekR'){el.style.left=(window.innerWidth-sz*0.4)+'px';}
-      setTimeout(function(){el.remove();busy=false;},800);
+      setTimeout(function(){el.remove();if(bbl){bbl.remove();}busy=false;},800);
     },5000);
   }
   var __iv=10000; try{ var __pv=parseInt(localStorage.getItem('mtp_tokun_iv')||'10000',10); if(__pv===0){__iv=0;}else if(__pv===-1){__iv=-1;}else if(__pv>0){__iv=__pv;} }catch(e){}
