@@ -12540,6 +12540,12 @@ try{(function(){
   (function __loop(){ setTimeout(function(){ if(__iv!==0) show(); __loop(); },(__iv===-1?300:__iv)); })();
 })();}catch(e){}
 </script>
+<style id="bg40-css">
+/* v421-add: きせつの はいけい40枚 — さいゆうせんで とうさいする */
+html.bg40 #pane-chat{background-image:var(--bg40-img)!important;background-size:cover!important;background-position:center bottom!important;background-repeat:no-repeat!important;background-color:#CFE0EA!important}
+html.bg40 #chat-log{background:transparent!important;background-color:transparent!important}
+html.bg40 #pane-chat::before{content:none!important}
+</style>
 <script>
 /* =================================================================
    季節背景 40枚(ぶー君+にゃんちゃん 手つなぎ) — v420 追加機能
@@ -12561,26 +12567,26 @@ try{(function(){
     if(m>=9&&m<=11) return 'aki';
     return 'fuyu';
   }
-  function todayPick(){
+  function todayIdx(){
     try{
       var d=new Date(), y=d.getFullYear(), m=d.getMonth()+1, day=d.getDate();
-      var arr=BG40[seasonOf(m)]||BG40.haru;
       var seed=((y*10000+m*100+day)>>>0);
       seed=(Math.imul(seed,1103515245)+12345)>>>0;
       seed=(seed>>>16)%100000;
-      return arr[seed%arr.length];
-    }catch(e){ return ''; }
+      return seed%10;
+    }catch(e){ return 0; }
   }
   function applyBg(){
     try{
-      var p=document.getElementById('pane-chat');
-      if(!p) return;
-      var u=todayPick(); if(!u) return;
-      p.style.backgroundImage='linear-gradient(rgba(255,255,255,.45),rgba(255,255,255,.45)),url("'+u+'")';
-      p.style.backgroundSize='cover';
-      p.style.backgroundPosition='center bottom';
-      p.style.backgroundRepeat='no-repeat';
-      p.style.backgroundColor='#f4f6f2';
+      var s=seasonOf((new Date()).getMonth()+1);
+      var u=BG40[s]&&BG40[s][todayIdx()];
+      if(!u) return;
+      var root=document.documentElement;
+      var v='linear-gradient(rgba(255,255,255,.45),rgba(255,255,255,.45)),url("'+u+'")';
+      if(root.getAttribute('data-bg40')===v) return;
+      root.setAttribute('data-bg40',v);
+      root.style.setProperty('--bg40-img',v);
+      root.classList.add('bg40');
     }catch(e){}
   }
   function boot(){
