@@ -982,37 +982,7 @@ html body #chat-log .msg.out .message-content>.bubble:not(.sticker-b):not(.dog-b
 @keyframes sticker-hop{0%,100%{transform:translateY(0) scale(1,1)}30%{transform:translateY(0) scale(1.12,.88)}60%{transform:translateY(-16px) scale(.94,1.1)}80%{transform:translateY(0) scale(1.1,.9)}}
 @media(prefers-reduced-motion:reduce){.sticker-motion{animation:none!important;transform:none!important}.sticker-fullscreen{display:none!important}}
 </style>
-<style id="zg-bg-css">
-/* ===== v338: まいにち かわる しゃしんの はいけい（トークの うしろ） ===== */
-body.zg-bg #pane-chat{background:#fff!important;position:relative!important;isolation:isolate;overflow:hidden}
-body.zg-bg #pane-chat::before{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;
-  background:var(--zg-img,none) center/cover no-repeat}
-body.zg-bg #chat-log,body.zg-bg #line-chat,body.zg-bg .line-chat{background:transparent!important;background-color:transparent!important;border-color:transparent!important}
-body.zg-bg .lhead{background:rgba(255,255,255,.97)!important}
-body.zg-bg .line-composer{background:rgba(255,255,255,.97)!important}
-body.zg-bg .line-day{background:rgba(255,255,255,.98)!important;color:#33424E!important;font-weight:800!important}
-body.zg-bg .msg .nm{background:rgba(255,255,255,.96);color:#2E3B46;border-radius:999px;padding:0 8px;display:inline-block;box-shadow:0 1px 3px rgba(20,30,40,.18)}
-body.zg-bg .msg .meta{background:rgba(255,255,255,.98);color:#22303A;font-weight:700;border-radius:999px;padding:1px 8px;display:inline-block;box-shadow:0 1px 3px rgba(20,30,40,.22)}
-body.zg-bg .msg .bubble{box-shadow:0 2px 7px rgba(20,30,40,.26)}
-/* たんじょうびの おいわい */
-#zg-bd{position:fixed;inset:0;z-index:9997;display:flex;align-items:center;justify-content:center;pointer-events:none}
-#zg-bd .in{background:rgba(255,255,255,.95);border-radius:22px;padding:18px 26px;text-align:center;
-  box-shadow:0 10px 34px rgba(0,0,0,.22);animation:zgBdIn .45s ease-out}
-#zg-bd .t{font-size:1.45rem;font-weight:900;color:#C2405A}
-#zg-bd .s{font-size:.8rem;font-weight:800;color:#7A6A5A;margin-top:6px}
-@keyframes zgBdIn{from{opacity:0;transform:scale(.86) translateY(10px)}to{opacity:1;transform:none}}
-/* v338: でんわを かけている 最中を もっと わかりやすく */
-#call-center.call-ring{background:radial-gradient(130% 80% at 50% 26%,#1E3B31 0%,#0B1210 74%)!important}
-#center-note{display:none;color:rgba(255,255,255,.86);font-size:.8rem;font-weight:800;line-height:1.75;max-width:20em}
-#call-center.call-ring #center-note{display:block}
-#call-center.call-ring #call-big{font-size:1.02rem;padding:10px 20px;background:rgba(12,18,16,.74);
-  border:1.5px solid rgba(255,211,122,.55);color:#FFE9BC}
-#call-center.call-ring #call-peer{font-size:1.8rem;margin-top:2px}
-#call-center.call-ring #call-end-big{width:96px;height:96px;font-size:1rem;
-  box-shadow:0 10px 26px rgba(0,0,0,.5),0 0 0 7px rgba(229,50,59,.26)}
-#call-ringicon b.has-av{background:#fff!important}
-#call-ringicon b img{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block}
-</style></head>
+</head>
 <body>
 <main class="frame">
   <div class="board">
@@ -1408,12 +1378,7 @@ body.zg-bg .msg .bubble{box-shadow:0 2px 7px rgba(20,30,40,.26)}
   <div class="sec">つながり</div>
   <button type="button" class="ph" id="pf-unpair" style="background:#FFECEC;color:#C62828;border:1px solid #F5C9C9">つながりを とく（でる）</button>
   <p style="font-size:.72rem;color:#556;margin:4px 0 0">つながりを とくと、あたらしく 部屋を つくって ペアに ならないと つながりません。2回 おすと 解除されます。</p>
-  <div class="sec">はいけい</div>
-  <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 0 4px">
-    <span style="font-size:.84rem">まいにち かわる しゃしんの はいけい</span>
-    <button type="button" class="ph" id="pf-bg" style="padding:4px 14px">オン</button>
-  </div>
-  <p style="font-size:.72rem;color:#556;margin:0 0 10px">トークの うしろに、その 日の 季節の しゃしんを <b>うすく</b> 出します。日付で 決まる ので、<b>2人の スマホで 同じ しゃしん</b>に なります。オフに すると もとの 白い 画面に もどります。</p>
+  
   <div class="sec">たんじょうび</div>
   <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 0 4px">
     <span style="font-size:.84rem">じぶんの たんじょうび</span>
@@ -12071,99 +12036,7 @@ try{ window.__zgsPeerLive=+(sessionStorage.getItem('zg_peer_live')||0)||0; }catc
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"08b344934bdd416db94053d34eb889d8","spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"08b344934bdd416db94053d34eb889d8","spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"08b344934bdd416db94053d34eb889d8","spa":2}' crossorigin="anonymous"></script>
-<!-- v249: トークの 背面（がいへき）を 18しゅるいから えらべる -->
-<style>
-html body{background-color:var(--bgc,#F1F2F4)!important;background-image:var(--bgi,none)!important;background-size:var(--bgz,auto)!important;background-position:var(--bgp,0 0)!important}
-html body .line-chat{background-color:var(--bgc2,#F7F8FA)!important;background-image:var(--bgi2,none)!important;background-size:var(--bgz2,auto)!important;background-position:var(--bgp2,0 0)!important;border-color:rgba(0,0,0,.06)!important}
-html body #chat{background-color:var(--bgc2,#F7F8FA)!important;background-image:var(--bgi2,none)!important;background-size:var(--bgz2,auto)!important;background-position:var(--bgp2,0 0)!important}
-body.bgdark .line-chat{color:#E9EFF8!important}
-body.bgdark .line-chat .msg .nm{color:#AFC2D8!important}
-#pf-bg{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin:6px 0 4px}
-#pf-bg button{padding:0;border:2px solid #E3E7ED;border-radius:11px;background:#fff;overflow:hidden;display:flex;flex-direction:column;cursor:pointer;line-height:1}
-#pf-bg button .sw{display:block;height:42px;width:100%}
-#pf-bg button .nmm{font-size:.58rem;color:#556;padding:4px 2px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
-#pf-bg button.sel{border-color:#06C755;box-shadow:0 0 0 3px #DDF6E6}
-#pf-bg button.sel .nmm{color:#06A046}
-#pf-bg-reset{margin:8px 0 2px;padding:9px 12px;border-radius:12px;border:1px solid #E3E7ED;background:#fff;color:#374151;font:800 .78rem/1.2 inherit;cursor:pointer}
-</style>
-<script>
-/* v249: 背面（がいへき）の えらびかた。CSSの へんすうを かえるだけで だす。 */
-(function(){
-  var T=[
-    {n:'しろ',     c:'#FAFBFC', i:'none', z:'auto'},
-    {n:'クリーム', c:'#FDF6E7', i:'radial-gradient(circle,#F1E3C4 1.1px,transparent 1.3px)', z:'14px 14px'},
-    {n:'ミント',   c:'#E9F7F0', i:'linear-gradient(180deg,#EFFAF4,#DBF1E6)', z:'auto'},
-    {n:'ソラ',     c:'#E7F1FF', i:'linear-gradient(180deg,#EDF5FF,#D9E8FF)', z:'auto'},
-    {n:'ラベンダー',c:'#F1ECFF', i:'linear-gradient(180deg,#F5F0FF,#E5DBFF)', z:'auto'},
-    {n:'もも',     c:'#FFF0F5', i:'linear-gradient(180deg,#FFF5F8,#FFE1EC)', z:'auto'},
-    {n:'れもん',   c:'#FFFBEB', i:'repeating-linear-gradient(45deg,#FFFBEB 0 10px,#FDF3C9 10px 20px)', z:'auto'},
-    {n:'わかば',   c:'#EFF7E9', i:'repeating-linear-gradient(90deg,#EFF7E9 0 12px,#E4F1D9 12px 24px)', z:'auto'},
-    {n:'みずたま', c:'#FFF7FA', i:'radial-gradient(circle,#FFC9DB 2px,transparent 2.4px)', z:'18px 18px'},
-    {n:'チェック', c:'#FFFFFF', i:'linear-gradient(45deg,#EEF2FF 25%,transparent 25%,transparent 75%,#EEF2FF 75%),linear-gradient(45deg,#EEF2FF 25%,transparent 25%,transparent 75%,#EEF2FF 75%)', z:'22px 22px', p:'0 0,11px 11px'},
-    {n:'ななめ',   c:'#FFF6F9', i:'repeating-linear-gradient(-45deg,#FFF6F9 0 9px,#FFE7EF 9px 18px)', z:'auto'},
-    {n:'ほしぞら', c:'#F3F6FF', i:'radial-gradient(circle,#CFD9FF 1.6px,transparent 2px),radial-gradient(circle,#E7D9FF 1.2px,transparent 1.6px)', z:'26px 26px,17px 17px', p:'0 0,9px 11px'},
-    {n:'わし',     c:'#FBF7EF', i:'radial-gradient(120% 90% at 0% 0%,#F6EEDC 0%,transparent 60%),radial-gradient(100% 80% at 100% 100%,#F1E6D2 0%,transparent 55%)', z:'auto'},
-    {n:'ほうがんし',c:'#FFFFFF', i:'linear-gradient(#EDF1F7 1px,transparent 1px),linear-gradient(90deg,#EDF1F7 1px,transparent 1px)', z:'20px 20px'},
-    {n:'グレー',   c:'#F2F4F7', i:'linear-gradient(180deg,#F7F9FB,#E9EDF2)', z:'auto'},
-    {n:'よる',     c:'#101A2E', i:'radial-gradient(circle,#26375A 1.4px,transparent 1.8px)', z:'24px 24px', dark:1},
-    {n:'すみ',     c:'#1B1D22', i:'linear-gradient(180deg,#22252C,#171A1F)', z:'auto', dark:1},
-    {n:'こんぺき', c:'#12233F', i:'repeating-linear-gradient(45deg,#12233F 0 10px,#15294A 10px 20px)', z:'auto', dark:1}
-  ];
-  var KEY='zg.bgv1';
-  function apply(k){
-    var t=T[k]||T[0], r=document.documentElement.style;
-    r.setProperty('--bgc',t.c); r.setProperty('--bgi',t.i); r.setProperty('--bgz',t.z); r.setProperty('--bgp',t.p||'0 0');
-    r.setProperty('--bgc2',t.c); r.setProperty('--bgi2',t.i); r.setProperty('--bgz2',t.z); r.setProperty('--bgp2',t.p||'0 0');
-    document.body.classList.toggle('bgdark',!!t.dark);
-    var g=document.getElementById('pf-bg');
-    if(g){ var bs=g.querySelectorAll('button'); for(var j=0;j<bs.length;j++){ bs[j].classList.toggle('sel',+bs[j].dataset.k===k); } }
-  }
-  function saved(){ var v=parseInt(localStorage.getItem(KEY),10); return (v>=0&&v<T.length)?v:0; }
-  function save(k){ try{ localStorage.setItem(KEY,String(k)); }catch(e){} }
-  function build(){
-    var pm=document.querySelector('#prof-modal .pm'); if(!pm||document.getElementById('pf-bg')) return;
-    var sec=document.createElement('div'); sec.className='sec'; sec.style.marginTop='16px'; sec.textContent='トークの 背面（がいへき）';
-    var note=document.createElement('div'); note.style.cssText='font-size:.7rem;color:#667;margin:2px 0 6px;font-weight:700';
-    note.textContent='タップすると すぐ かわります。この きかいに おぼえます。';
-    var g=document.createElement('div'); g.id='pf-bg';
-    for(var k=0;k<T.length;k++){
-      (function(k){
-        var b=document.createElement('button'); b.type='button'; b.dataset.k=String(k); b.title=T[k].n;
-        var sw=document.createElement('span'); sw.className='sw';
-        sw.style.backgroundColor=T[k].c; sw.style.backgroundImage=T[k].i; sw.style.backgroundSize=T[k].z; sw.style.backgroundPosition=T[k].p||'0 0';
-        var nm=document.createElement('span'); nm.className='nmm'; nm.textContent=T[k].n;
-        b.appendChild(sw); b.appendChild(nm);
-        b.addEventListener('click',function(){ save(k); apply(k); });
-        g.appendChild(b);
-      })(k);
-    }
-    /* v286: 背面が おかしく なった ときの 1タップ復帰 */
-    var rs=document.createElement('button'); rs.type='button'; rs.id='pf-bg-reset';
-    rs.textContent='背面を しろに もどす（おかしく なった とき）';
-    rs.addEventListener('click',function(){ try{ save(0); apply(0); }catch(e){} try{ toast('背面を しろに もどしました'); }catch(e){} });
-    var anchor=document.getElementById('pf-snd'); var holder=anchor?(anchor.closest('.row')||anchor):null;
-    if(holder&&holder.parentNode===pm&&holder!==pm){ pm.insertBefore(sec,holder); pm.insertBefore(note,holder); pm.insertBefore(g,holder); pm.insertBefore(rs,holder); }
-    else { pm.appendChild(sec); pm.appendChild(note); pm.appendChild(g); pm.appendChild(rs); }
-  }
-  function boot(){ apply(saved()); build();
-    var pm=document.querySelector('#prof-modal');
-    if(pm){ pm.addEventListener('click',function(){ setTimeout(build,0); }); }
-  }
-  /* v286: 背面は 色と グラデーションだけ。写真や 画像（url(...)）が まぎれこんだら すぐ しろに もどす */
-  var __bgFix=0;
-  function bgWatch(){
-    try{
-      if(Date.now()-__bgFix<8000) return;
-      var e1=document.getElementById('chat-log'), e2=document.body, bad=false;
-      [e1,e2].forEach(function(el){ if(!el||bad) return; try{ if(String(getComputedStyle(el).backgroundImage||'').indexOf('url(')>=0) bad=true; }catch(e){} });
-      if(bad){ __bgFix=Date.now(); save(0); apply(0); try{ toast('背面の 画像を もどしました。'); }catch(e){} }
-    }catch(e){}
-  }
-  setInterval(bgWatch,3000);
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot); else boot();
-  setTimeout(boot,1200);
-})();
-</script>
+
 <!-- v251: えらんで まとめて けす（入り口は 上部、操作は 下部） -->
 <style>
 #btn-sel{display:inline-flex;align-items:center;gap:5px;background:#fff!important;border:1px solid #E3E7EE!important;color:#3A4553!important;border-radius:999px!important;padding:5px 10px 5px 8px;font:800 .72rem/1 inherit;box-shadow:0 1px 2px rgba(16,24,40,.06)}
@@ -12340,11 +12213,9 @@ function apply(){
   var p=pick();
   lastDay=todayKey();
   try{
-    if(!st.on){ document.body.classList.remove('zg-bg'); document.documentElement.style.removeProperty('--zg-img'); }
-    else{
-      document.documentElement.style.setProperty('--zg-img','url("data:image/jpeg;base64,'+ZG_PHOTO[p.k]+'")');
-      document.body.classList.add('zg-bg');
-    }
+    /* v421: しゃしんはいけいは はいし（ぶー君+にゃんちゃん背景40枚に 一本化） */
+    document.body.classList.remove('zg-bg');
+    document.documentElement.style.removeProperty('--zg-img');
   }catch(e){}
   if(p.bd) bd(p.bd);
   return p;
@@ -12541,10 +12412,11 @@ try{(function(){
 })();}catch(e){}
 </script>
 <style id="bg40-css">
-/* v421-add: きせつの はいけい40枚 — さいゆうせんで とうさいする */
+/* v421: きせつの はいけい40枚 — ぶー君+にゃんちゃん 一本化。旧背景(しゃしん/背面18しゅるい)は うえから けす */
 html.bg40 #pane-chat{background-image:var(--bg40-img)!important;background-size:cover!important;background-position:center bottom!important;background-repeat:no-repeat!important;background-color:#CFE0EA!important}
-html.bg40 #chat-log{background:transparent!important;background-color:transparent!important}
-html.bg40 #pane-chat::before{content:none!important}
+html.bg40 #chat-log,html.bg40 .line-chat,html.bg40 #chat{background:transparent!important;background-color:transparent!important;background-image:none!important;border-color:transparent!important}
+html.bg40 #pane-chat::before,html.bg40 body::before{content:none!important}
+html.bg40 body{background-image:none!important}
 </style>
 <script>
 /* =================================================================
