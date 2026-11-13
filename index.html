@@ -12408,7 +12408,7 @@ try{(function(){
     var sp=document.getElementById('s-play'),pc=document.getElementById('pane-chat'),log=document.getElementById('chat-log');
     if(!sp||!pc||!log)return;
     if(!sp.classList.contains('on')||!pc.classList.contains('on'))return;
-    try{ if(!(window.S&&S.tab==='chat'&&document.visibilityState==='visible')) return; }catch(e){ return; }
+    try{ if(document.visibilityState!=='visible') return; }catch(e){ return; }
     busy=true;
     var p=PATTERNS[pick()];
     if(BIG){p={img:p.img,exit:'burst'};}
@@ -12455,7 +12455,7 @@ try{(function(){
     try{
       if(!cur) return;
       var sp2=document.getElementById('s-play'),pc2=document.getElementById('pane-chat');
-      var ok=window.S&&S.tab==='chat'&&document.visibilityState==='visible'&&sp2&&sp2.classList.contains('on')&&pc2&&pc2.classList.contains('on');
+      var ok=document.visibilityState==='visible'&&sp2&&sp2.classList.contains('on')&&pc2&&pc2.classList.contains('on');
       if(!ok){ try{ if(curFx) curFx.remove(); }catch(e){} try{ cur.remove(); }catch(e){} cur=null; curFx=null; busy=false; }
     }catch(e){}
   },400);
