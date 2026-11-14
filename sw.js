@@ -1,8 +1,8 @@
 'use strict';
 /* 雑学王 v436。本文は復号しない。鍵は受け取らず、暗号文だけを耐久保存する。
    zg-sw-inbox/pin {b:暗号文,t:時刻} は本体との互換契約。本文に時限削除を行わない。 */
-const SW_VERSION='v438';
-const SHELL_CACHE='zg-v438-shell';
+const SW_VERSION='v439';
+const SHELL_CACHE='zg-v439-shell';
 function unwrapPush(value){
   for(let i=0;i<8;i++){
     if(value&&typeof value==='object'){
