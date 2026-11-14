@@ -1,230 +1,115 @@
-/* 雑学王 サービスワーカー（v148）
-   - v148: アイコンの 赤い数字＝まだ 読んでいない 件数（同じ メッセージは 1回だけ かぞえる）
-   - アプリが 裏・画面オフ・まるごと とじて いても、通知と おなじ 通り道で メッセージ（あんごう文のまま）を 受けとる
-   - v128: バッジは ある/なし の み（「1」づけ）。新しい ワーカーが きどうした ときも バッジを けす
-   - v127: 通知アイコンは ファイルの ままで（画像の直もじれつは iPhoneで だめな ことが わかった）。通知は さいしょに だす！（しまう 仕事で つかれて 通知が でない ことが ないように）
-     あんごう文は 通知の おくにも いれて おくので、しまい場所が だめでも アプリを ひらけば わかる
-   - v149: 通知の 音と バイブを つける（silent:false）。バッジは 数字なし（iPhoneの 決まりで 画像は だせない）
-   ここでは 中身を 読めません（鍵は ここに ありません） */
-self.addEventListener('install', function(e){ self.skipWaiting(); });
-self.addEventListener('activate', function(e){ e.waitUntil((async function(){ await self.clients.claim(); try { var n0 = await cntRead(); await badgeSet(n0); } catch (err) {} })()); });
-
-var unread = 0;
-var SW_VERSION = 'sw155';
-var PAW = 'data:image/png;base64,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';
-
-function idbOpen(){
-  return new Promise(function(res, rej){
-    var r = indexedDB.open('zg-inbox', 1);
-    r.onupgradeneeded = function(){ r.result.createObjectStore('m', {autoIncrement:true}); };
-    r.onsuccess = function(){ res(r.result); };
-    r.onerror = function(){ rej(r.error); };
-  });
+'use strict';
+/* 雑学王 v436。本文は復号しない。鍵は受け取らず、暗号文だけを耐久保存する。
+   zg-sw-inbox/pin {b:暗号文,t:時刻} は本体との互換契約。本文に時限削除を行わない。 */
+const SW_VERSION='v436';
+const SHELL_CACHE='zg-v436-shell';
+function unwrapPush(value){
+  for(let i=0;i<8;i++){
+    if(value&&typeof value==='object'){
+      if(typeof value.message==='string'){value=value.message;continue;}
+      if(typeof value.msg==='string'){value=value.msg;continue;}
+      if(typeof value.zgm==='string'){value=value.zgm;continue;}
+      if(typeof value.b==='string'){value=value.b;continue;}
+      return '';
+    }
+    if(typeof value!=='string')return '';
+    value=value.trim();
+    if(value[0]==='{'||value[0]==='"'){try{value=JSON.parse(value);continue;}catch(e){return '';}}
+    return value;
+  }
+  return '';
 }
-function stash(body){
-  return new Promise(function(res){ setTimeout(res, 2500); idbOpen().then(function(db){
-    var tx = db.transaction('m', 'readwrite');
-    tx.objectStore('m').add(body);
-    tx.oncomplete = function(){ clearTimeout(k); db.close(); res(); }; tx.onerror = function(){ db.close(); res(); };
-    var k=setTimeout(function(){ try{ db.close(); }catch(e){} res(); }, 2400);
-  }).catch(function(){ res(); }); });
+function sealedBody(value){
+  let body=unwrapPush(value).replace(/^zgm:\d+:/,'');
+  return /^[A-Za-z0-9_-]{40,}$/.test(body)?body:'';
 }
-
-/* v141: まだ読んでいない 件数を しまう場所（サービスワーカーが きえても のこる） */
-function cntRead(){
-  return caches.open('zg-count').then(function(c){ return c.match('u'); }).then(function(r){ return r?r.text():'0'; }).then(function(t){
-    var n=parseInt(t||'0',10); return isNaN(n)?0:n;
-  }).catch(function(){ return 0; });
+function swInboxOpen(){return new Promise((resolve,reject)=>{
+  const r=indexedDB.open('zg-sw-inbox',1);
+  r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains('pin'))r.result.createObjectStore('pin');};
+  r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);
+});}
+async function swInboxSave(body){
+  const db=await swInboxOpen();
+  try{await new Promise((resolve,reject)=>{
+    const tx=db.transaction('pin','readwrite');
+    // 同じ暗号文の再通知は同じ行。IDB完了前に通知成功としない。
+    tx.objectStore('pin').put({b:body,t:Date.now()},body);
+    tx.oncomplete=resolve;tx.onerror=tx.onabort=()=>reject(tx.error||new Error('通知本文の保存失敗'));
+  });}finally{db.close();}
 }
-/* v148: 同じ メッセージを 2回 かぞえない ための しるし（あんごう文の さいごの 40文字） */
-function seenRead(){
-  return caches.open('zg-count').then(function(c){ return c.match('s'); }).then(function(r){ return r?r.text():'[]'; })
-    .then(function(t){ try{ var a=JSON.parse(t); return Array.isArray(a)?a:[]; }catch(e){ return []; } }).catch(function(){ return []; });
+async function broadcast(value){
+  const list=await self.clients.matchAll({type:'window',includeUncontrolled:true});
+  list.forEach(c=>c.postMessage(value));return list;
 }
-function seenSave(a){
-  return caches.open('zg-count').then(function(c){ return c.put('s', new Response(JSON.stringify(a.slice(-80)))); }).catch(function(){});
+async function getRole(){
+  try{const c=await caches.open('zg-count'),r=await c.match('role');return r?await r.text():'';}catch(e){return '';}
 }
-async function badgeSet(n){
-  try {
-    if (n > 0) { if (self.navigator && self.navigator.setAppBadge) await self.navigator.setAppBadge(n); }
-    else if (self.navigator && self.navigator.clearAppBadge) await self.navigator.clearAppBadge();
-  } catch (err) {}
-}
-function cntSave(n){
-  return caches.open('zg-count').then(function(c){ return c.put('u', new Response(String(n))); }).catch(function(){});
-}
-
-/* v152: あいてが アプリを ひらいた しらせ（zgo:時刻）。とじていても ここで 鳴らす */
-function poSave(at){ return caches.open('zg-count').then(function(c){ return c.put('po', new Response(String(at))); }).catch(function(){}); }
-async function handlePeerOpen(at){
-  if(!at || at > Date.now()+60000) at = Date.now();
-  /* v155: 「ひらいた」の しらせは ホストの 端末だけ。役割が しまって ある 'role' を みて、
-     ゲストの 端末では 記録と アプリへの つたえだけして 通知は ださない */
-  var role='';
-  try{
-    var rc = await caches.open('zg-count');
-    var rr = await rc.match('role');
-    if (rr) role = String(await rr.text() || '').trim();
-  }catch(err){}
-  try{ await poSave(at); }catch(err){}
-  var seenWin = false;
-  try{
-    var lw = await sx(self.clients.matchAll({type:'window', includeUncontrolled:true}), 1200);
-    for (var iw=0; iw<lw.length; iw++) { if (lw[iw].visibilityState === 'visible') seenWin = true; }
-  }catch(err){}
-  try{
-    var l2 = await self.clients.matchAll({type:'window', includeUncontrolled:true});
-    for (var j2=0; j2<l2.length; j2++) { try { l2[j2].postMessage('zg-new'); } catch (err) {} }
-  }catch(err){}
-  if (seenWin) return;   /* 画面を みている ときは 音を ださない（アプリが 記録する） */
-  if (role === 'g') return;   /* v155: ゲスト(入室した 側)の 端末では 通知を ださない */
-  try{
-    await self.registration.showNotification('雑学王', {
-      body: 'あいてが アプリを ひらいたよ🐾',
-      tag: 'mtp-peer', renotify: true, silent: false, vibrate: [110,70,110],
-      icon: './icon-paw-192.png', badge: './icon-paw-192.png', data: { app:'zg', zgpeer: at }
-    });
-  }catch(err){}
-}
-
-/* ntfy の Web Push は {event, message:{message:"本文"}} の 形で とどく */
-function pickText(raw){
-  try { var j = JSON.parse(raw); if (j && j.message && typeof j.message.message === 'string') return j.message.message; } catch (err) {}
-  return raw || '';
-}
-function sx(p, ms){ return Promise.race([Promise.resolve(p), new Promise(function(r){ setTimeout(r, ms); })]); }
-
 async function handlePush(raw){
-  var txt = pickText(raw);
-  var om = /^zgo:(\d+)$/.exec(txt);
-  if (om) { return handlePeerOpen(parseInt(om[1], 10)); }
-  /* v154: でんわの よびだし。とじていても 長めの バイブで しらせる */
-  var zc = /^zgcall:(\d+)$/.exec(txt);
-  if (zc) {
-    try {
-      await self.registration.showNotification('📞 でんわが きて います', {
-        body: 'タップして でて ください',
-        tag: 'mtg-call', renotify: true, silent: false, requireInteraction: true,
-        vibrate: [700,300,700,300,700,300,700,300,700,300,700],
-        icon: './icon-paw-192.png', badge: './icon-paw-192.png',
-        data: { app:'zg', zgcall: parseInt(zc[1],10) }
-      });
-    } catch (err) {}
-    return;
-  }
-  var isTest = txt.indexOf('zg-test') >= 0;
-  /* 本文つき: 'zgm:件数:あんごう文' / 数字だけの 合図 'zgn:件数' は v126 では つかわない（通知も ださない） */
-  var mm = /^zgm:(\d+):([\s\S]+)$/.exec(txt);
-  if (/^zgn:\d+$/.test(txt)) { return; }
-  /* ページが 画面に でている か（でていなければ かならず 通知。判断に まよったら 通知する） */
-  var viewed = false;
-  try {
-    var list0 = await sx(self.clients.matchAll({type:'window', includeUncontrolled:true}), 1200);
-    for (var i=0; i<list0.length; i++) { if (list0[i].visibilityState === 'visible') viewed = true; }
-  } catch (err) {}
-  var cnt = mm ? (parseInt(mm[1],10) || 1) : 1;
-  if (viewed && !isTest) {   /* v153: テスト通知は 画面を みて いても かならず だす（これまでは アプリを ひらいた ままだと テストが 見えなかった） */
-    if (mm) { try { await stash(mm[2]); } catch (err) {} }
-    try {
-      var listV = await self.clients.matchAll({type:'window', includeUncontrolled:true});
-      for (var jv=0; jv<listV.length; jv++) { try { listV[jv].postMessage('zg-new'); } catch (err) {} }
-    } catch (err) {}
-    return;
-  }
-  /* v148: とどいた メッセージ 1通ごとに +1（おなじ ものの くりかえしは かぞえない） */
-  var isNew = false;
-  if (mm) {
-    var sig = mm[2].slice(-40);
-    var seen = await seenRead();
-    if (seen.indexOf(sig) < 0) { seen.push(sig); await seenSave(seen); isNew = true; }
-    unread = (await cntRead()) + (isNew ? 1 : 0);
-    await cntSave(unread);
-  }
-
-  /* v126: 通知を さいしょに だす。あんごう文は data の おくにも のせて おく */
-  if (true) { /* v130: かならず 通知（ださないと iPhoneが 購読を はいきする） */
-    try {
-      await self.registration.showNotification('雑学王', {
-        body: isTest ? '🐾 テスト通知です。とどいています！' : '新しい問題が追加されたよ🐾',   /* v145: みためは みじかく ぎじつく */
-        tag: isTest ? 'mtp-test' : 'mtp-chat',
-        renotify: true, silent: false, vibrate: [110,70,110], icon: './icon-paw-192.png', badge: './icon-paw-192.png',
-        data: { app:'zg', zgm: mm ? mm[2] : null, n: unread }
-      });
-    } catch (err) {}
-  }
-  /* つぎに スマホの 中に しまう（ここが うまく いかなくても 通知は でている） */
-  if (mm) { try { await stash(mm[2]); } catch (err) {} }
-  try {
-    var list = await self.clients.matchAll({type:'window', includeUncontrolled:true});
-    for (var j=0; j<list.length; j++) { try { list[j].postMessage('zg-new'); } catch (err) {} }
-  } catch (err) {}
-  await badgeSet(unread);
+  const msg=unwrapPush(raw),body=sealedBody(msg);
+  let tag='mtp-chat',text='新しい メッセージが とどいています',data={},saved=false;
+  if(body){
+    data.zgm=body;
+    try{await swInboxSave(body);saved=true;}catch(e){data.saveFailed=true;}
+    // 保存できない場合も通知のdataに暗号文を残す。成功と偽らず再取込対象とする。
+    if(!saved)text='メッセージの 保存を もう一度 ためします。アプリを ひらいてください';
+    tag='zgs-'+body.slice(-32);
+  }else if(/^zgcall:/.test(msg)){
+    tag='mtp-call';text='でんわが きています';data.call=true;
+  }else if(/^zgo:\d+$/.test(msg)){
+    // 相手の開封通知だけはホスト限定。役割不明も表示しない。
+    if(await getRole()!=='h')return;
+    const c=await caches.open('zg-count');await c.put('po',new Response(msg.slice(4)));
+    tag='mtp-peer';text='あいてが アプリを ひらきました';
+  }else if(msg==='zg-test'){
+    tag='mtp-test';text='テスト通知です';
+  }else if(/^zgm:\d+:!/.test(msg)){
+    data.stub=true;
+  }else if(msg==='💬'||/^zgn:/.test(msg)){
+    data.stub=true;
+  }else if(msg.startsWith('⚠')){
+    if(await getRole()!=='h')return;
+    tag='mtp-alert';text='入室の おしらせが あります';
+  }else{return;}
+  await self.registration.showNotification('雑学王',{
+    body:text,tag,renotify:true,data,silent:false,
+    vibrate:data.call?[600,250,600,250,600]:[110,70,110]
+  });
+  if(body)await broadcast({zgm:body,saved,swver:SW_VERSION});
+  await broadcast(data.call?'zg-call':'zg-new');
 }
-
-/* v150: とうろくが 端末側で つくりなおされても、アプリを ひらかずに サーバーへ とうろくしなおす。
-   これが ないと、とじた あいだに 通知が とどかなく なる。 */
-var NTFY_VAPID='BEMjM0sNxh41x0a6Lz3YaqkJ7AUhZefxsOQgw-at69i0fM1CybVBcj7-QQXf4N_tPCgFnOXdRbQ5jrSrr9Yg9Lc';
-function urlB64(s){
-  var pad='='.repeat((4-s.length%4)%4); var b=(s+pad).replace(/-/g,'+').replace(/_/g,'/');
-  var raw=atob(b), out=new Uint8Array(raw.length);
-  for(var i=0;i<raw.length;i++) out[i]=raw.charCodeAt(i);
-  return out;
-}
-function ptRead(){
-  return caches.open('zg-count').then(function(c){ return c.match('pt'); }).then(function(r){ return r?r.text():'[]'; })
-    .then(function(t){ try{ var a=JSON.parse(t); return Array.isArray(a)?a:[]; }catch(e){ return []; } }).catch(function(){ return []; });
-}
-self.addEventListener('pushsubscriptionchange', function(e){
-  e.waitUntil((async function(){
-    try{
-      var topics=await ptRead(); if(!topics.length) return;
-      var sub=e.newSubscription;
-      if(!sub) sub=await self.registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlB64(NTFY_VAPID)});
-      var j=sub.toJSON();
-      await fetch('https://ntfy.sh/v1/webpush',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({endpoint:j.endpoint,auth:j.keys.auth,p256dh:j.keys.p256dh,topics:topics})});
-    }catch(err){}
+self.addEventListener('push',event=>{
+  let raw='';try{raw=event.data?event.data.text():'';}catch(e){}
+  event.waitUntil(handlePush(raw));
+});
+self.addEventListener('notificationclick',event=>{
+  event.waitUntil((async()=>{
+    const n=event.notification,body=n&&n.data&&n.data.zgm;
+    if(body){try{await swInboxSave(body);}catch(e){
+      // 唯一の暗号文を閉じる前に再保存。失敗時は新しい通知へ引き継ぐ。
+      await self.registration.showNotification('雑学王',{body:'アプリを ひらいて メッセージを 受け取ってください',tag:n.tag,data:{zgm:body,saveFailed:true}});
+    }}
+    const windows=await self.clients.matchAll({type:'window',includeUncontrolled:true});
+    let client=windows.find(c=>c.url.startsWith(self.registration.scope));
+    if(client){await client.focus();}else{client=await self.clients.openWindow(new URL('./index.html',self.registration.scope).href);}
+    if(client){if(body)client.postMessage({zgm:body,swver:SW_VERSION});client.postMessage(n.data&&n.data.call?'zg-call':'zg-new');}
+    // 本文つき通知は本体が保存完了後に閉じる。OSが閉じてもIDBから回収する。
+    if(!body)n.close();
   })());
 });
-self.addEventListener('push', function(e){
-  var raw = '';
-  try { raw = e.data ? e.data.text() : ''; } catch (err) {}
-  e.waitUntil(handlePush(raw));
-});
-
-self.addEventListener('notificationclick', function(e){
-  var isCall = !!(e.notification && e.notification.data && e.notification.data.zgcall);
-  e.notification.close();
-  /* v154: でんわの しらせを タップしたら、ひらいて いる 画面に つたえる */
-  if (isCall) {
-    e.waitUntil((async function(){
-      try {
-        var lc = await self.clients.matchAll({type:'window', includeUncontrolled:true});
-        for (var ic=0; ic<lc.length; ic++) { try { lc[ic].postMessage('zg-call'); } catch (err) {} }
-        for (var fc=0; fc<lc.length; fc++) { if (lc[fc].visibilityState==='visible' && 'focus' in lc[fc]) return lc[fc].focus(); }
-        if (lc.length && 'focus' in lc[0]) return lc[0].focus();
-      } catch (err) {}
-      if (self.clients.openWindow) return self.clients.openWindow('./');
-    })());
-    return;
-  }
-  unread = 0;
-  e.waitUntil((async function(){
-    await cntSave(0);
-    try { if (self.navigator && self.navigator.clearAppBadge) await self.navigator.clearAppBadge(); } catch (err) {}
-    var list = await self.clients.matchAll({type:'window', includeUncontrolled:true});
-    for (var i = 0; i < list.length; i++) { if ('focus' in list[i]) return list[i].focus(); }
-    if (self.clients.openWindow) return self.clients.openWindow('./');
+self.addEventListener('message',event=>{
+  const d=event.data;
+  if(d&&d.get==='ver'){if(event.source)event.source.postMessage({swver:SW_VERSION});return;}
+  if(d==='skipWaiting'){self.skipWaiting();return;}
+  if(d==='clear')event.waitUntil((async()=>{
+    const ns=await self.registration.getNotifications();
+    ns.forEach(n=>{if(!(n.data&&n.data.zgm))n.close();});
+    if(self.registration.clearAppBadge)await self.registration.clearAppBadge();
   })());
 });
-
-self.addEventListener('message', function(e){
-  if (e.data && typeof e.data === 'object' && e.data.get === 'ver') { try { e.source.postMessage({swver: SW_VERSION}); } catch (err) {} return; }
-  if (e.data && typeof e.data === 'object' && typeof e.data.unread === 'number') { return; }   /* v148: 件数は ここが もつ */
-  if (e.data === 'clear') {
-    unread = 0;
-    e.waitUntil(cntSave(0));
-    try { if (self.navigator && self.navigator.clearAppBadge) self.navigator.clearAppBadge(); } catch (err) {}
-    e.waitUntil(self.registration.getNotifications().then(function(a){ a.forEach(function(n){ if (n.data && n.data.app === 'zg') n.close(); }); }));
-  }
-});
+self.addEventListener('install',event=>{event.waitUntil(self.skipWaiting());});
+self.addEventListener('activate',event=>{event.waitUntil((async()=>{
+  const names=await caches.keys();
+  await Promise.all(names.filter(n=>/^zg-v\d+-shell$/.test(n)&&n!==SHELL_CACHE).map(n=>caches.delete(n)));
+  await self.clients.claim();await broadcast({swver:SW_VERSION});await broadcast('zg-new');
+})());});
+// HTMLを旧キャッシュから返さない。通信・画像・通話要求のfetchには介入しない。
