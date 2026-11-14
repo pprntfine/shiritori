@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -1264,6 +1264,108 @@ body .bar::after{
 }
 
 </style>
+<style id="v438-salon">
+/* v438 追加層。新しい通常セレクターはロビーまたはチャットの子だけ。 */
+#s-lobby{
+ --salon-ink:#25334e;--salon-mist:#e9edf7;--salon-gold:#dcc494;
+ background:radial-gradient(ellipse at 85% 12%,#52618155,transparent 58%),linear-gradient(155deg,#25334e,#303753 65%,#202b43)!important;
+ padding:20px 18px 24px!important;gap:14px;overflow:visible;isolation:isolate;justify-content:center;
+}
+#s-lobby::before{inset:0;background:radial-gradient(ellipse at 18% 25%,#d7c6ec18,transparent 60%);filter:none;animation:none}
+#s-lobby .hero{margin:12px 0 12px;padding:26px 12px 28px;background:#ffffff08!important;border:1px solid #cdd7ec38!important;border-radius:28px!important;box-shadow:inset 0 1px 0 #ffffff12!important}
+#s-lobby .hero::before{content:'ふたりの時間に、ひとさじの発見。';top:16px;letter-spacing:.09em;color:#dce3f1;font-size:12px;font-weight:500}
+#s-lobby .hero::after{content:'';width:32px;height:2px;left:calc(50% - 16px);bottom:17px;background:#dcc494;opacity:.8}
+#s-lobby .chalk{font-family:'Yu Mincho','Hiragino Mincho ProN',serif!important;font-size:clamp(2.7rem,12vw,3.4rem)!important;font-weight:700;letter-spacing:.18em;padding-left:.18em;color:#f3e6c9!important;background:none;-webkit-text-fill-color:currentColor;text-shadow:none!important;filter:none;line-height:1.25}
+#s-lobby .chalk::after{content:none;animation:none}
+#s-lobby .mascots{margin:24px auto 6px;filter:none}
+#s-lobby .chalk-btn{min-height:52px;justify-content:center;border:1px solid #c8d2e440!important;border-radius:16px!important;background:#ffffff0d!important;box-shadow:inset 0 1px 0 #ffffff0c!important;text-shadow:none;animation:v438-arrive 640ms cubic-bezier(.22,.75,.25,1) both;font-weight:600!important;transition:transform 220ms ease,background 220ms ease}
+#s-lobby .chalk-btn.big{background:linear-gradient(120deg,#e3cfa8,#f1e5ce)!important;color:#28354c!important;border-color:#f2e5cc!important;box-shadow:0 6px 18px #101c3333!important;letter-spacing:.05em}
+#s-lobby .chalk-btn::before{content:none}
+#s-lobby .chalk-btn:not(:disabled):active{transform:translateY(1px) scale(.99)!important}
+#s-lobby .chalk-btn:focus-visible{outline:3px solid #d9c5f0;outline-offset:4px}
+#s-lobby .verline{animation:none;background:none;border:0;box-shadow:none;backdrop-filter:none;margin:20px auto 4px!important;padding:6px 0;color:#c5cfe2!important}
+#s-lobby .verline b{color:#eddbb6!important}
+#s-lobby .note,#s-lobby .fine{color:#dce3f1!important;text-shadow:none}
+#s-lobby .lab-fbub{animation-duration:4.8s;opacity:.4}
+#s-lobby .lab-prof{transition:transform 520ms cubic-bezier(.2,.7,.2,1)}
+#s-lobby .lab-pet{animation-duration:4.6s}
+@keyframes v438-arrive{from{opacity:0;transform:translate3d(0,7px,0)}to{opacity:1;transform:translate3d(0,0,0)}}
+
+/* 季節の既存背景は保持。読める面だけを整える。 */
+#pane-chat{color:#29364c;--talk-line:#d4dce7;--talk-accent:#4c5e86}
+#pane-chat #chat-log{padding:16px 10px 22px;scroll-behavior:smooth;scrollbar-width:thin;scroll-padding-bottom:16px}
+#pane-chat #chat-log .msg{animation:none!important;margin-bottom:12px}
+#pane-chat #chat-log .msg.cont{margin-bottom:8px}
+#pane-chat #chat-log .bubble:not(.sticker-b):not(.dog-b):not(.photo-b){font-size:16px;line-height:1.7!important;border-radius:18px!important;padding:11px 14px!important;border:1px solid #dce2ed!important;color:#28354a!important;box-shadow:0 2px 7px #27365312!important;background:#fffffff5!important;overflow-wrap:anywhere}
+#pane-chat #chat-log .msg.out .bubble:not(.sticker-b):not(.dog-b):not(.photo-b){background:linear-gradient(140deg,#eeeafa,#e0e6f5)!important;border-color:#d4d8e9!important;color:#28354a!important}
+#pane-chat #chat-log .nm{font-size:12px!important;color:#35445c!important;font-weight:600;line-height:1.5}
+#pane-chat #chat-log .meta{font-size:11px!important;color:#46546b!important;text-shadow:0 1px 2px #fff;white-space:normal!important;max-width:90px;line-height:1.45!important;overflow-wrap:anywhere}
+#pane-chat #chat-log .line-day{background:#ffffffe8;color:#4c5e76;border:1px solid #d9e1eb;font-size:12px;padding:5px 13px;box-shadow:none}
+#pane-chat .line-composer{background:#f8f9fdf5!important;border-top:1px solid #d3dbea!important;padding-bottom:max(10px,env(safe-area-inset-bottom));box-shadow:0 -4px 18px #25334e0a}
+#pane-chat .line-composer textarea#in-chat{font-size:16px!important;line-height:1.55;border-radius:16px!important;background:#fff!important;color:#29364c;box-shadow:0 0 0 1px #cbd4e3!important}
+#pane-chat .line-composer textarea#in-chat::placeholder{color:#69758a}
+#pane-chat .line-composer textarea#in-chat:focus{outline:2px solid #677cab;outline-offset:2px;box-shadow:none!important}
+#pane-chat .line-composer .line-send.cute-send{background:linear-gradient(150deg,#6577a0,#455a85)!important;box-shadow:0 3px 7px #2a3e6820!important;color:#fff!important;border-radius:15px;min-width:48px;min-height:48px}
+#pane-chat .chat-tools-toggle{background:#f0f2f8;color:#405473;border-color:#d0d9e7;border-radius:12px;min-height:44px}
+#pane-chat .chat-tools-toggle:focus-visible,#pane-chat .line-send:focus-visible{outline:3px solid #7385ac;outline-offset:2px}
+#pane-chat .sticker-picker{grid-area:stickers!important;display:flex;flex-direction:column;border-radius:20px;border-color:#d0d9e7;box-shadow:0 6px 20px #26354c12;background:#fafbfe;color:#33435d;height:min(330px,43dvh);max-height:min(330px,43dvh);min-height:0;overflow:hidden}
+#pane-chat .sticker-picker-head,#pane-chat .sticker-tabs{flex-shrink:0}
+#pane-chat .sticker-picker .sticker-grid{min-height:0;overflow-y:auto;overscroll-behavior:contain;padding-bottom:12px;scrollbar-width:thin}
+#pane-chat .sticker-picker-head{padding:4px 2px 7px 8px;font-size:13px;font-weight:600}
+#pane-chat .sticker-tabs{display:flex;overflow-x:auto;gap:6px;padding:3px 2px 9px;scrollbar-width:thin;overscroll-behavior-x:contain}
+#pane-chat .sticker-tabs .sticker-tab{flex:0 0 auto;min-width:76px;padding:8px 12px}
+#pane-chat .sticker-tab{border-color:#dbe0ec;background:#f1f3f9;color:#4a5870;font-size:12px;line-height:1.4}
+#pane-chat .sticker-tab[aria-selected=true]{background:#e5e7f5;border-color:#8b99ba;color:#304569}
+#pane-chat .sticker-choice{min-height:86px;border:1px solid #e6eaf2;background:#fff;border-radius:14px;padding:9px 3px;gap:8px;transition:background 200ms ease,transform 200ms ease}
+#pane-chat .sticker-grid{gap:7px}
+#pane-chat .sticker-choice:hover,#pane-chat .sticker-choice:focus-visible{background:#edf0fa;border-color:#9aa9c7}
+#pane-chat .sticker-choice:active{transform:scale(.97)}
+#pane-chat .sticker-choice small{font-size:11px;line-height:1.45;white-space:normal;overflow-wrap:anywhere}
+#pane-chat .sticker-choice .dog-stk-pick{width:52px;height:52px;object-fit:contain}
+#pane-chat .sticker-motion{animation-timing-function:cubic-bezier(.37,0,.32,1)!important;animation-duration:2800ms!important;animation-name:v438-content;transform-origin:50% 75%}
+#pane-chat .sticker-motion[data-motion=joy],#pane-chat .sticker-motion[data-motion=hop],#pane-chat .sticker-motion[data-motion=bob]{animation-name:v438-joy}
+#pane-chat .sticker-motion[data-motion=anger],#pane-chat .sticker-motion[data-motion=rage],#pane-chat .sticker-motion[data-motion=stomp]{animation-name:v438-anger;animation-duration:2600ms!important}
+#pane-chat .sticker-motion[data-motion=sad]{animation-name:v438-sad;animation-duration:4200ms!important}
+#pane-chat .sticker-motion[data-motion=sway],#pane-chat .sticker-motion[data-motion=walk]{animation-name:v438-sway;animation-duration:3600ms!important}
+#pane-chat .sticker-motion[data-motion=spark]{animation-name:v438-spark;animation-duration:3200ms!important}
+#pane-chat .sticker-motion[data-motion=dash]{animation-name:v438-dash}
+#pane-chat .sticker-motion[data-motion=spin]{animation-name:v438-turn;animation-duration:4800ms!important}
+#pane-chat .sticker-motion[data-motion=jelly]{animation-name:v438-jelly}
+#pane-chat .sticker-motion[data-motion=grow]{animation-name:v438-content}
+@keyframes v438-content{0%,100%{transform:scale(1)}50%{transform:scale(1.045)}}
+@keyframes v438-joy{0%,100%{transform:translate3d(0,0,0) rotate(0)}30%{transform:translate3d(0,-5px,0) rotate(-1.5deg)}65%{transform:translate3d(0,-2px,0) rotate(1.5deg)}}
+@keyframes v438-anger{0%,100%{transform:translate3d(0,0,0) rotate(0)}35%{transform:translate3d(0,1px,0) scale(1.025)}52%{transform:translate3d(-2px,0,0) rotate(-2deg)}68%{transform:translate3d(2px,0,0) rotate(2deg)}82%{transform:translate3d(-1px,0,0) rotate(-.8deg)}}
+@keyframes v438-sad{0%,100%{transform:translate3d(0,0,0) rotate(0)}55%{transform:translate3d(0,4px,0) rotate(-2deg) scale(.985)}}
+@keyframes v438-sway{0%,100%{transform:rotate(-2deg)}50%{transform:rotate(2deg)}}
+@keyframes v438-spark{0%,100%{transform:rotate(0) scale(1)}45%{transform:rotate(-2deg) scale(1.05)}70%{transform:rotate(1deg) scale(1.02)}}
+@keyframes v438-dash{0%,100%{transform:translate3d(-7px,0,0) rotate(-2deg)}50%{transform:translate3d(7px,-2px,0) rotate(2deg)}}
+@keyframes v438-turn{0%,100%{transform:rotate(-9deg)}50%{transform:rotate(9deg)}}
+@keyframes v438-jelly{0%,100%{transform:skewX(0)}35%{transform:skewX(-3deg)}70%{transform:skewX(3deg)}}
+#pane-chat .v438-raster{display:inline-block;position:relative;line-height:0;vertical-align:middle}
+#pane-chat .v438-raster canvas{display:block;width:100%;height:100%;object-fit:contain}
+#pane-chat .v438-raster>img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+#pane-chat .v438-raster[data-ready=true]>img{visibility:hidden}
+#pane-chat .v438-tokun{position:fixed;z-index:90;pointer-events:none;transform-origin:50% 65%;contain:layout style;will-change:transform,opacity}
+#pane-chat .v438-tokun .v438-raster{width:100%;height:100%}
+#pane-chat .v438-tokun-caption{position:absolute;left:8%;right:8%;top:1%;min-height:23%;padding:5px 7px;display:flex;align-items:center;justify-content:center;white-space:pre-line;text-align:center;background:#fff;border:1px solid #d7deeb;border-radius:12px;color:#2c3950;font-weight:600;font-size:clamp(11px,3.2vw,16px);line-height:1.4;box-shadow:0 2px 6px #20305012}
+#pane-chat .v438-tokun-party{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+#pane-chat .v438-tokun-party i{position:absolute;width:5px;height:9px;border-radius:2px;top:12%;background:#d9c19a;animation:v438-confetti 4s cubic-bezier(.2,.4,.5,1) both}
+#pane-chat .v438-tokun-party i:nth-child(3n){background:#b5bdd9}
+#pane-chat .v438-tokun-party i:nth-child(3n + 1){background:#d9b9cc}
+@keyframes v438-confetti{from{opacity:0;transform:translate3d(0,-10px,0) rotate(0)}20%{opacity:.8}to{opacity:0;transform:translate3d(var(--drift),180px,0) rotate(160deg)}}
+@media(max-width:350px){
+ #s-lobby{padding:14px 10px 20px!important;gap:10px}
+ #s-lobby .hero{padding-left:4px;padding-right:4px}
+ #s-lobby .hero::before{font-size:11px;letter-spacing:.02em}
+ #pane-chat #chat-log{padding:12px 5px 18px}
+ #pane-chat .sticker-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media(prefers-reduced-motion:reduce){
+ #s-lobby *,#s-lobby::before,#s-lobby::after,#pane-chat .sticker-motion,#pane-chat .v438-tokun-party i{animation:none!important;transition:none!important;transform:none!important}
+ #pane-chat #chat-log{scroll-behavior:auto}
+}
+
+</style>
 </head>
 <body>
 <main class="frame">
@@ -1291,7 +1393,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v437</b></p>
+      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v438</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -12838,69 +12940,139 @@ try{(function(){
 
 {img:'🐶㊲',exit:'rise'},{img:'🐶㊳',exit:'rise'}
   ];
-  var last=-1,busy=false,cur=null,curFx=null;
-  function pick(){var i;do{i=Math.floor(Math.random()*PATTERNS.length);}while(i===last&&PATTERNS.length>1);last=i;return i;}
-  function show(){
-    if(busy)return;
-    try{ if(localStorage.getItem('mtp_tokun_off')) return; }catch(e){}
-    var BIG=false; try{BIG=!!localStorage.getItem('mtp_tokun_big');}catch(e){}
-    var sp=document.getElementById('s-play'),pc=document.getElementById('pane-chat'),log=document.getElementById('chat-log');
-    if(!sp||!pc||!log)return;
-    if(!sp.classList.contains('on')||!pc.classList.contains('on'))return;
-    try{ if(document.visibilityState!=='visible') return; }catch(e){ return; }
-    busy=true;
-    var p=PATTERNS[pick()];
-    if(BIG){p={img:p.img,exit:'burst'};}
-    var r=log.getBoundingClientRect();
-    var sz=BIG?Math.round(Math.max(window.innerWidth,window.innerHeight)*0.75):Math.max(130,Math.min(230,Math.round(Math.min(r.width,r.height)*0.42)));
-    var el=document.createElement('div');
-    var im=document.createElement('img');
-    im.src=p.img==='PEEK'?PEEK:((window.DOG_STK&&window.DOG_STK[p.img])||((window.TOKUN_STK&&window.TOKUN_STK[p.img])||''));
-    if(!im.src){busy=false;return;}
-    im.alt='とー君';
-    im.style.cssText='width:100%;height:100%;object-fit:contain;display:block';
-    el.appendChild(im);
-    el.style.cssText='position:fixed;z-index:99999;pointer-events:none;width:'+sz+'px;height:'+sz+'px;opacity:1;transition:all .6s ease;will-change:transform,opacity,left,top';
-    document.body.appendChild(el);cur=el;
-    if(BIG){try{(function(){var fx=document.createElement('div');fx.style.cssText='position:fixed;left:0;top:0;width:100%;height:100%;z-index:99998;pointer-events:none;overflow:hidden';document.body.appendChild(fx);curFx=fx;var CS=['#ff5252','#ffd740','#40c4ff','#69f0ae','#ff4081','#e040fb'];var i,c;for(i=0;i<80;i++){c=document.createElement('div');var w=Math.random()*10+6;c.style.cssText='position:absolute;width:'+w+'px;height:'+Math.round(w*0.5)+'px;background:'+CS[i%CS.length]+';left:'+(Math.random()*100)+'%;top:-8%;border-radius:2px;transition:transform '+(2.5+Math.random()*2.5).toFixed(2)+'s linear,opacity 5s linear';fx.appendChild(c);(function(cc){setTimeout(function(){cc.style.transform='translate('+Math.round((Math.random()-0.5)*260)+'px,'+(window.innerHeight+140)+'px) rotate('+Math.round(Math.random()*720-360)+'deg)';cc.style.opacity='0';},60);})(c);}var j,e;for(j=0;j<10;j++){e=document.createElement('div');e.textContent=(j%2?'🎊':'🎉');e.style.cssText='position:absolute;font-size:'+Math.round(30+Math.random()*44)+'px;left:'+(Math.random()*88)+'%;top:'+(Math.random()*78)+'%;opacity:0;transition:all 1.2s ease';fx.appendChild(e);(function(ee,d){setTimeout(function(){ee.style.opacity='1';ee.style.transform='scale(1.7) rotate('+Math.round(Math.random()*60-30)+'deg)';},d);setTimeout(function(){ee.style.opacity='0';},d+2600);})(e,120+j*150);}setTimeout(function(){fx.remove();},5800);})();}catch(e){}}
-    var mx=r.left+8,mw=Math.max(40,r.width-sz-16),mh=Math.max(40,r.height-sz-16);
-    var x=mx+Math.random()*mw,y=r.top+8+Math.random()*mh;
-    if(BIG){x=(window.innerWidth-sz)/2;y=(window.innerHeight-sz)/2;}
-    var tx=null; try{tx=localStorage.getItem('mtp_cm_'+p.img);}catch(e){}
-    if(tx===null){tx=(window.TOKUN_CM&&window.TOKUN_CM[p.img])||'';}
-    try{ if(window.TOKUN_BUB&&window.TOKUN_BUB[p.img]){ var bb=window.TOKUN_BUB[p.img]; var mk=document.createElement('div'); mk.style.cssText='position:absolute;left:'+Math.max(0,(bb[0]-0.01)*100)+'%;top:'+Math.max(0,(bb[1]-0.01)*100)+'%;width:'+Math.min(100,(bb[2]+0.02)*100)+'%;height:'+Math.min(100,(bb[3]+0.02)*100)+'%;box-sizing:border-box;background:#fff;border-radius:'+Math.max(4,Math.round(sz*0.045))+'px;display:flex;align-items:center;justify-content:center;text-align:center;overflow:hidden;padding:3%;font-weight:700;color:#222;white-space:pre-wrap;word-break:break-word;line-height:1.2;font-size:'+Math.max(9,Math.round(sz*0.1))+'px'; mk.textContent=tx||''; el.appendChild(mk);if(p.img!=='PEEK'&&window.DOG_STK&&window.DOG_STK[p.img]){try{var kf=[{transform:'translateY(0)'},{transform:'translateY(-'+Math.max(3,Math.round(sz*0.015))+'px)'}],ka={duration:1490,iterations:Infinity,direction:'alternate',easing:'ease-in-out'},im=el.querySelector('img'); if(im)im.animate(kf,ka); mk.animate(kf,ka);}catch(e){}} var fs=Math.max(9,Math.round(sz*0.1)); mk.style.fontSize=fs+'px'; var g=0; while(g++<14&&fs>6&&(mk.scrollHeight>mk.clientHeight+1||mk.scrollWidth>mk.clientWidth+1)){fs--;mk.style.fontSize=fs+'px';} } }catch(e){}
-    function setT(v){el.style.transform=(p.flip?'scaleX(-1) ':'')+v;}
-    if(p.ent==='peekL'){el.style.left=(-sz*0.55)+'px';el.style.top=y+'px';requestAnimationFrame(function(){requestAnimationFrame(function(){el.style.left='8px';});});}
-    else if(p.ent==='peekR'){el.style.left=(window.innerWidth-sz*0.45)+'px';el.style.top=y+'px';requestAnimationFrame(function(){requestAnimationFrame(function(){el.style.left=(window.innerWidth-sz-8)+'px';});});}
-    else{el.style.left=Math.round(x)+'px';el.style.top=Math.round(y)+'px';setT('scale(0)');el.style.opacity='0';requestAnimationFrame(function(){requestAnimationFrame(function(){el.style.opacity='1';setT('scale(1)');});});}
-    setTimeout(function(){
-      if(p.exit==='jump'){setT('translate(40px,-80px) rotate(12deg) scale(.6)');el.style.opacity='0';}
-      else if(p.exit==='spin'){setT('rotate(360deg) scale(.1)');el.style.opacity='0';}
-      else if(p.exit==='rise'){setT('translateY(-90px)');el.style.opacity='0';}
-      else if(p.exit==='shrink'){setT('scale(.05)');el.style.opacity='0';}
-      else if(p.exit==='sink'){setT('translateY(80px)');el.style.opacity='0';}
-      else if(p.exit==='runL'){el.style.transition='all .5s ease-in';setT('translateX(-'+Math.round(x+sz+80)+'px)');}
-      else if(p.exit==='dash'){el.style.transition='all .35s ease-in';setT('translateX('+Math.round(window.innerWidth-x+40)+'px)');}
-      else if(p.exit==='dashL'){el.style.transition='all .35s ease-in';setT('translateX(-'+Math.round(x+sz+80)+'px)');}
-      else if(p.exit==='burst'){el.style.transition='all .35s ease-out';setT('scale(2.2)');el.style.opacity='0';}
-      else if(p.exit==='unpeekL'){el.style.left=(-sz*0.6)+'px';}
-      else if(p.exit==='unpeekR'){el.style.left=(window.innerWidth-sz*0.4)+'px';}
-      setTimeout(function(){el.remove();if(cur===el)cur=null;busy=false;},800);
-    },5000);
+/* v438 描画専用。通信状態・本文・保存形式には触れない。
+   低フレーム数のWebPを補間したと偽らない。元画像の先頭ポーズを
+   ImageBitmapで一度だけ描き、外側を連続変形する。非対応時は元画像へ戻す。 */
+(function(){
+ 'use strict';
+ var pane=document.getElementById('pane-chat'),screen=document.getElementById('s-play');
+ if(!pane||!screen)return;
+ var reduce=window.matchMedia('(prefers-reduced-motion: reduce)');
+ var pending=0,raf=0,cur=null,curAnimation=null,exitTimer=0,removeTimer=0,nextTimer=0;
+ var interval=10000,last=-1,stopped=false,visible=new Set(),tracked=new Set();
+ var poses=new Map(),decodeQueue=[],decoding=0,poseLimit=48;
+ var budget=3;
+ var emotions={'😊':'joy','😂':'joy','😀':'joy','😆':'joy','🤣':'joy','🎉':'joy','🙌':'joy','😡':'anger','😤':'anger','😑':'anger','😢':'sad','😔':'sad','😥':'sad','🥲':'sad','🥹':'sad','🐶⑫':'sad','🐶⑬':'joy','🐶⑭':'anger','🐶⑯':'joy','🐶⑰':'spark','🐶⑱':'sway','🐶⑲':'sway','🐶㉗':'sad'};
+ function active(){return !document.hidden&&screen.classList.contains('on')&&pane.classList.contains('on');}
+ function chooseEmotion(value){return emotions[value]||'sway';}
+ function originalKey(src){var keys=Object.keys(window.DOG_STK||{});for(var i=0;i<keys.length;i++)if(window.DOG_STK[keys[i]]===src)return keys[i];return '';}
+ function pose(src){
+  if(poses.has(src))return poses.get(src);
+  if(typeof createImageBitmap!=='function'||poses.size>=poseLimit)return Promise.reject(Error('静止ポーズ非対応'));
+  var promise=new Promise(function(resolve,reject){decodeQueue.push({src:src,resolve:resolve,reject:reject});pump();});
+  poses.set(src,promise);return promise;
+ }
+ function pump(){
+  if(decoding||!decodeQueue.length)return;decoding=1;
+  var job=decodeQueue.shift();
+  Promise.resolve().then(function(){
+   var b64=job.src.split(',')[1],raw=atob(b64),bytes=new Uint8Array(raw.length);
+   for(var i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);
+   return createImageBitmap(new Blob([bytes],{type:'image/webp'}));
+  }).then(job.resolve,job.reject).finally(function(){decoding=0;pump();});
+ }
+ function raster(img){
+  if(img.closest('.v438-raster'))return img.parentElement;
+  var wrapper=document.createElement('span'),canvas=document.createElement('canvas');
+  wrapper.className='v438-raster';wrapper.setAttribute('aria-hidden','true');
+  var src=img.src,key=originalKey(src);wrapper.dataset.value=key;
+  if(img.classList.contains('dog-stk')){wrapper.style.width='124px';wrapper.style.height='124px';}
+  else if(img.classList.contains('dog-stk-pick')){wrapper.style.width='52px';wrapper.style.height='52px';}
+  img.parentNode.insertBefore(wrapper,img);wrapper.appendChild(canvas);wrapper.appendChild(img);
+  img.decoding='async';
+  pose(src).then(function(bitmap){
+   if(!wrapper.isConnected)return;
+   canvas.width=bitmap.width;canvas.height=bitmap.height;
+   var ctx=canvas.getContext('2d');if(!ctx)return;
+   ctx.drawImage(bitmap,0,0);wrapper.dataset.ready='true';
+   // 画像内の連番再生を止める。原画は元の定義・共有Bitmap内に保持。
+   img.removeAttribute('src');
+  }).catch(function(){canvas.remove();wrapper.dataset.fallback='original';});
+  if(!wrapper.closest('.v438-tokun')){
+   wrapper.classList.add('sticker-motion');wrapper.dataset.motion=chooseEmotion(key);
+   track(wrapper);
   }
-  var __iv=10000; try{ var __pv=parseInt(localStorage.getItem('mtp_tokun_iv')||'10000',10); if(__pv===0){__iv=0;}else if(__pv===-1){__iv=-1;}else if(__pv>0){__iv=__pv;} }catch(e){}
-  /* v436: とー君は メッセージ(トーク)の 画面だけ。トップや クイズに 移ったら すぐ けす */
-  setInterval(function(){
-    try{
-      if(!cur) return;
-      var sp2=document.getElementById('s-play'),pc2=document.getElementById('pane-chat');
-      var ok=document.visibilityState==='visible'&&sp2&&sp2.classList.contains('on')&&pc2&&pc2.classList.contains('on');
-      if(!ok){ try{ if(curFx) curFx.remove(); }catch(e){} try{ cur.remove(); }catch(e){} cur=null; curFx=null; busy=false; }
-    }catch(e){}
-  },400);
-  document.addEventListener('visibilitychange',function(){ try{ if(document.hidden&&cur){ if(curFx)curFx.remove(); cur.remove(); cur=null; curFx=null; busy=false; } }catch(e){} });
-  window.__tokSet=function(v){ __iv=v; };
-  (function __loop(){ setTimeout(function(){ if(__iv!==0) show(); __loop(); },(__iv===-1?300:__iv)); })();
+  return wrapper;
+ }
+ var observer=typeof IntersectionObserver==='function'?new IntersectionObserver(function(entries){
+  entries.forEach(function(e){if(e.isIntersecting)visible.add(e.target);else visible.delete(e.target);});schedule();
+ },{root:null,threshold:.12}):null;
+ function track(el){if(tracked.has(el))return;tracked.add(el);if(observer)observer.observe(el);else visible.add(el);}
+ function running(){
+  var on=active()&&!reduce.matches,count=cur?1:0;
+  tracked.forEach(function(el){
+   if(!el.isConnected){if(observer)observer.unobserve(el);tracked.delete(el);visible.delete(el);return;}
+   var can=on&&visible.has(el)&&count<budget;
+   // 一覧は選択・指差し・キーボードフォーカス時だけ動かす。
+   var pick=el.closest('.sticker-choice');
+   if(pick&&!pick.matches(':hover,:focus-within'))can=false;
+   if(can)count++;
+   var state=can?'running':'paused';if(el.style.animationPlayState!==state)el.style.setProperty('animation-play-state',state,'important');
+  });
+ }
+ function scan(){
+  raf=0;
+  pane.querySelectorAll('img.dog-stk,img.dog-stk-pick').forEach(raster);
+  pane.querySelectorAll('.sticker-motion').forEach(function(el){
+   if(!el.classList.contains('v438-raster')){var e=emotions[el.textContent];if(e)el.dataset.motion=e;}
+   track(el);
+  });
+  running();
+ }
+ function schedule(){if(!raf)raf=requestAnimationFrame(scan);}
+ function removeTokun(){
+  clearTimeout(exitTimer);clearTimeout(removeTimer);
+  if(curAnimation){curAnimation.cancel();curAnimation=null;}
+  if(cur){cur.remove();cur=null;}running();
+ }
+ function showTokun(){
+  if(cur||!active()||reduce.matches)return;
+  try{if(localStorage.getItem('mtp_tokun_off'))return;}catch(e){}
+  var big=false;try{big=!!localStorage.getItem('mtp_tokun_big');}catch(e){}
+  var log=document.getElementById('chat-log'),r=log.getBoundingClientRect();
+  if(r.width<60||r.height<80)return;
+  var i;do{i=Math.floor(Math.random()*PATTERNS.length);}while(i===last&&PATTERNS.length>1);last=i;
+  var pattern=PATTERNS[i],src=(window.DOG_STK&&window.DOG_STK[pattern.img])||(window.TOKUN_STK&&window.TOKUN_STK[pattern.img]);
+  if(!src)return;
+  var sz=Math.min(big?Math.min(r.width-20,r.height-20):176,r.width-20,r.height-20);
+  var el=document.createElement('div'),img=document.createElement('img');
+  el.className='v438-tokun';el.setAttribute('aria-hidden','true');
+  el.style.width=sz+'px';el.style.height=sz+'px';
+  el.style.left=Math.round(Math.max(r.left+8,r.right-sz-12))+'px';
+  el.style.top=Math.round(Math.max(r.top+8,r.bottom-sz-14))+'px';
+  img.src=src;img.alt='とー君';img.style.cssText='width:100%;height:100%;object-fit:contain';el.appendChild(img);pane.appendChild(el);cur=el;
+  raster(img);
+  var text=null;try{text=localStorage.getItem('mtp_cm_'+pattern.img);}catch(e){}
+  if(text===null)text=(window.TOKUN_CM&&window.TOKUN_CM[pattern.img])||'';
+  if(window.TOKUN_BUB&&window.TOKUN_BUB[pattern.img]){
+   var caption=document.createElement('div');caption.className='v438-tokun-caption';caption.textContent=text;el.appendChild(caption);
+  }
+  if(big){var party=document.createElement('span');party.className='v438-tokun-party';for(var j=0;j<12;j++){var conf=document.createElement('i');conf.style.left=(j*8+4)+'%';conf.style.setProperty('--drift',((j%3-1)*24)+'px');conf.style.animationDelay=(j*.07)+'s';party.appendChild(conf);}el.appendChild(party);}
+  if(el.animate)curAnimation=el.animate([
+   {opacity:0,transform:'translate3d(0,12px,0) scale(.965)',offset:0},
+   {opacity:1,transform:'translate3d(0,0,0) scale(1)',offset:.16},
+   {opacity:1,transform:'translate3d(-3px,-4px,0) rotate(-1deg)',offset:.52},
+   {opacity:1,transform:'translate3d(0,0,0) rotate(0)',offset:.86},
+   {opacity:0,transform:'translate3d(0,9px,0) scale(.985)',offset:1}
+  ],{duration:5800,easing:'cubic-bezier(.37,0,.32,1)',fill:'both'});
+  removeTimer=setTimeout(removeTokun,5900);running();
+ }
+ function loop(){
+  clearTimeout(nextTimer);if(stopped)return;
+  nextTimer=setTimeout(function(){showTokun();loop();},interval===-1?6500:Math.max(6500,interval||10000));
+ }
+ try{var saved=parseInt(localStorage.getItem('mtp_tokun_iv')||'10000',10);if(saved===-1||saved===0||saved>0)interval=saved;}catch(e){}
+ window.__tokSet=function(v){interval=v;stopped=v===0;removeTokun();loop();};stopped=interval===0;
+ function changed(){if(!active()||reduce.matches)removeTokun();schedule();}
+ new MutationObserver(schedule).observe(pane,{childList:true,subtree:true});
+ var stateObserver=new MutationObserver(changed);stateObserver.observe(pane,{attributes:true,attributeFilter:['class']});stateObserver.observe(screen,{attributes:true,attributeFilter:['class']});
+ document.addEventListener('visibilitychange',changed);
+ if(reduce.addEventListener)reduce.addEventListener('change',changed);else reduce.addListener(changed);
+ ['pointerover','pointerout','focusin','focusout','scroll'].forEach(function(type){pane.addEventListener(type,schedule,{passive:true,capture:type==='scroll'});});
+ window.addEventListener('resize',function(){removeTokun();schedule();},{passive:true});
+ schedule();loop();
+})();
+
 })();}catch(e){}
 </script>
 <style id="bg40-css">
