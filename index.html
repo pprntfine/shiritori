@@ -1424,7 +1424,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v439</b></p>
+      <p class="verline" title="ビルド 2026-11-02">バージョン <b id="ver">v440</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -13013,11 +13013,11 @@ try{(function(){
   var art=document.createElement('div');art.className='v439-art';
   var img=document.createElement('img');img.alt='とー君';img.decoding='async';img.src=src;art.appendChild(img);
   var words=document.createElement('div');words.className='v439-words';
-  var label=document.createElement('span');label.className='v439-label';label.textContent='とー君';
+  var label=document.createElement('span');label.className='v439-label';label.hidden=true;
   var caption=document.createElement('div');caption.className='v439-caption';
   var text=saved('mtp_cm_'+p.img);caption.textContent=text===null?((window.TOKUN_CM&&window.TOKUN_CM[p.img])||''):text;
   var close=document.createElement('button');close.type='button';close.className='v439-dismiss';close.textContent='閉じる';close.setAttribute('aria-label','とー君の表示を閉じる');close.onclick=stop;
-  words.appendChild(label);words.appendChild(caption);el.appendChild(art);el.appendChild(words);el.appendChild(close);
+  words.appendChild(caption);el.appendChild(art);el.appendChild(words);el.appendChild(close);
   // 上端29%は焼き込み吹き出し。原画を変更せず表示窓から外す。
   // 編集可能な文字は独立した一つのDOM。空文字も尊重する。
   var trail=document.createElement('span');trail.className='v439-trail';trail.setAttribute('aria-hidden','true');el.appendChild(trail);
