@@ -1424,7 +1424,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v449</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v450</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1498,7 +1498,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v449</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v450</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -7623,7 +7623,24 @@ var chatRenderTicket=0,chatScrollUserTicket=0;
   $('#chat-log').addEventListener(type,function(){ chatScrollUserTicket++; },{passive:true});
 });
 function __msgKey(m){ return m?(String(m.from)+':'+String(m.pid||m.uid||m.n||m.at)):''; }
+/* v450: 描き直しの 入口。画面に 出る 中身が まえと 同じなら 作りなおさない。
+   送りなおし（受信確認待ち）の たびに ぜんぶ 作りなおし、ふきだしの「ふわっと 出る」動きが くりかえされ ちかっと 消えて 見えた */
 function renderChat(forceBottom, __tailFrom){
+  try{
+    var box=$('#chat-log');
+    if(!(typeof __tailFrom==='number'&&__tailFrom>0) && box && box.querySelector('.msg') && S._rcSig){
+      S.chat=S.chat.filter(function(m){ return m.sys||!messageGone(m); });
+      if(chatSweepSigOf()===S._rcSig){
+        if(S._jump){ S._jump=false; try{ box.scrollTop=box.scrollHeight; }catch(e){} }
+        persistChat();
+        return;
+      }
+    }
+  }catch(e){}
+  renderChatFull(forceBottom, __tailFrom);
+  try{ if(!chatDeferred){ S._rcSig=chatSweepSigOf(); chatSweepSig=S._rcSig; } }catch(e){}
+}
+function renderChatFull(forceBottom, __tailFrom){
   try{ stickerSweep(); }catch(e){}   /* v245: えがく たびに のこり物の 幕を かたづける */
   S.chat=S.chat.filter(function(m){ return m.sys||!messageGone(m); });
   try{
@@ -7631,7 +7648,6 @@ function renderChat(forceBottom, __tailFrom){
     if(!forceBottom && ai && ai.id==='in-chat' && (ai.value||'').length>0 && (chatComposing||document.activeElement===ai)){ chatDeferred=true; return; }   /* v253: 入力が 空なら 保留しない（かたまって 描き直せなく なるのを 防ぐ） */
   }catch(e){}
   chatDeferred=false;
-  try{ chatSweepSig=chatSweepSigOf(); }catch(e){}   /* v449: いま 描く 中身を おぼえる（5秒ごとの 見まわりで おなじなら 描き直さない） */
   persistChat();
   var box=$('#chat-log');
   if(!box) return;
@@ -7940,11 +7956,12 @@ function chatSweepSigOf(){
       if(m.sys){ out.push('s'+(m.text||'')); continue; }
       var mine=(m.from===S.me.id);
       out.push([m.uid,m.mid||'',m.n||0,m.at||0,m.sent?1:0,m.acked?1:0,m.peerAck?1:0,m.read?1:0,m.failed?1:0,m.waiting?1:0,m.__chunked?1:0,
-        m.photo?1:0,m.file?1:0,(m.text||'').length,(m.data||'').length,m.pid||'',
+        m.photo?1:0,m.file?1:0,m.lost?1:0,m.fileName||'',(m.text||'').length,(m.data||'').length,m.pid||'',
         (m.rad&&m.read)?Math.ceil((m.rad+VANISH_MS-now)/60000):0,
         (mine&&!m.sent&&!m.failed&&typeof m.at==='number'&&now-m.at>75000)?1:0].join(','));
     }
     out.push(vanishOn()?1:0, new Date(now).toDateString());
+    try{ out.push(peerName(), meName()); }catch(e){}
     return out.join('|');
   }catch(e){ return String(Math.random()); }
 }
