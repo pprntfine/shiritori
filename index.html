@@ -1420,11 +1420,16 @@ body .bar::after{
       </div>
       <button id="btn-solo" class="chalk-btn big" type="button" style="width:100%;margin-top:4px">クイズを はじめる</button>
       <p id="local-hint" class="note" hidden></p>
+      <section id="zg-news" aria-label="最新ニュース" hidden>
+        <div class="zn-head"><b>最新ニュース</b><span id="zn-at"></span><button type="button" id="zn-re" aria-label="ニュースを あたらしく する">↻</button></div>
+        <div id="zn-mkt" class="zn-mkt"></div>
+        <div id="zn-body"></div>
+      </section>
       
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v454</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v455</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1498,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v454</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v455</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -12121,6 +12126,75 @@ var Relay={ws:null,topic:'',base:'',ts:0,seen:null,ids:[],retry:0,timer:null,pin
   }
 };
 document.addEventListener('visibilitychange',function(){ if(!document.hidden){ try{ Relay.wake(); }catch(e){} } });
+/* ===== v455: トップ画面の 最新ニュース（徳島・事件事故・株価）=====
+   じぶんの サーバー（つうちサーバー）の /news から だけ とる。スマホは ニュースの サイトに 直接 つながらない。
+   アプリを ひらく たび・もどる たびに あたらしく する（サーバー側で 5分 おぼえる）。 */
+var News={at:0,busy:false,
+  base:function(){ var u=psrvRaw(); return (u&&psrvOk(u))?u.replace(/\/+$/,''):''; },
+  lobbyOn:function(){ var l=document.getElementById('s-lobby'); return !!(l&&l.classList.contains('on')); },
+  load:async function(force){
+    var box=document.getElementById('zg-news'); if(!box) return;
+    var b=this.base(); if(!b){ box.hidden=true; return; }
+    box.hidden=false;
+    if(!this.shown){ this.shown=true; try{ var c=JSON.parse(localStorage.getItem('zg_news')||'null'); if(c&&c.at) this.render(c); else this.msg('ニュースを よみこんで います…'); }catch(e){} }
+    if(this.busy||(!force&&Date.now()-this.at<60000)) return;
+    this.busy=true;
+    try{
+      var r=await fetch(b+'/news',{cache:'no-store',credentials:'omit',signal:(typeof AbortSignal!=='undefined'&&AbortSignal.timeout)?AbortSignal.timeout(15000):undefined});
+      var j=await r.json();
+      if(!j||!j.ok) throw 0;
+      this.at=Date.now(); this.render(j);
+      try{ localStorage.setItem('zg_news',JSON.stringify(j)); }catch(e){}
+    }catch(e){ if(!document.querySelector('#zn-body .zn-it')) this.msg('ニュースを よみこめません。あとで もう一度 ためします。'); }
+    finally{ this.busy=false; }
+  },
+  msg:function(t){ var body=document.getElementById('zn-body'); if(!body) return; body.textContent=''; var p=document.createElement('p'); p.className='zn-msg'; p.textContent=t; body.appendChild(p); },
+  ago:function(d){ if(!d) return ''; var m=Math.round((Date.now()-d)/60000); if(m<1) return 'いま'; if(m<60) return m+'分まえ'; var h=Math.round(m/60); if(h<48) return h+'時間まえ'; return Math.round(h/24)+'日まえ'; },
+  quote:function(name,q,digits){
+    var d=document.createElement('div'); d.className='zn-q';
+    var t=document.createElement('span'); t.textContent=name; d.appendChild(t);
+    var v=document.createElement('b');
+    if(q&&typeof q.v==='number'){
+      v.textContent=q.v.toLocaleString('ja-JP',{minimumFractionDigits:digits,maximumFractionDigits:digits});
+      d.appendChild(v);
+      if(typeof q.c==='number'){
+        var c=document.createElement('span'); var up=q.c>=0;
+        c.className=up?'zn-up':'zn-dn';
+        c.textContent=(up?'▲':'▼')+Math.abs(q.c).toLocaleString('ja-JP',{maximumFractionDigits:digits})+(typeof q.p==='number'?'（'+(up?'+':'−')+Math.abs(q.p).toFixed(2)+'%）':'');
+        d.appendChild(c);
+      }
+    } else { v.textContent='—'; d.appendChild(v); }
+    return d;
+  },
+  render:function(j){
+    var mk=document.getElementById('zn-mkt'), body=document.getElementById('zn-body'), at=document.getElementById('zn-at');
+    if(!mk||!body) return;
+    var m=j.market||{};
+    mk.textContent='';
+    mk.appendChild(this.quote('日経平均',m.nikkei,2));
+    mk.appendChild(this.quote('ドル円',m.usdjpy,2));
+    body.textContent='';
+    var self=this;
+    [['tokushima','徳島の ニュース'],['jiken','事件・事故'],['keizai','株価・経済']].forEach(function(g){
+      var list=Array.isArray(j[g[0]])?j[g[0]]:[]; if(!list.length) return;
+      var h=document.createElement('h3'); h.textContent=g[1]; body.appendChild(h);
+      list.forEach(function(it){
+        if(!it||typeof it.t!=='string'||!/^https:\/\//.test(String(it.u||''))) return;
+        var a=document.createElement('a'); a.className='zn-it'; a.href=it.u; a.target='_blank'; a.rel='noopener noreferrer';
+        a.textContent=it.t;
+        var sm=document.createElement('small'); sm.textContent=[it.s||'',self.ago(it.d)].filter(Boolean).join('・');
+        a.appendChild(sm); body.appendChild(a);
+      });
+    });
+    if(!body.firstChild) this.msg('いまは ニュースが ありません。');
+    if(at){ var d=new Date(j.at||Date.now()); at.textContent=(d.getMonth()+1)+'/'+d.getDate()+' '+('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2)+' こうしん'+(j.stale?'（ふるい）':''); }
+  }
+};
+setTimeout(function(){ try{ News.load(true); }catch(e){} },800);
+document.addEventListener('visibilitychange',function(){ if(!document.hidden&&News.lobbyOn()){ try{ News.load(true); }catch(e){} } });
+setInterval(function(){ try{ if(!document.hidden&&News.lobbyOn()) News.load(false); }catch(e){} },5*60*1000);
+try{ var __znre=document.getElementById('zn-re'); if(__znre) __znre.addEventListener('click',function(e){ e.stopPropagation(); News.load(true); }); }catch(e){}
+try{ new MutationObserver(function(){ if(News.lobbyOn()&&Date.now()-News.at>60000) News.load(false); }).observe(document.getElementById('s-lobby'),{attributes:true,attributeFilter:['class']}); }catch(e){}
 window.addEventListener('online',function(){ try{ Relay.wake(); }catch(e){} });
 async function psrvPush(topic,payload){
   var u=psrvGet(); if(!u) return false;
@@ -13406,6 +13480,30 @@ html body #pane-chat #chat-log .msg .meta{white-space:nowrap}
 #s-lobby .fine b,#s-lobby .note b{color:#F6D98A}
 #s-lobby .verline{margin-top:22px!important;font-size:.7rem!important;letter-spacing:.18em;color:rgba(255,255,255,.42)!important;text-align:center}
 #s-lobby .verline b{color:rgba(246,231,193,.78)!important;letter-spacing:.1em}
+
+/* ---- v455: トップ画面の 最新ニュース ---- */
+#s-lobby #zg-news{position:relative;z-index:1;flex:1 1 0;min-height:140px;overflow-y:auto;-webkit-overflow-scrolling:touch;margin:14px 0 8px;padding:10px 12px 12px;border-radius:16px;background:#ffffff14;border:1px solid #ffffff26;color:#F3EEFF;text-align:left}
+#s-lobby #zg-news[hidden]{display:none!important}
+#s-lobby #zg-news .zn-head{display:flex;align-items:center;gap:8px;margin:0 0 6px;font-size:.92rem}
+#s-lobby #zg-news .zn-head b{letter-spacing:.08em}
+#s-lobby #zg-news #zn-at{font-size:.68rem;opacity:.7;margin-left:auto}
+#s-lobby #zg-news #zn-re{min-width:30px;min-height:30px;padding:0;border-radius:50%;border:1px solid #ffffff40;background:#ffffff14;color:#fff;font-size:.9rem;line-height:1}
+#s-lobby #zg-news .zn-mkt{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 4px}
+#s-lobby #zg-news .zn-q{flex:1 1 140px;padding:7px 9px;border-radius:12px;background:#00000026;font-size:.74rem}
+#s-lobby #zg-news .zn-q b{display:block;font-size:1.02rem;letter-spacing:.02em;margin-top:1px}
+#s-lobby #zg-news .zn-up{color:#FF8A8A}
+#s-lobby #zg-news .zn-dn{color:#8FC8FF}
+#s-lobby #zg-news h3{margin:10px 0 4px;font-size:.76rem;font-weight:800;color:var(--zg-cream);letter-spacing:.06em}
+#s-lobby #zg-news a.zn-it{display:block;padding:7px 2px;border-top:1px solid #ffffff1c;color:#F3EEFF;text-decoration:none;font-size:.84rem;line-height:1.45}
+#s-lobby #zg-news a.zn-it small{display:block;font-size:.66rem;opacity:.65;margin-top:1px}
+#s-lobby #zg-news .zn-msg{font-size:.76rem;opacity:.75;padding:6px 2px}
+#s-lobby #zg-news,#s-lobby #zg-news .zn-head b,#s-lobby #zg-news .zn-q,#s-lobby #zg-news .zn-q span,#s-lobby #zg-news .zn-q b,#s-lobby #zg-news #zn-at,#s-lobby #zg-news .zn-msg{color:#F3EEFF!important;text-shadow:none!important}
+#s-lobby #zg-news .zn-q b{color:#FFFFFF!important}
+#s-lobby #zg-news .zn-q span.zn-up{color:#FF9C9C!important}
+#s-lobby #zg-news .zn-q span.zn-dn{color:#9CCFFF!important}
+#s-lobby #zg-news h3{color:#F6E7C1!important}
+#s-lobby #zg-news a.zn-it,#s-lobby #zg-news a.zn-it:visited{color:#F3EEFF!important}
+#s-lobby #zg-news a.zn-it small{color:#CFC6EA!important;opacity:1!important}
 </style>
 </body>
 </html>

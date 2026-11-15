@@ -1,4 +1,4 @@
-# 雑学王（zatsugakuou）引き継ぎメモ  ― 現在 v454
+# 雑学王（zatsugakuou）引き継ぎメモ  ― 現在 v455
 
 ## これは何か
 見た目は「雑学クイズ」アプリ。中身は **2人専用の暗号化チャット**（メッセージ・写真・ライブ映像・電話）。
@@ -56,6 +56,10 @@
   ペアが消えるのは unpairBoth / btn-wipe / 相手からの 'unpair' だけ。危なかったので:
   `#btn-wipe`（1回で消えていた）と `unpairBoth`（2回押しで消えていた）に確認ダイアログ(confirm)を追加。`#pf-unpair` を設定の下に離して「きけん」表示。
   再開で部屋の鍵がIDBに無いとき、黙って false にせず storageWarn を出す。
+- v455 トップ画面に「最新ニュース」（持ち主の希望：徳島中心・事件事故・株価）。`#zg-news`（`#s-lobby` 内）と `News` オブジェクト。
+  取得先は自分のWorkerの `GET /news` だけ（スマホはニュースサイトへ直接つながない）。開くたび・戻るたび・5分ごとに更新、前回分は localStorage `zg_news`。
+  Worker側 `handleNews`: Google ニュースRSS（徳島）、NHK RSS cat1（事件事故）、Google ニュース「株価」/NHK cat5、日経平均・ドル円は Yahoo chart（予備 stooq）。5分キャッシュ（DO 'news'）。
+  リンクは https のみ、target=_blank rel=noopener noreferrer。表示は textContent のみ。隠し入口（5回タップ）が動くことを確認。
 
 ## 構造のメモ（行番号は目安。検索で探すこと）
 - メインのスクリプトは `<script>(function(){'use strict'; …})();</script>` の1つの大きな閉じ込み。外から内部は見えない（テスト用に `tools/make_test.py` で `window.__t` を出す）。

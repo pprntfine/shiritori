@@ -6,6 +6,9 @@
    - POST /sub   {topic, sub}        この 端末の とどけさき を とうろく
    - POST /push  {topic, msg}        そのトピックの 端末へ Web Push（RFC8291 aes128gcm + RFC8292 VAPID）
 
+   ■ 最新ニュース
+   - GET  /news  徳島・事件事故・株価（日経平均・ドル円）。5分ごとに 取りなおす
+
    ■ 中継所（ntfy.sh と 同じ 受け答え。1日250通の せいげんが ない）
    - POST /r/{topic}                     本文（暗号文）を おく
    - PUT  /r/{topic}?filename=&message=   ファイル（暗号化ずみ）を おく
@@ -254,6 +257,108 @@ async function handleRelay(req, env, parts) {
   return new Response(r.body, { status: r.status, headers: h });
 }
 
+/* ---------- 最新ニュース（トップ画面用） ----------
+   アプリを ひらく たびに よばれる。ニュースの サイトへは この サーバーが 取りに いく
+   （スマホは ニュースの サイトに 直接 つながらない）。5分 おぼえて おいて、それより 古ければ 取りなおす。 */
+const NEWS_TTL = 5 * 60 * 1000;
+const GN = q => 'https://news.google.com/rss/search?q=' + encodeURIComponent(q) + '&hl=ja&gl=JP&ceid=JP:ja';
+const NEWS_SRC = {
+  tokushima: [GN('徳島 when:2d'), GN('徳島')],
+  jiken: ['https://www.nhk.or.jp/rss/news/cat1.xml', GN('事件 OR 事故 when:1d')],
+  keizai: [GN('株価 OR 日経平均 when:1d'), 'https://www.nhk.or.jp/rss/news/cat5.xml'],
+};
+const NEWS_MAX = { tokushima: 6, jiken: 5, keizai: 4 };
+let newsMem = null;
+
+function xmlText(s) {
+  s = String(s || '').replace(/^\s*<!\[CDATA\[([\s\S]*?)\]\]>\s*$/, '$1');
+  s = s.replace(/<[^>]+>/g, ' ');
+  s = s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'")
+    .replace(/&#(\d+);/g, (m, n) => String.fromCodePoint(+n)).replace(/&#x([0-9a-f]+);/gi, (m, n) => String.fromCodePoint(parseInt(n, 16)))
+    .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&');
+  return s.replace(/\s+/g, ' ').trim();
+}
+function tag(block, name) {
+  const m = new RegExp('<' + name + '(?:\\s[^>]*)?>([\\s\\S]*?)</' + name + '>', 'i').exec(block);
+  return m ? xmlText(m[1]) : '';
+}
+function parseRss(xml) {
+  const out = [];
+  const re = /<item[\s>][\s\S]*?<\/item>/gi;
+  let m;
+  while ((m = re.exec(xml)) && out.length < 40) {
+    const b = m[0];
+    let t = tag(b, 'title'), src = tag(b, 'source');
+    const u = tag(b, 'link');
+    if (src && t.endsWith(' - ' + src)) t = t.slice(0, -(' - ' + src).length);
+    const d = Date.parse(tag(b, 'pubDate')) || 0;
+    if (!t || !/^https:\/\//.test(u)) continue;
+    out.push({ t: t.slice(0, 120), u: u.slice(0, 600), s: (src || '').slice(0, 30), d });
+  }
+  return out;
+}
+async function getText(url) {
+  const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (zatsugaku-news)', Accept: '*/*' }, signal: AbortSignal.timeout(6000), cf: { cacheTtl: 120 } });
+  if (!r.ok) throw new Error('http ' + r.status);
+  return r.text();
+}
+async function newsGroup(key) {
+  for (const url of NEWS_SRC[key]) {
+    try {
+      const items = parseRss(await getText(url));
+      if (!items.length) continue;
+      if (!url.includes('nhk.or.jp')) items.sort((a, b) => b.d - a.d);
+      const seen = new Set(), list = [];
+      for (const it of items) { const k = it.t.replace(/\s/g, ''); if (seen.has(k)) continue; seen.add(k); list.push(it); if (list.length >= NEWS_MAX[key]) break; }
+      return list;
+    } catch (e) {}
+  }
+  return [];
+}
+async function quote(sym) {
+  try {
+    const r = await fetch('https://query1.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(sym) + '?interval=1d&range=5d',
+      { headers: { 'User-Agent': 'Mozilla/5.0 (zatsugaku-news)' }, signal: AbortSignal.timeout(6000) });
+    const j = await r.json();
+    const meta = j.chart.result[0].meta;
+    const v = meta.regularMarketPrice, p = meta.chartPreviousClose ?? meta.previousClose;
+    if (typeof v !== 'number') throw 0;
+    return { v, c: typeof p === 'number' ? v - p : null, p: typeof p === 'number' && p ? (v - p) / p * 100 : null, at: (meta.regularMarketTime || 0) * 1000 };
+  } catch (e) {}
+  try {   // 予備（stooq）
+    const st = { '^N225': '^nkx', 'JPY=X': 'usdjpy' }[sym];
+    const t = await getText('https://stooq.com/q/l/?s=' + encodeURIComponent(st) + '&f=sd2t2ohlc&h&e=csv');
+    const row = t.trim().split('\n')[1].split(',');
+    const v = parseFloat(row[6]), o = parseFloat(row[3]);
+    if (!isFinite(v)) throw 0;
+    return { v, c: isFinite(o) ? v - o : null, p: isFinite(o) && o ? (v - o) / o * 100 : null, at: Date.parse(row[1] + 'T' + row[2] + 'Z') || 0, open: 1 };
+  } catch (e) {}
+  return null;
+}
+async function buildNews() {
+  const [tokushima, jiken, keizai, nikkei, usdjpy] = await Promise.all([
+    newsGroup('tokushima'), newsGroup('jiken'), newsGroup('keizai'), quote('^N225'), quote('JPY=X'),
+  ]);
+  return { at: Date.now(), tokushima, jiken, keizai, market: { nikkei, usdjpy } };
+}
+async function handleNews(env, ctx) {
+  const now = Date.now();
+  if (newsMem && now - newsMem.at < NEWS_TTL) return json({ ok: true, ...newsMem });
+  const b = box(env, 'news');
+  try { const saved = await b.get('v'); if (saved && now - saved.at < NEWS_TTL) { newsMem = saved; return json({ ok: true, ...saved }); } } catch (e) {}
+  const fresh = await buildNews();
+  const got = fresh.tokushima.length + fresh.jiken.length + fresh.keizai.length;
+  if (got) {
+    newsMem = fresh;
+    const p = b.put('v', fresh).catch(() => {});
+    if (ctx && ctx.waitUntil) ctx.waitUntil(p);
+    return json({ ok: true, ...fresh });
+  }
+  // とれなかった ときは 前の ぶんを かえす（古い しるし つき）
+  try { const saved = newsMem || await b.get('v'); if (saved) return json({ ok: true, stale: 1, ...saved }); } catch (e) {}
+  return json({ ok: false, err: 'news unavailable' }, 502);
+}
+
 export class ZgRelay {
   constructor(ctx, env) {
     this.ctx = ctx;
@@ -394,6 +499,7 @@ export default {
     try {
       if (path.startsWith('/r/')) return await handleRelay(req, env, path.slice(3).split('/'));
       if (path === '/key' && req.method === 'GET') return json({ key: (await vapid(env)).pub, relay: 1 });
+      if (path === '/news' && req.method === 'GET') return await handleNews(env, ctx);
       if (path === '/sub' && req.method === 'POST') return await handleSub(req, env);
       if (path === '/push' && req.method === 'POST') return await handlePush(req, env, ctx);
       if (path === '/') return json({ ok: true, app: 'zatsugaku-push', relay: 1 });
