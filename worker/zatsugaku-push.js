@@ -267,7 +267,7 @@ const NEWS_SRC = {
   jiken: ['https://www.nhk.or.jp/rss/news/cat1.xml', GN('事件 OR 事故 when:1d')],
   keizai: [GN('株価 OR 日経平均 when:1d'), 'https://www.nhk.or.jp/rss/news/cat5.xml'],
 };
-const NEWS_MAX = { tokushima: 6, jiken: 5, keizai: 4 };
+const NEWS_MAX = { tokushima: 12, jiken: 8, keizai: 6 };
 let newsMem = null;
 
 function xmlText(s) {

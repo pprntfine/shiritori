@@ -12787,7 +12787,7 @@ window.addEventListener('pagehide',function(){ Net.close(); });
   if(bi){ bi.hidden=true; bi.style.display='none'; }   /* 1ファイル版は ブラウザの機能で 追加 */
   var ub2=document.getElementById('btn-update'); if(ub2) ub2.style.display='none';
   var rb2=document.getElementById('btn-reload'); if(rb2) rb2.style.display='none';
-  if(hi){ hi.hidden=false; hi.innerHTML='この版は <b>1ファイル</b>です。ホーム画面に入れるには、Chromeなら「⋮」→「<b>ホーム画面に追加</b>」、iPhoneは 共有→「<b>ホーム画面に追加</b>」をおしてください。'; }
+  if(hi){ hi.hidden=true; hi.style.display='none'; }   /* v455: 「1ファイル」の せつめいは 出さない（その ぶん ニュースを ひろく） */
   var rb=document.getElementById('btn-reload'), ub=document.getElementById('btn-update');
   if(rb) rb.hidden=true;
   if(ub) ub.hidden=true;
@@ -13484,6 +13484,11 @@ html body #pane-chat #chat-log .msg .meta{white-space:nowrap}
 /* ---- v455: トップ画面の 最新ニュース ---- */
 #s-lobby #zg-news{position:relative;z-index:1;flex:1 1 0;min-height:140px;overflow-y:auto;-webkit-overflow-scrolling:touch;margin:14px 0 8px;padding:10px 12px 12px;border-radius:16px;background:#ffffff14;border:1px solid #ffffff26;color:#F3EEFF;text-align:left}
 #s-lobby #zg-news[hidden]{display:none!important}
+#s-lobby:has(#zg-news:not([hidden])){padding-bottom:6px!important}
+#s-lobby:has(#zg-news:not([hidden])) .verline{margin-top:2px!important;margin-bottom:2px!important}
+#s-lobby:has(#zg-news:not([hidden])) #zg-news{margin:12px 0 4px!important}
+#s-lobby:has(#zg-news:not([hidden])) .hero{margin-top:0!important}
+#s-lobby:has(#zg-news:not([hidden])) #btn-solo{margin-bottom:0!important}
 #s-lobby #zg-news .zn-head{display:flex;align-items:center;gap:8px;margin:0 0 6px;font-size:.92rem}
 #s-lobby #zg-news .zn-head b{letter-spacing:.08em}
 #s-lobby #zg-news #zn-at{font-size:.68rem;opacity:.7;margin-left:auto}
