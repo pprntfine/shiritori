@@ -19,7 +19,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="雑学王">
 <meta name="theme-color" content="#12312A">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; font-src 'none'; connect-src https://ntfy.sh wss://ntfy.sh https://*.workers.dev wss://broker.emqx.io:8084 wss://broker.hivemq.com:8884; worker-src 'self'; img-src 'self' data:; manifest-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; font-src 'none'; connect-src https://ntfy.sh wss://ntfy.sh https://*.workers.dev wss://*.workers.dev wss://broker.emqx.io:8084 wss://broker.hivemq.com:8884; worker-src 'self'; img-src 'self' data:; manifest-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'">
 <meta http-equiv="Cache-Control" content="no-store">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -1424,7 +1424,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v450</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v451</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1498,7 +1498,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v450</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v451</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -2454,6 +2454,7 @@ var Net={
     this.openStream();
     this.startPoll();
     try{ Fast.connect(topic); }catch(e){}
+    try{ Relay.connect(topic); }catch(e){}   /* v451: じぶんの 中継所も 見る */
   },
   /* 2本目から 来た あんごう文 */
   recvFast:function(body,attachment){
@@ -2469,6 +2470,7 @@ var Net={
     if(typeof S!=='undefined'&&S){ S.in2Busy=false; S.in3Busy=false; S.hostCandidate=null; S.approvalBusy=false; }
     this.sendQueue=Promise.resolve(); this.chunkQueue=Promise.resolve(); this.cqLanes=null; this.cqNext=0; this.recvQueue=Promise.resolve(); this.qBusy=0;
     try{ Fast.close(); }catch(e){}
+    try{ Relay.close(); }catch(e){}
     if(this.retryTimer){clearTimeout(this.retryTimer);this.retryTimer=null;}
     this.stopPoll();
     this.closeStream();
@@ -2830,28 +2832,30 @@ var Net={
       /* v282: かけらは 即時路(MQTT)だけを つかう。中継所の 制限中でも とおす */
       /* v336: 即時路が つながって いない とき、かけらを 中継所の 小さい POST で おくる。
          これが 無いと、MQTT が ふさがれた 回線では しゃしんが 絶対に とどかない */
+      var __rb=relaySendBase();
       if(__ns&&!fastOk){
-        if(this.coolUntil&&Date.now()<this.coolUntil) return false;
-        if(!this.allow(1)) return false;
+        if(!__rb&&this.coolUntil&&Date.now()<this.coolUntil) return false;
+        if(!__rb&&!this.allow(1)) return false;
         try{
           var ac4=(typeof AbortController!=='undefined')?new AbortController():null;
           var tmo4=setTimeout(function(){ try{ if(ac4) ac4.abort(); }catch(e){} },12000);
           var r4;
           if(ac4) privateAborts.add(ac4);
-          try{ r4=await fetch('https://ntfy.sh/'+scope.topic,{method:'POST',headers:{'Content-Type':'text/plain'},body:body,signal:ac4?ac4.signal:undefined}); }
+          try{ r4=await this.storeFetch(scope.topic,{method:'POST',headers:{'Content-Type':'text/plain'},body:body,signal:ac4?ac4.signal:undefined}); }
           finally{ clearTimeout(tmo4); if(ac4) privateAborts.delete(ac4); }
           if(!outboundCurrent(scope)) return false;
           if(r4.status===429||r4.status===503){ this.hit429(45000); return false; }
           return !!r4.ok;
         }catch(e){ return false; }
       }
-      if(this.coolUntil&&Date.now()<this.coolUntil) return __ns?fastOk:false;
-      if(!(env.t==='chats'?this.allowChat():this.allow(typeof prio==='number'?prio:1))) return __ns?fastOk:false;
+      if(!__rb&&this.coolUntil&&Date.now()<this.coolUntil) return __ns?fastOk:false;
+      if(!__rb&&!(env.t==='chats'?this.allowChat():this.allow(typeof prio==='number'?prio:1))) return __ns?fastOk:false;
       if(!__ns) this.postStore(body,scope); return true;
     }
     /* ntfy は 保存用(相手が いない ときの 受けとり用)。制限中は 2本目だけで 成功あつかい */
-    if(this.coolUntil&&Date.now()<this.coolUntil) return fastOk||await viaPush();
-    if(!(env.t==='chats'?this.allowChat():this.allow(typeof prio==='number'?prio:1))) return fastOk||await viaPush();
+    var __rb2=relaySendBase();
+    if(!__rb2&&this.coolUntil&&Date.now()<this.coolUntil) return fastOk||await viaPush();
+    if(!__rb2&&!(env.t==='chats'?this.allowChat():this.allow(typeof prio==='number'?prio:1))) return fastOk||await viaPush();
     /* v122: 即時路で おくれたら 保存路は 待たずに うしろで（つぎの メッセージが つまらない） */
     if(fastOk){
       /* v267: 相手が いま つながって いるなら 保存は いらない（1日に 250通の わくを 節約） */
@@ -2888,7 +2892,7 @@ var Net={
       var r;
       if(!outboundCurrent(scope)){ clearTimeout(tmo); return false; }
       if(ac) privateAborts.add(ac);
-      try{ r=await fetch('https://ntfy.sh/'+scope.topic+noCache,{method:'POST',headers:{'Content-Type':'text/plain'},body:body,signal:ac?ac.signal:undefined}); }
+      try{ r=await this.storeFetch(scope.topic,{method:'POST',headers:{'Content-Type':'text/plain'},body:body,signal:ac?ac.signal:undefined},noCache); }
       finally{ clearTimeout(tmo); if(ac) privateAborts.delete(ac); }
       if(!outboundCurrent(scope)) return false;
       this.lastPostStatus=r.status;
@@ -2905,13 +2909,27 @@ var Net={
       return true;
     }catch(e){ return fastOk||await viaPush(); }
   },
+  /* v451: 中継所へ おく。あいても 対応して いれば じぶんの 中継所（せいげん なし）、だめなら ntfy.sh */
+  storeFetch:async function(topic,init,query){
+    var rb=relaySendBase();
+    if(rb){
+      try{
+        var rr=await fetch(rb+topic+(query||''),init);
+        if(rr.ok){ this.lastVia='relay'; return rr; }
+        if(rr.status!==413) Relay.badUntil=Date.now()+60000;
+        else return rr;
+      }catch(e){ if(init&&init.signal&&init.signal.aborted) throw e; Relay.badUntil=Date.now()+60000; }
+    }
+    this.lastVia='ntfy';
+    return fetch('https://ntfy.sh/'+topic+(query||''),init);
+  },
   postStore:function(body,scope){
     var self=this;
     if(!outboundCurrent(scope)) return;
-    if(this.coolUntil&&Date.now()<this.coolUntil) return;
+    if(!relaySendBase()&&this.coolUntil&&Date.now()<this.coolUntil) return;
     try{
       var ac=typeof AbortController!=='undefined'?new AbortController():null; if(ac) privateAborts.add(ac);
-      fetch('https://ntfy.sh/'+scope.topic,{method:'POST',headers:{'Content-Type':'text/plain'},body:body,signal:ac?ac.signal:undefined})
+      this.storeFetch(scope.topic,{method:'POST',headers:{'Content-Type':'text/plain'},body:body,signal:ac?ac.signal:undefined})
         .then(function(r){ if(outboundCurrent(scope)&&(r.status===429||r.status===503)) self.hit429(45000); }).catch(function(){})
         .finally(function(){ if(ac) privateAborts.delete(ac); });
     }catch(e){}
@@ -2960,9 +2978,10 @@ var Net={
     if(env&&messageDeleted({from:env.from,pid:env.id})) return false;
     var scope=outboundScopes.get(env),key=scope&&scope.key;
     if(!privateCurrent(scope)) return false;
-    if(this.coolUntil&&Date.now()<this.coolUntil) return false;
-    if(this.noPutUntil&&Date.now()<this.noPutUntil) return false;   /* v282: 回数制限の あとは しばらく 1回おくりを しない */
-    if(!this.allow(0)) return false;
+    var __rbf=relaySendBase();
+    if(!__rbf&&this.coolUntil&&Date.now()<this.coolUntil) return false;
+    if(!__rbf&&this.noPutUntil&&Date.now()<this.noPutUntil) return false;   /* v282: 回数制限の あとは しばらく 1回おくりを しない */
+    if(!__rbf&&!this.allow(0)) return false;
     try{
       var iv=randFrom(12);
       var ct=await crypto.subtle.encrypt({name:'AES-GCM',iv:iv},key,bytes);
@@ -2976,8 +2995,8 @@ var Net={
       var tmo2=setTimeout(function(){ try{ if(ac2) ac2.abort(); }catch(e){} },45000);   /* v273: 20秒では 写真が 切れすぎた */
       var r;
       if(ac2) privateAborts.add(ac2);
-      try{ r=await fetch('https://ntfy.sh/'+scope.topic+'?filename=d.bin&message='+encodeURIComponent(body),
-        {method:'PUT',headers:{'Content-Type':'application/octet-stream'},body:all,signal:ac2?ac2.signal:undefined}); }
+      try{ r=await this.storeFetch(scope.topic,
+        {method:'PUT',headers:{'Content-Type':'application/octet-stream'},body:all,signal:ac2?ac2.signal:undefined},'?filename=d.bin&message='+encodeURIComponent(body)); }
       finally{ clearTimeout(tmo2); if(ac2) privateAborts.delete(ac2); }
       if(!privateCurrent(scope)) return false;
       this.lastPostStatus=r.status; this.lastFileStatus=r.status; this.lastFileAt=Date.now();
@@ -3001,7 +3020,7 @@ var Net={
   fetchFile:async function(url,m){
     var scope=inboundScopes.get(m);
     if(!privateIncoming(m)||typeof m.fh!=='string'||!(/^[0-9a-f]{64}$/).test(m.fh)) return null;
-    try{ var u=new URL(url); if(u.protocol!=='https:'||u.origin!=='https://ntfy.sh'||u.username||u.password) return null; }catch(e){ return null; }
+    try{ var u=new URL(url); if(u.protocol!=='https:'||!(u.origin==='https://ntfy.sh'||relayFileOk(u))||u.username||u.password) return null; }catch(e){ return null; }
     for(var t=0;t<4;t++){
       if(!privateCurrent(scope)) return null;
       var ac=typeof AbortController!=='undefined'?new AbortController():null;
@@ -11484,7 +11503,8 @@ Net.onMsg=async function(m){
       if(m.from===S.me.id) break;
       recvProf(m);
       if(typeof m.ps==='string'&&psrvOk(m.ps)&&m.ps.replace(/\/+$/,'')!==psrvGet()){ psrvSet(m.ps); setTimeout(function(){ try{ bgPushSetup(); }catch(e){} },300); }
-      if(!m.r) setTimeout(function(){ try{ Net.send({t:'prof',r:1,nm:meName(),emo:(PROF.me&&PROF.me.emo)||'🐷',img:(PROF.me&&PROF.me.img)||'',ps:psrvGet()}); }catch(e){} },400);
+      relayPeerMark(m);   /* v451: あいてが じぶんの 中継所を 見て いるか */
+      if(!m.r) setTimeout(function(){ try{ Net.send({t:'prof',r:1,nm:meName(),emo:(PROF.me&&PROF.me.emo)||'🐷',img:(PROF.me&&PROF.me.img)||'',ps:psrvGet(),rl:relayHas()?1:0}); }catch(e){} },400);
       break;
     case 'rtc2':
       if(m.from===S.me.id) break;
@@ -11946,6 +11966,7 @@ async function psrvCheck(){
     if(!r.ok) throw 0;
     var j=await r.json();
     if(!j||!j.key) throw 0;
+    relayMark(u,j.relay===1);
     psrvAlive(); return true;
   }catch(e){ psrvDead(u); return false; }
 }
@@ -11956,6 +11977,7 @@ async function psrvSetup(){
     var mine=await myBellTopic(); if(!mine) return false;
     var kr=await fetch(u+'/key',{cache:'no-store'}); if(!kr||!kr.ok) throw 0;
     var kj=await kr.json(); if(!kj||!kj.key) throw 0;
+    relayMark(u,kj.relay===1);
     var sub=await swReg.pushManager.getSubscription();
     var want=kj.key, have='';
     try{ if(sub&&sub.options&&sub.options.applicationServerKey){ var a=new Uint8Array(sub.options.applicationServerKey); var bs=''; for(var i=0;i<a.length;i++) bs+=String.fromCharCode(a[i]); have=btoa(bs).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); } }catch(e){}
@@ -11967,6 +11989,96 @@ async function psrvSetup(){
     psrvAlive(); return true;
   }catch(e){ psrvDead(u); return false; }   /* v241: つながらない サーバーは はずす */
 }
+/* ===== v451: じぶん専用の 中継所（つうちサーバーの /r/）。ntfy.sh の 1日250通の せいげんを なくす =====
+   中身は 今までどおり 2人の 鍵で 暗号化した ものだけ。うけとりは ntfy.sh と 中継所の 両方を 見る。
+   おくるのは「あいても 中継所を 見て いる」と わかった ときだけ（ちがう ときは ntfy.sh）。 */
+function relayHas(){ var u=psrvGet(); if(!u) return ''; try{ return localStorage.getItem('zg_relay_ok')===u?u:''; }catch(e){ return ''; } }
+function relayMark(u,on){
+  u=(u||'').replace(/\/+$/,'');
+  try{ var was=localStorage.getItem('zg_relay_ok'); if(on) localStorage.setItem('zg_relay_ok',u); else if(was===u) localStorage.removeItem('zg_relay_ok'); }catch(e){ return; }
+  if(on&&was!==u) setTimeout(function(){ try{ if(Net.topic&&Relay.topic!==Net.topic) Relay.connect(Net.topic); sendProf(); }catch(e){} },500);
+}
+function relayPeerMark(m){
+  try{
+    var ps=(typeof m.ps==='string')?m.ps.replace(/\/+$/,''):'';
+    if(m.rl===1&&ps&&psrvOk(ps)) localStorage.setItem('zg_peer_relay',ps); else localStorage.removeItem('zg_peer_relay');
+  }catch(e){}
+}
+function relaySendBase(){
+  var u=relayHas(); if(!u) return '';
+  try{ if(localStorage.getItem('zg_peer_relay')!==u) return ''; }catch(e){ return ''; }
+  if(Relay.badUntil&&Date.now()<Relay.badUntil) return '';
+  return u+'/r/';
+}
+function relayFileOk(u){ var b=relayHas(); if(!b) return false; try{ return u.origin===new URL(b).origin&&u.pathname.indexOf('/r/')===0; }catch(e){ return false; } }
+var Relay={ws:null,topic:'',base:'',ts:0,seen:null,ids:[],retry:0,timer:null,pingT:null,badUntil:0,epoch:0,up:false,lastRx:0,
+  connect:function(topic){
+    this.close();
+    var b=relayHas(); if(!b||!topic) return;
+    this.topic=topic; this.base=b; this.seen=new Set(); this.ids=[]; this.retry=0;
+    var now=Math.floor(Date.now()/1000), o=null;
+    try{ o=JSON.parse(localStorage.getItem('zg_relay_since')||'null'); }catch(e){}
+    if(o&&o.topic===topic&&o.base===b&&o.ts>0){ this.ts=Math.max(o.ts,now-11*3600); (o.ids||[]).forEach(function(id){ Relay.seen.add(id); Relay.ids.push(id); }); }
+    else this.ts=now-11*3600;
+    this.open();
+  },
+  open:function(){
+    var self=this, ep=++this.epoch, w;
+    if(!this.topic) return;
+    try{ w=new WebSocket(this.base.replace(/^https:/,'wss:')+'/r/'+this.topic+'/ws?since='+Math.max(0,this.ts)); }catch(e){ this.again(); return; }
+    this.ws=w;
+    w.onopen=function(){ if(ep!==self.epoch) return; self.retry=0; self.up=true; self.badUntil=0; self.lastRx=Date.now(); };
+    w.onmessage=function(ev){ if(ep!==self.epoch) return; self.lastRx=Date.now(); var d; try{ d=JSON.parse(ev.data); }catch(e){ return; } self.handle(d); };
+    w.onclose=function(){ if(ep!==self.epoch) return; self.up=false; self.ws=null; self.again(); };
+    w.onerror=function(){};
+    if(this.pingT) clearInterval(this.pingT);
+    this.pingT=setInterval(function(){ try{ if(self.ws&&self.ws.readyState===1) self.ws.send('ping'); }catch(e){} },30000);
+  },
+  again:function(){
+    var self=this;
+    if(this.timer||!this.topic) return;
+    var d=Math.min(30000,1000*Math.pow(2,this.retry++));
+    if(this.retry>=4) this.badUntil=Date.now()+60000;   /* つながらない あいだは ntfy.sh で おくる */
+    this.timer=setTimeout(function(){ self.timer=null; if(self.topic) self.open(); },d);
+  },
+  wake:function(){ if(!this.topic) return; if(!this.ws||this.ws.readyState>1||Date.now()-(this.lastRx||0)>75000){ if(this.ws){ try{ this.ws.onclose=null; this.ws.close(); }catch(e){} this.ws=null; } if(this.timer){ clearTimeout(this.timer); this.timer=null; } this.open(); } },
+  close:function(){
+    this.epoch++; this.topic=''; this.up=false;
+    if(this.timer){ clearTimeout(this.timer); this.timer=null; }
+    if(this.pingT){ clearInterval(this.pingT); this.pingT=null; }
+    if(this.ws){ try{ this.ws.onclose=null; this.ws.close(); }catch(e){} this.ws=null; }
+  },
+  save:function(id){
+    try{ if(id){ this.ids.push(id); if(this.ids.length>60) this.ids=this.ids.slice(-60); }
+      localStorage.setItem('zg_relay_since',JSON.stringify({topic:this.topic,base:this.base,ts:this.ts,ids:this.ids})); }catch(e){}
+  },
+  handle:function(ev){
+    if(!ev||ev.event!=='message'||!this.topic||Net.topic!==this.topic||typeof ev.message!=='string') return;
+    if(this.seen.has(ev.id)) return;
+    var self=this, epoch=Net.epoch, topic=this.topic;
+    Net.recvQueue=Net.recvQueue.catch(function(){}).then(async function(){
+      if(epoch!==Net.epoch||self.topic!==topic) return false;
+      if(self.seen.has(ev.id)) return true;
+      try{ await saveIngress(ev.message,ev.attachment); }catch(e){ return false; }
+      var ok=await Net.process(ev.message,ev.attachment);
+      if(ok===true) await deleteIngress(ev.message);
+      if(ok===true&&epoch===Net.epoch&&self.topic===topic){
+        self.seen.add(ev.id);
+        if(typeof ev.time==='number') self.ts=Math.max(self.ts,ev.time-1);
+        self.save(ev.id);
+      } else if(ok===false) Net.retryLater(ev.message,ev.attachment);
+      return ok;
+    });
+  },
+  status:function(){
+    if(!relayHas()) return 'つかって いません（つうちサーバーが 新しく ない か、せってい なし）';
+    var rx=this.up?'うけとり つながって いる':'うけとり つなぎ中';
+    var tx=relaySendBase()?'おくりも 中継所（せいげん なし）':(function(){ try{ return localStorage.getItem('zg_peer_relay')===relayHas()?'おくりは いったん ntfy.sh（中継所 やすみ中）':'おくりは ntfy.sh（あいてが まだ 対応して いません）'; }catch(e){ return '?'; } })();
+    return rx+'／'+tx;
+  }
+};
+document.addEventListener('visibilitychange',function(){ if(!document.hidden){ try{ Relay.wake(); }catch(e){} } });
+window.addEventListener('online',function(){ try{ Relay.wake(); }catch(e){} });
 async function psrvPush(topic,payload){
   var u=psrvGet(); if(!u) return false;
   try{ var r=await fetch(u+'/push',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topic:topic,msg:payload})}); return await r.json(); }catch(e){ return null; }
@@ -12199,7 +12311,7 @@ function paintProf(){
   try{ $('#ig-name').textContent=peerName(); }catch(e){}
 }
 function sendProf(){
-  try{ if(!Net.topic||!Net.key||!(S.paired||S.linked)) return; Net.send({t:'prof',nm:meName(),emo:(PROF.me&&PROF.me.emo)||'🐷',img:(PROF.me&&PROF.me.img)||'',ps:psrvGet()}); }catch(e){}
+  try{ if(!Net.topic||!Net.key||!(S.paired||S.linked)) return; Net.send({t:'prof',nm:meName(),emo:(PROF.me&&PROF.me.emo)||'🐷',img:(PROF.me&&PROF.me.img)||'',ps:psrvGet(),rl:relayHas()?1:0}); }catch(e){}
 }
 function recvProf(m){
   var __pn0=String(m.nm||'').trim().slice(0,12); if(__pn0==='にゃん') __pn0='';   /* v388 */
@@ -12254,7 +12366,7 @@ function recvProf(m){
       if(pu&&!psrvOk(pu)){ $('#pf-psrvh').textContent='アドレスが ちがいます。https:// で はじまり .workers.dev で おわる アドレスを 入れてください。'; return; }
       if(pu){
         $('#pf-psrvh').textContent='つうちサーバーを たしかめて います…';
-        try{ var kr=await fetch(pu+'/key',{cache:'no-store'}); var kj=await kr.json(); if(!kj||!kj.key) throw 0; }
+        try{ var kr=await fetch(pu+'/key',{cache:'no-store'}); var kj=await kr.json(); if(!kj||!kj.key) throw 0; relayMark(pu,kj.relay===1); }
         catch(e){ $('#pf-psrvh').textContent='つうちサーバーに つながりません。アドレスと「デプロイ」を たしかめてください。'; return; }
       }
       psrvSet(pu);
@@ -12394,6 +12506,7 @@ function recvProf(m){
       say('⑧ 予備(ntfy)経由: '+nres);
       say('⑨ しゃしん送信の さいごの 応答: '+(Net.lastFileStatus?('HTTP '+Net.lastFileStatus+'（'+new Date(Net.lastFileAt).toLocaleTimeString('ja-JP')+'）'):'まだ なし'));
     try{ say('しゃしんの さいご: '+photoDiagText()); }catch(e){}
+      try{ say('⑮ じぶんの 中継所: '+Relay.status()); }catch(e){}
       say('⑩ つながり: '+(Net.topic&&Net.key?'あり':'なし')+'／まちの のこり: '+((Net.coolUntil&&Net.coolUntil>Date.now())?Math.ceil((Net.coolUntil-Date.now())/1000)+'秒':'なし'));
       say('⑫ けした 控え（この 端末）: '+(function(){ try{ var t=tombAll(), sc=tombScope(), m=t[sc]||{}; return Object.keys(m).length+'件'; }catch(e){ return '?'; } })()+'／入力の 保留: '+(chatComposing?'止まって いる':'なし')+'／画面の 残り: '+(function(){ try{ var b=document.getElementById('chat-log'); var k=0; b.querySelectorAll('.msg').forEach(function(r){ if(tombRowGone(r)) k++; }); return k+'件'; }catch(e){ return '?'; } })());
       say('⑬ あいての 画面から 消す 合図: '+(function(){ try{ return purgePending().length+'件 まだ おくって いない'; }catch(e){ return '?'; } })()+'／この 画面で まだ けせて いない 合図: '+(function(){ try{ return purgeInAll().length+'件'; }catch(e){ return '?'; } })()+'／あいてから とどいた 合図: '+(function(){ try{ return (window.__purgeIn||0)+'件'+(window.__purgeAt?('（'+new Date(window.__purgeAt).toLocaleTimeString('ja-JP')+'）'):''); }catch(e){ return '?'; } })());

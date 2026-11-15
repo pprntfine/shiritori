@@ -1,27 +1,44 @@
-/* 雑学王 つうちサーバー（Cloudflare Workers）
+/* 雑学王 じぶん専用サーバー（Cloudflare Workers + Durable Objects）
    アプリの 設定「つうちサーバー」(zg_psrv) に この Worker の アドレスを 入れて つかう。
-   - GET  /key   → {key}            VAPID公開鍵（はじめて よばれた とき 自動で つくって KV に しまう）
-   - POST /sub   {topic, sub}       この 端末の とどけさき を とうろく
-   - POST /push  {topic, msg}       そのトピックの 端末へ Web Push（RFC8291 aes128gcm + RFC8292 VAPID）
-   本文は アプリで 暗号化ずみ（zgm:N:暗号文）。この Worker は 中身を 読めないし 保存も しない。
-   保存するのは「トピック → 端末の とどけさき」と VAPID鍵 だけ。
-   必要な せってい: KV namespace を 変数名 ZG で バインド する。 */
 
-const TOPIC_RE = /^gskb-[0-9a-f]{28}$/;
-const MAX_SUBS = 4;          // 1トピック(=1人)あたりの 端末数
-const MAX_PLAIN = 3900;      // Web Push の 本体は 4096バイトまで。暗号の 上乗せ分を 引いた 安全な 値
-const MAX_MSG = 30000;       // うけつける msg の 上限（大きい ものは しるしに おきかえる）
+   ■ 通知（Web Push）
+   - GET  /key   → {key, relay:1}    VAPID公開鍵（はじめて よばれた とき 自動で つくって しまう）
+   - POST /sub   {topic, sub}        この 端末の とどけさき を とうろく
+   - POST /push  {topic, msg}        そのトピックの 端末へ Web Push（RFC8291 aes128gcm + RFC8292 VAPID）
+
+   ■ 中継所（ntfy.sh と 同じ 受け答え。1日250通の せいげんが ない）
+   - POST /r/{topic}                     本文（暗号文）を おく
+   - PUT  /r/{topic}?filename=&message=   ファイル（暗号化ずみ）を おく
+   - GET  /r/{topic}/json?poll=1&since=T  T 以降の ぶんを 1行ずつ
+   - GET  /r/{topic}/ws?since=T           WebSocket で ずっと うけとる
+   - GET  /r/{topic}/file/{id}            ファイルを とる
+
+   中身は すべて アプリで 暗号化ずみ。この サーバーは 読めない。12時間で 消える。
+   必要な せってい: Durable Object（クラス ZgRelay）を 変数名 RELAY で バインド（wrangler.toml 参照）。 */
+
+const TOPIC_RE = /^gskb-[0-9a-f]{28}$/;          // 通知（ベル）用
+const RELAY_TOPIC_RE = /^[A-Za-z0-9_-]{6,64}$/;   // 中継所の とおりみち
+const MAX_SUBS = 4;            // 1トピックあたりの 端末数
+const MAX_PLAIN = 3900;        // Web Push 本体 4096バイト − 暗号の 上乗せ
+const MAX_MSG = 30000;         // /push で うけつける msg の 上限
+const MAX_TEXT = 64 * 1024;    // 中継所の 本文 1通の 上限
+const MAX_FILE = 2 * 1024 * 1024 + 64;   // ファイル 1こ の 上限（アプリは 2MB+28）
+const KEEP_SEC = 12 * 3600;    // 中継所に のこす 時間
+const DAY_LIMIT = 20000;       // 1とおりみち 1日の 上限（いたずら よけ）
+const FILE_LIMIT = 300;        // 1とおりみちに 同時に おける ファイル数
+const POLL_ROWS = 500;
 
 const enc = new TextEncoder();
 const CORS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Expose-Headers': 'Retry-After',
   'Access-Control-Max-Age': '86400',
 };
-function json(obj, status = 200) {
+function json(obj, status = 200, extra) {
   return new Response(JSON.stringify(obj), {
-    status, headers: { ...CORS, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+    status, headers: { ...CORS, 'Content-Type': 'application/json', 'Cache-Control': 'no-store', ...(extra || {}) },
   });
 }
 
@@ -46,21 +63,41 @@ function concat(...parts) {
   for (const p of parts) { out.set(p, o); o += p.length; }
   return out;
 }
+function randId(n = 12) {
+  const A = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  const r = crypto.getRandomValues(new Uint8Array(n));
+  let s = '';
+  for (let i = 0; i < n; i++) s += A[r[i] % A.length];
+  return s;
+}
 
-/* ---------- VAPID 鍵（KV に 1回だけ つくる） ---------- */
+/* ---------- 小さな 保存場所（Durable Object の 中の kv 表） ---------- */
+function box(env, name) {
+  const stub = env.RELAY.get(env.RELAY.idFromName(name));
+  const call = async (op, k, v) => {
+    const r = await stub.fetch('https://do/kv', { method: 'POST', body: JSON.stringify({ op, k, v }) });
+    return r.json();
+  };
+  return {
+    async get(k) { const j = await call('get', k); return j.v == null ? null : JSON.parse(j.v); },
+    async put(k, v) { await call('put', k, JSON.stringify(v)); },
+    async del(k) { await call('del', k); },
+    async putIfAbsent(k, v) { const j = await call('add', k, JSON.stringify(v)); return JSON.parse(j.v); },
+  };
+}
+
+/* ---------- VAPID 鍵（1回だけ つくる） ---------- */
 let vapidMem = null;
 async function vapid(env) {
   if (vapidMem) return vapidMem;
-  let saved = await env.ZG.get('vapid', 'json');
+  const cfg = box(env, 'cfg');
+  let saved = await cfg.get('vapid');
   if (!saved || !saved.jwk || !saved.pub) {
     const kp = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
     const jwk = await crypto.subtle.exportKey('jwk', kp.privateKey);
     const pub = b64u(await crypto.subtle.exportKey('raw', kp.publicKey));
-    saved = { jwk, pub };
-    await env.ZG.put('vapid', JSON.stringify(saved));
-    // 同時に よばれて 別の 鍵が できた ときは、KV に のこった ほうに そろえる
-    const again = await env.ZG.get('vapid', 'json');
-    if (again && again.pub) saved = again;
+    // 同時に よばれても 鍵は 1つ（さきに 入った ほうを つかう）
+    saved = await cfg.putIfAbsent('vapid', { jwk, pub });
   }
   const key = await crypto.subtle.importKey('jwk', saved.jwk, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']);
   vapidMem = { pub: saved.pub, key, jwt: {} };
@@ -104,7 +141,7 @@ async function encryptPayload(sub, text) {
   return concat(salt, rs, new Uint8Array([asPub.length]), asPub, ct);
 }
 
-/* ---------- とどけさき の 保存 ---------- */
+/* ---------- とどけさき ---------- */
 function validSub(s) {
   if (!s || typeof s !== 'object' || typeof s.endpoint !== 'string' || !s.keys) return false;
   let u; try { u = new URL(s.endpoint); } catch (e) { return false; }
@@ -116,7 +153,7 @@ function validSub(s) {
   return true;
 }
 async function loadSubs(env, topic) {
-  const a = await env.ZG.get('t:' + topic, 'json');
+  const a = await box(env, 'b:' + topic).get('subs');
   return Array.isArray(a) ? a.filter(validSub) : [];
 }
 
@@ -129,14 +166,13 @@ async function handleSub(req, env) {
   const clean = { endpoint: s.endpoint, keys: { p256dh: s.keys.p256dh, auth: s.keys.auth } };
   const list = await loadSubs(env, topic);
   const i = list.findIndex(x => x.endpoint === clean.endpoint);
-  // 同じ ものは 書かない（KV の 書きこみ回数を ふやさない）
   if (i >= 0 && list[i].keys.p256dh === clean.keys.p256dh && list[i].keys.auth === clean.keys.auth && i === list.length - 1) {
     return json({ ok: true, n: list.length });
   }
   if (i >= 0) list.splice(i, 1);
   list.push(clean);
   while (list.length > MAX_SUBS) list.shift();   // ふるい ものから はずす
-  await env.ZG.put('t:' + topic, JSON.stringify(list));
+  await box(env, 'b:' + topic).put('subs', list);
   return json({ ok: true, n: list.length });
 }
 
@@ -158,8 +194,8 @@ async function handlePush(req, env, ctx) {
   const isCall = /^zgcall:/.test(msg);
   const subject = new URL(req.url).origin;
   const gone = [];
-  let sent = 0;
   const why = [];
+  let sent = 0;
   await Promise.all(list.map(async s => {
     try {
       const body = await encryptPayload(s, msg);
@@ -183,7 +219,8 @@ async function handlePush(req, env, ctx) {
   }));
   if (gone.length) {
     const keep = list.filter(s => !gone.includes(s.endpoint));
-    const p = keep.length ? env.ZG.put('t:' + topic, JSON.stringify(keep)) : env.ZG.delete('t:' + topic);
+    const b = box(env, 'b:' + topic);
+    const p = keep.length ? b.put('subs', keep) : b.del('subs');
     if (ctx && ctx.waitUntil) ctx.waitUntil(p); else await p;
   }
   if (!sent) {
@@ -193,16 +230,166 @@ async function handlePush(req, env, ctx) {
   return json({ ok: true, sent, send: sent, small: msg !== raw ? 1 : 0 });
 }
 
+/* ---------- 中継所 ---------- */
+async function handleRelay(req, env, parts) {
+  const topic = parts[0];
+  if (!RELAY_TOPIC_RE.test(topic || '')) return json({ error: 'bad topic' }, 400);
+  const stub = env.RELAY.get(env.RELAY.idFromName('r:' + topic));
+  const url = new URL(req.url);
+  const rest = parts.slice(1).join('/');
+  const inner = new URL('https://do/' + (rest || 'pub') + url.search);
+  inner.searchParams.set('topic', topic);
+  inner.searchParams.set('origin', url.origin);
+  const r = await stub.fetch(new Request(inner.toString(), req));
+  if (r.status === 101) return r;
+  const h = new Headers(r.headers);
+  Object.entries(CORS).forEach(([k, v]) => h.set(k, v));
+  return new Response(r.body, { status: r.status, headers: h });
+}
+
+export class ZgRelay {
+  constructor(ctx, env) {
+    this.ctx = ctx;
+    this.env = env;
+    this.sql = ctx.storage.sql;
+    this.sql.exec('CREATE TABLE IF NOT EXISTS kv(k TEXT PRIMARY KEY, v TEXT)');
+    this.sql.exec('CREATE TABLE IF NOT EXISTS m(seq INTEGER PRIMARY KEY AUTOINCREMENT, id TEXT UNIQUE, t INTEGER, msg TEXT, an TEXT, asz INTEGER)');
+    this.sql.exec('CREATE INDEX IF NOT EXISTS m_t ON m(t)');
+    this.sql.exec('CREATE TABLE IF NOT EXISTS f(id TEXT, part INTEGER, b BLOB, PRIMARY KEY(id, part))');
+  }
+
+  kvGet(k) { const r = this.sql.exec('SELECT v FROM kv WHERE k=?', k).toArray(); return r.length ? r[0].v : null; }
+  kvPut(k, v) { this.sql.exec('INSERT INTO kv(k,v) VALUES(?,?) ON CONFLICT(k) DO UPDATE SET v=excluded.v', k, v); }
+
+  async fetch(req) {
+    const url = new URL(req.url);
+    const path = url.pathname.replace(/^\/+/, '');
+    if (path === 'kv') {
+      const j = await req.json();
+      if (j.op === 'get') return Response.json({ v: this.kvGet(j.k) });
+      if (j.op === 'put') { this.kvPut(j.k, j.v); return Response.json({ ok: 1 }); }
+      if (j.op === 'del') { this.sql.exec('DELETE FROM kv WHERE k=?', j.k); return Response.json({ ok: 1 }); }
+      if (j.op === 'add') { const have = this.kvGet(j.k); if (have == null) { this.kvPut(j.k, j.v); return Response.json({ v: j.v }); } return Response.json({ v: have }); }
+      return Response.json({ err: 'op' }, { status: 400 });
+    }
+    const topic = url.searchParams.get('topic') || '';
+    const origin = url.searchParams.get('origin') || '';
+    if ((path === 'pub' || path === '') && (req.method === 'POST' || req.method === 'PUT')) return this.publish(req, url, topic, origin);
+    if (path === 'json' && req.method === 'GET') return this.poll(url);
+    if (path === 'ws' && req.method === 'GET') return this.ws(req, url);
+    if (path.startsWith('file/') && req.method === 'GET') return this.file(path.slice(5));
+    return Response.json({ error: 'not found' }, { status: 404 });
+  }
+
+  since(url) {
+    const s = url.searchParams.get('since') || '';
+    if (s === 'all') return 0;
+    if (/^\d{1,12}$/.test(s)) return parseInt(s, 10);
+    return Math.floor(Date.now() / 1000) - KEEP_SEC;
+  }
+
+  rows(since) {
+    const cut = Math.floor(Date.now() / 1000) - KEEP_SEC;
+    return this.sql.exec('SELECT id,t,msg,an,asz FROM m WHERE t>=? AND t>=? ORDER BY seq LIMIT ?', since, cut, POLL_ROWS).toArray();
+  }
+
+  event(row, topic, origin) {
+    const ev = { id: row.id, time: row.t, expires: row.t + KEEP_SEC, event: 'message', topic, message: row.msg };
+    if (row.an) ev.attachment = { name: row.an, type: 'application/octet-stream', size: row.asz, expires: row.t + KEEP_SEC, url: origin + '/r/' + topic + '/file/' + row.id };
+    return ev;
+  }
+
+  async publish(req, url, topic, origin) {
+    const now = Math.floor(Date.now() / 1000);
+    const day = 'cnt:' + new Date().toISOString().slice(0, 10);
+    const used = parseInt(this.kvGet(day) || '0', 10);
+    if (used >= DAY_LIMIT) return Response.json({ error: 'daily limit' }, { status: 429, headers: { 'Retry-After': '600' } });
+    const len = parseInt(req.headers.get('content-length') || '0', 10);
+    const filename = url.searchParams.get('filename');
+    let msg, bytes = null;
+    if (filename) {
+      if (len > MAX_FILE) return Response.json({ error: 'too large' }, { status: 413 });
+      bytes = new Uint8Array(await req.arrayBuffer());
+      if (bytes.length > MAX_FILE || !bytes.length) return Response.json({ error: 'too large' }, { status: 413 });
+      const files = this.sql.exec('SELECT COUNT(*) AS n FROM m WHERE an IS NOT NULL').one().n;
+      if (files >= FILE_LIMIT) return Response.json({ error: 'too many files' }, { status: 429, headers: { 'Retry-After': '600' } });
+      msg = url.searchParams.get('message') || url.searchParams.get('m') || '';
+    } else {
+      if (len > MAX_TEXT) return Response.json({ error: 'too large' }, { status: 413 });
+      msg = await req.text();
+    }
+    if (msg.length > MAX_TEXT) return Response.json({ error: 'too large' }, { status: 413 });
+    this.kvPut(day, String(used + 1));
+    const row = { id: randId(), t: now, msg, an: bytes ? String(filename).slice(0, 64) : null, asz: bytes ? bytes.length : 0 };
+    const keep = (url.searchParams.get('cache') || '').toLowerCase() !== 'no' || bytes;
+    if (keep) {
+      this.sql.exec('INSERT INTO m(id,t,msg,an,asz) VALUES(?,?,?,?,?)', row.id, row.t, row.msg, row.an, row.asz);
+      if (bytes) {
+        const CH = 1024 * 1024;   // 1行 2MBまで なので 1MBずつ
+        for (let p = 0, i = 0; p < bytes.length; p += CH, i++) this.sql.exec('INSERT INTO f(id,part,b) VALUES(?,?,?)', row.id, i, bytes.slice(p, p + CH));
+      }
+      if ((await this.ctx.storage.getAlarm()) == null) await this.ctx.storage.setAlarm(Date.now() + 3600 * 1000);
+    }
+    const ev = this.event(row, topic, origin);
+    const line = JSON.stringify(ev);
+    for (const ws of this.ctx.getWebSockets()) { try { ws.send(line); } catch (e) {} }
+    return Response.json(ev);
+  }
+
+  poll(url) {
+    const topic = url.searchParams.get('topic'), origin = url.searchParams.get('origin');
+    const out = this.rows(this.since(url)).map(r => JSON.stringify(this.event(r, topic, origin))).join('\n');
+    return new Response(out ? out + '\n' : '', { headers: { 'Content-Type': 'application/x-ndjson', 'Cache-Control': 'no-store' } });
+  }
+
+  ws(req, url) {
+    if ((req.headers.get('Upgrade') || '').toLowerCase() !== 'websocket') return Response.json({ error: 'need websocket' }, { status: 426 });
+    const topic = url.searchParams.get('topic'), origin = url.searchParams.get('origin');
+    const pair = new WebSocketPair();
+    const [client, server] = Object.values(pair);
+    if (this.ctx.getWebSockets().length >= 16) { try { this.ctx.getWebSockets()[0].close(1000, 'too many'); } catch (e) {} }
+    this.ctx.acceptWebSocket(server);
+    server.send(JSON.stringify({ id: randId(), time: Math.floor(Date.now() / 1000), event: 'open', topic }));
+    for (const r of this.rows(this.since(url))) server.send(JSON.stringify(this.event(r, topic, origin)));
+    return new Response(null, { status: 101, webSocket: client });
+  }
+  webSocketMessage(ws, msg) {
+    if (msg === 'ping') { try { ws.send(JSON.stringify({ event: 'keepalive', time: Math.floor(Date.now() / 1000) })); } catch (e) {} }
+  }
+  webSocketClose(ws, code) { try { ws.close(code === 1005 ? 1000 : code); } catch (e) {} }
+  webSocketError(ws) { try { ws.close(1011); } catch (e) {} }
+
+  file(id) {
+    if (!/^[A-Za-z0-9]{12}$/.test(id)) return Response.json({ error: 'bad id' }, { status: 400 });
+    const cut = Math.floor(Date.now() / 1000) - KEEP_SEC;
+    const meta = this.sql.exec('SELECT asz FROM m WHERE id=? AND an IS NOT NULL AND t>=?', id, cut).toArray();
+    if (!meta.length) return Response.json({ error: 'not found' }, { status: 404 });
+    const parts = this.sql.exec('SELECT b FROM f WHERE id=? ORDER BY part', id).toArray().map(r => new Uint8Array(r.b));
+    const all = concat(...parts);
+    return new Response(all, { headers: { 'Content-Type': 'application/octet-stream', 'Content-Length': String(all.length), 'Cache-Control': 'no-store' } });
+  }
+
+  async alarm() {
+    const cut = Math.floor(Date.now() / 1000) - KEEP_SEC;
+    this.sql.exec('DELETE FROM f WHERE id IN (SELECT id FROM m WHERE t<?)', cut);
+    this.sql.exec('DELETE FROM m WHERE t<?', cut);
+    this.sql.exec("DELETE FROM kv WHERE k LIKE 'cnt:%' AND k<?", 'cnt:' + new Date(Date.now() - 2 * 86400 * 1000).toISOString().slice(0, 10));
+    const left = this.sql.exec('SELECT COUNT(*) AS n FROM m').one().n;
+    if (left) await this.ctx.storage.setAlarm(Date.now() + 3600 * 1000);
+  }
+}
+
 export default {
   async fetch(req, env, ctx) {
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
-    if (!env.ZG) return json({ ok: false, err: 'KV namespace ZG is not bound' }, 500);
+    if (!env.RELAY) return json({ ok: false, err: 'Durable Object RELAY is not bound' }, 500);
     const path = new URL(req.url).pathname.replace(/\/+$/, '') || '/';
     try {
-      if (path === '/key' && req.method === 'GET') return json({ key: (await vapid(env)).pub });
+      if (path.startsWith('/r/')) return await handleRelay(req, env, path.slice(3).split('/'));
+      if (path === '/key' && req.method === 'GET') return json({ key: (await vapid(env)).pub, relay: 1 });
       if (path === '/sub' && req.method === 'POST') return await handleSub(req, env);
       if (path === '/push' && req.method === 'POST') return await handlePush(req, env, ctx);
-      if (path === '/') return json({ ok: true, app: 'zatsugaku-push' });
+      if (path === '/') return json({ ok: true, app: 'zatsugaku-push', relay: 1 });
       return json({ ok: false, err: 'not found' }, 404);
     } catch (e) {
       return json({ ok: false, err: 'server error' }, 500);

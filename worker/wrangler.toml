@@ -1,0 +1,13 @@
+# 雑学王 じぶん専用サーバー（wrangler で デプロイ する ときの せってい）
+name = "zatsugaku-push"
+main = "zatsugaku-push.js"
+compatibility_date = "2025-01-01"
+workers_dev = true
+
+[[durable_objects.bindings]]
+name = "RELAY"
+class_name = "ZgRelay"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["ZgRelay"]

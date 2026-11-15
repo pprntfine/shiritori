@@ -1,4 +1,4 @@
-# 雑学王（zatsugakuou）引き継ぎメモ  ― 現在 v450
+# 雑学王（zatsugakuou）引き継ぎメモ  ― 現在 v451
 
 ## これは何か
 見た目は「雑学クイズ」アプリ。中身は **2人専用の暗号化チャット**（メッセージ・写真・ライブ映像・電話）。
@@ -10,7 +10,7 @@
 - `sw.js`  通知用 Service Worker。本文は復号しない（暗号文だけIndexedDB `zg-sw-inbox/pin` に保存）。互換契約なので形式を変えない。
 - `manifest.webmanifest`, `icon-192.png`, `icon-512.png`  PWA用。
 - `tools/` 確認用の道具（下記）。※このリポジトリにはまだ入っていない（持ち主の手元のみ）。
-- `worker/` 自分専用の通知サーバー（Cloudflare Worker）。`zatsugaku-push.js` と、持ち主向けの手順 `README.md`。
+- `worker/` 自分専用サーバー（Cloudflare Worker＋Durable Objects）。通知(/key /sub /push)と中継所(/r/)。`zatsugaku-push.js`、`wrangler.toml`、持ち主向けの手順 `README.md`。
 
 ## 絶対のルール
 1. **更新のたびに版番号を1つ上げる。** 場所は2つのファイルで計4か所:
@@ -35,6 +35,11 @@
 - v450 それでも自分のメッセージが約3秒ごとにちかっと消えた。受信確認待ちの送り直し(`flushOutbox`の完了)のたびに `renderChat(true)` で全部作り直し、
   `#chat-log .msg{animation:zg-pop}` が毎回やり直されていた。`renderChat` を入口にして、要約(`S._rcSig`)が同じなら作り直さない。本体は `renderChatFull`。
   ※ 画面に出る値を新しく増やしたら `chatSweepSigOf()` にも足すこと（足さないと表示が更新されない）。
+- v451 1日250通(ntfy.sh無料の上限)をなくすため、自分専用の中継所に対応。`Relay`（WebSocketで /r/{topic}/ws を受信）と `Net.storeFetch`（送り先の切替）。
+  受信は ntfy.sh と中継所の両方。送信は `relaySendBase()` が空でないときだけ中継所（自分が /key で relay:1 を確認 ＋ 相手が prof で rl:1 と同じ ps を送ってきた）。
+  中継所が失敗したら60秒 ntfy.sh に戻す。中継所使用中は ntfy 用の節約（coolUntil/allow）を通さない。添付URLは `relayFileOk` で同じ origin の /r/ だけ許可。
+  CSPに wss://*.workers.dev を追加。設定の「とどけ てんけん」に ⑮ を追加。
+  試験: wrangler dev(https:443)＋chromium 2台（ntfy/MQTT遮断）で、メッセージ往復・閉じている間の受信・写真・相手が古い版のときntfyに戻る、を確認。
   ※ 再開後は `S.sas` が空で「あいず」が出ない。必要なら「鍵の しるし」（sk のハッシュ）を出す案あり。
 
 ## 構造のメモ（行番号は目安。検索で探すこと）
@@ -58,8 +63,8 @@ node --check sw.js
 ## 未解決・次にやると良いこと
 - 「メッセージ・写真が届かないことが多い」→ 原因は公開の無料中継（ntfy.sh）の回数制限が有力。
   根本対策は自分専用の通知サーバー(Cloudflare Workers)。アプリは設定画面の「つうちサーバー」(`zg_psrv`)に対応済み。
-  → **Workerのコードを作成済み**（`worker/zatsugaku-push.js`、手順は `worker/README.md`）。KVを変数名 `ZG` でつなぐだけ。
-    VAPID鍵は初回 `/key` で自動生成しKVに保存。暗号(RFC8291)とVAPID署名は http_ece と node:crypto で検証済み。
+  → **Workerのコードを作成済み**（`worker/zatsugaku-push.js`、手順は `worker/README.md`）。v451で中継所も同じWorkerに入れた（KVは使わずDurable Objectのみ）。
+    デプロイは Deploy ボタン（deploy.workers.cloudflare.com/?url=…/tree/main/worker）か、APIトークンで代わりに行う。VAPID鍵は初回 `/key` で自動生成しDOに保存。暗号(RFC8291)とVAPID署名は http_ece と node:crypto で検証済み。
     持ち主がデプロイして、2台で「とどけ てんけん」⑦が「おくれた」になるか確認してもらう段階。
   - 注意: 受け手の端末は Worker の鍵で購読し直すので、送り手が ntfy に落ちた分はその端末に届かない（既存の設計のまま）。
 - `index.html` に Cloudflare の解析スクリプト(`static.cloudflareinsights.com`)が5か所ある。機密重視なら削除を提案する（持ち主に確認）。
