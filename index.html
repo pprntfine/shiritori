@@ -1424,7 +1424,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v448</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v449</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1498,7 +1498,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v448</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v449</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -7631,6 +7631,7 @@ function renderChat(forceBottom, __tailFrom){
     if(!forceBottom && ai && ai.id==='in-chat' && (ai.value||'').length>0 && (chatComposing||document.activeElement===ai)){ chatDeferred=true; return; }   /* v253: 入力が 空なら 保留しない（かたまって 描き直せなく なるのを 防ぐ） */
   }catch(e){}
   chatDeferred=false;
+  try{ chatSweepSig=chatSweepSigOf(); }catch(e){}   /* v449: いま 描く 中身を おぼえる（5秒ごとの 見まわりで おなじなら 描き直さない） */
   persistChat();
   var box=$('#chat-log');
   if(!box) return;
@@ -7922,7 +7923,30 @@ function sweepChat(){
   if(gone){
     S.chat=S.chat.filter(function(mm){ return mm.sys||!mm.exp; });
   }
-  if(gone||(S.tab==='chat'&&document.visibilityState==='visible')) renderChat(gone);
+  /* v449: 見て いる あいだ 5秒ごとに ぜんぶ 作りなおして いたため、写真・スタンプが 一瞬 きえて 見えた。
+     画面に 出る 中身（状態・「あと N分」・しゃしんの 送信待ち 75秒）が かわった ときだけ 描き直す */
+  if(gone){ chatSweepSig=''; renderChat(true); return; }
+  if(S.tab==='chat'&&document.visibilityState==='visible'){
+    var sig=chatSweepSigOf();
+    if(sig!==chatSweepSig){ chatSweepSig=sig; renderChat(false); }
+  }
+}
+var chatSweepSig='';
+function chatSweepSigOf(){
+  try{
+    var now=Date.now(), out=[S.chat.length, S._rcCap||0, S.me&&S.me.id];
+    for(var i=0;i<S.chat.length;i++){
+      var m=S.chat[i]; if(!m) continue;
+      if(m.sys){ out.push('s'+(m.text||'')); continue; }
+      var mine=(m.from===S.me.id);
+      out.push([m.uid,m.mid||'',m.n||0,m.at||0,m.sent?1:0,m.acked?1:0,m.peerAck?1:0,m.read?1:0,m.failed?1:0,m.waiting?1:0,m.__chunked?1:0,
+        m.photo?1:0,m.file?1:0,(m.text||'').length,(m.data||'').length,m.pid||'',
+        (m.rad&&m.read)?Math.ceil((m.rad+VANISH_MS-now)/60000):0,
+        (mine&&!m.sent&&!m.failed&&typeof m.at==='number'&&now-m.at>75000)?1:0].join(','));
+    }
+    out.push(vanishOn()?1:0, new Date(now).toDateString());
+    return out.join('|');
+  }catch(e){ return String(Math.random()); }
 }
 setInterval(sweepChat,5000);
 try{ document.addEventListener('visibilitychange',function(){ if(document.visibilityState==='visible') setTimeout(sweepChat,300); }); }catch(e){}
