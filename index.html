@@ -1424,7 +1424,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v446</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v447</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1498,7 +1498,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v446</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v447</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -1580,6 +1580,7 @@ body .bar::after{
 
   <div id="pane-chat" class="pane chatpane on">
     <div class="lhead"><span class="lh-av" id="lh-av">🐱</span><span class="lh-nm" id="lh-nm"></span><span class="lh-dot" id="lh-dot"></span><button type="button" id="btn-prof">名前</button><button type="button" id="btn-top2">トップ</button></div>
+    <div id="zg-room-strip" role="button" tabindex="0" hidden></div>
     <div id="chat-log" class="line-chat" role="log" aria-live="polite"></div>
     <form id="form-chat" class="line-composer" autocomplete="off">
       <div class="chat-tool-menu">
@@ -8128,7 +8129,7 @@ function photoStuckSweep(){
     S.chat.forEach(function(m){
       if(!m||m.sys||!m.photo||m.from!==S.me.id||m.sent||m.failed||m.waiting) return;
       if(typeof m.at!=='number'||now-m.at<180000) return;
-      if(privateReady()&&(m.__retry||0)<2){   /* つながっているなら しずかに おくりなおす（最大2回） */
+      if(privateReady()&&(m.__retry||0)<8){   /* v447: つながっているなら しずかに おくりなおす（最大8回） */
         m.__retry=(m.__retry||0)+1;
         try{ retryPhoto(m); }catch(e){ m.failed=true; ch=true; }
         return;
@@ -9320,9 +9321,9 @@ function photoQueueTick(){
       if(!m||!m.photo||m.from!==S.me.id||m.sent||m.cancelled) continue;
       if(!m.waiting&&!m.failed) continue;
       if(!m.data||String(m.data).length<32) continue;
-      if(now-(m.__qt||0)<8000) continue;
-      if((m.qt||0)>=40) continue;                      /* 約5分 ためして だめなら 手で */
-      if(m.failed&&(m.qt||0)>=6) continue;   /* 失敗は 6回まで じどう。あとは 手で */
+      if(now-(m.__qt||0)<Math.min(60000,8000+(m.qt||0)*1500)) continue;   /* v447: だんだん 間をあける */
+      if((m.qt||0)>=240) continue;                     /* v447: 約1時間は じどうで ためしつづける */
+      if(m.failed&&(m.qt||0)>=60) continue;   /* v447: 失敗後も 60回までは じどう */
       m.qt=(m.qt||0)+1; m.__qt=now; m.failed=false; m.waiting=true;
       try{ sendPhoto(m,0); }catch(e){}
       return;                                          /* 1まいずつ 順番に */
@@ -9742,7 +9743,7 @@ function photoAutoRetry(force){
     for(var i=0;i<S.chat.length;i++){
       var m=S.chat[i];
       if(!m||m.sys||!m.photo||m.from!==S.me.id||m.sent||m.cancelled) continue;
-      if((m.__auto||0)>=6) continue;
+      if((m.__auto||0)>=24) continue;   /* v447: 6→24回 */
       if(force) m.__auto=0;
       m.__auto=(m.__auto||0)+1;
       m.failed=false; m.__chunked=false; m.__chunkAt=0; m.__wait=0;
@@ -12580,6 +12581,26 @@ appNav.init();
 new MutationObserver(function(){ appNav.changed(); }).observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['class','hidden']});
 window.addEventListener('pagehide',function(){ closeCam(); stopCall(false); });
   window.DOG_STK=DOG_STK;
+  /* v447: 部屋が「2人だけ・暗号化」であることを トーク画面に 見せる。タップで せつめい */
+  (function(){
+    var strip=document.getElementById('zg-room-strip'); if(!strip) return;
+    function paint(){
+      try{
+        var on=!!(S&&S.sealed&&(S.paired||S.linked)&&S.opp&&S.opp.id);
+        if(!on){ strip.hidden=true; return; }
+        var intr=(S.isHost&&S.intruderN)||0;
+        strip.hidden=false;
+        strip.className=intr?'warn':'';
+        strip.textContent=(intr?'⚠ 3人目の 入室を ことわりました（'+intr+'回）　':'')+'🔒 2人だけ・あんごう'+(S.sas?'　あいず '+S.sas:'');
+      }catch(e){}
+    }
+    function explain(){
+      try{ toast('この 部屋は ホストが 承認した 2人だけです。3人目は 入れません。'+(S.sas?'「あいず '+S.sas+'」が あいての 画面と 同じなら、まちがいなく あいてです。':'')); }catch(e){}
+    }
+    strip.addEventListener('click',explain);
+    strip.addEventListener('keydown',function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); explain(); } });
+    setInterval(paint,2000); setTimeout(paint,300);
+  })();
 })();
 </script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"08b344934bdd416db94053d34eb889d8","spa":2}' crossorigin="anonymous"></script>
@@ -13082,7 +13103,7 @@ try{(function(){
 </script>
 <style id="bg40-css">
 /* v436: きせつの はいけい40枚 — ぶー君+にゃんちゃん 一本化。旧背景は はいし */
-html.bg40 body,html.bg40 #pane-chat,html.bg40 #chat,html.bg40 #chat-log,html.bg40 .line-chat{background-image:var(--bg40-img)!important;background-size:cover!important;background-position:center bottom!important;background-repeat:no-repeat!important;background-color:#CFE0EA!important}
+html.bg40 body,html.bg40 #pane-chat,html.bg40 #chat,html.bg40 #chat-log,html.bg40 .line-chat{background-image:var(--bg40-img)!important;background-size:100% 100%,cover!important;background-position:0 0,center calc(100% + 14vh)!important;background-repeat:no-repeat!important;background-color:#FFD3BA!important}
 html.bg40 #pane-chat::before,html.bg40 body::before{content:none!important}
 </style>
 <script>
@@ -13116,14 +13137,14 @@ html.bg40 #pane-chat::before,html.bg40 body::before{content:none!important}
       var u=BG_ONE;
       if(!u) return;
       var root=document.documentElement;
-      var v='linear-gradient(rgba(255,255,255,.45),rgba(255,255,255,.45)),url("'+u+'")';
+      var v='linear-gradient(rgba(255,255,255,.10),rgba(255,255,255,.10)),url("'+u+'")';
       if(root.getAttribute('data-bg40')===v) return;
       root.setAttribute('data-bg40',v);
       root.style.setProperty('--bg40-img',v);
       root.classList.add('bg40');
       var st=document.getElementById('bg40-live');
       if(!st){ st=document.createElement('style'); st.id='bg40-live'; (document.head||document.documentElement).appendChild(st); }
-      st.textContent='html.bg40 body,html.bg40 #pane-chat,html.bg40 #chat,html.bg40 #chat-log,html.bg40 .line-chat{background-image:'+v+'!important;background-size:cover!important;background-position:center bottom!important;background-repeat:no-repeat!important}';
+      st.textContent='html.bg40 body,html.bg40 #pane-chat,html.bg40 #chat,html.bg40 #chat-log,html.bg40 .line-chat{background-image:'+v+'!important;background-size:100% 100%,cover!important;background-position:0 0,center calc(100% + 14vh)!important;background-repeat:no-repeat!important;background-color:#FFD3BA!important}';
     }catch(e){}
   }
   function boot(){
@@ -13134,5 +13155,65 @@ html.bg40 #pane-chat::before,html.bg40 body::before{content:none!important}
   document.addEventListener('visibilitychange',function(){ if(!document.hidden) applyBg(); });
 })();
 </script>
+
+<style id="v447-polish">
+/* v447: 見た目の仕上げ。配色は「ゆうやけ + むらさき」にそろえる。機能・構造は変えない。 */
+:root{--zg-violet:#6D4DF2;--zg-violet-d:#4B2ED6;--zg-ink:#28354A;--zg-cream:#F6E7C1}
+/* ---- 上の帯（トーク中は小さく） ---- */
+body.in-play .bar{padding-top:calc(5px + env(safe-area-inset-top))!important;padding-bottom:5px!important;min-height:0!important}
+body.in-play .bar .brand{font-size:.98rem!important;letter-spacing:.12em}
+body.in-play .bar button.ghost{min-height:34px!important;height:34px!important;padding:0 13px!important;font-size:.74rem!important;font-weight:700!important;letter-spacing:.04em;border-radius:999px!important;background:rgba(255,255,255,.14)!important;border:1px solid rgba(255,255,255,.38)!important;position:relative}
+body.in-play .bar button.ghost::after{content:"";position:absolute;inset:-6px -4px}
+body.in-play .bar .bar-right{gap:8px!important}
+/* ---- 相手の名前の行 ---- */
+html body #pane-chat .lhead{padding:7px 10px!important;gap:8px!important;background:linear-gradient(#fff,#fbf9ff)!important;border-bottom:1px solid #ECE8F8!important}
+html body #pane-chat .lhead .lh-av{width:36px!important;height:36px!important;font-size:21px!important;box-shadow:0 0 0 2px #fff,0 0 0 3px #DDD5FA}
+html body #pane-chat .lhead .lh-nm{font-size:1rem!important;font-weight:800!important;color:#2A2350!important;letter-spacing:.02em}
+html body #pane-chat .lhead button{min-height:34px!important;height:34px!important;padding:0 12px!important;font-size:.72rem!important;font-weight:700!important;border-radius:999px!important;background:#F2EFFC!important;color:#4A3C9A!important;border:0!important;position:relative}
+html body #pane-chat .lhead button::after{content:"";position:absolute;inset:-5px -3px}
+html body #pane-chat .lhead #btn-sel{background:#fff!important;border:1px solid #E3DEF6!important;color:#4A3C9A!important;padding:0 11px 0 9px!important}
+html body #pane-chat .lhead #btn-sel svg{width:15px!important;height:15px!important}
+html body #pane-chat .lhead #verchip{font-weight:700!important;color:#9A94B8!important;background:transparent!important;padding:0 2px!important;letter-spacing:.04em}
+/* ---- ふきだし ---- */
+html body #pane-chat #chat-log .msg.out .bubble:not(.sticker-b):not(.dog-b):not(.photo-b){background:linear-gradient(145deg,#7C5CFF,#5B3DF0)!important;color:#fff!important;border:0!important;box-shadow:0 3px 10px rgba(60,32,170,.30)!important;border-radius:20px 20px 6px 20px!important}
+html body #pane-chat #chat-log .msg.out.cont .bubble:not(.sticker-b):not(.dog-b):not(.photo-b){border-radius:20px 20px 6px 20px!important}
+html body #pane-chat #chat-log .msg.in .bubble:not(.sticker-b):not(.dog-b):not(.photo-b){background:rgba(255,255,255,.97)!important;border:0!important;box-shadow:0 2px 9px rgba(70,40,40,.14)!important;border-radius:20px 20px 20px 6px!important;color:#2A2338!important}
+html body #pane-chat #chat-log .msg.in.cont .bubble:not(.sticker-b):not(.dog-b):not(.photo-b){border-radius:20px 20px 20px 6px!important}
+html body #pane-chat #chat-log .msg .bubble:not(.sticker-b):not(.dog-b):not(.photo-b){font-size:1rem!important;line-height:1.6!important;padding:10px 15px!important}
+html body #pane-chat #chat-log .msg .av{width:36px!important;height:36px!important;box-shadow:0 0 0 2px rgba(255,255,255,.9),0 2px 6px rgba(70,40,40,.18)}
+html body #pane-chat #chat-log .msg .meta{font-size:.62rem!important;font-weight:600!important;padding:2px 7px!important;border-radius:999px!important;background:rgba(40,24,70,.34)!important;color:#fff!important;letter-spacing:.03em;text-shadow:none}
+html body #pane-chat #chat-log .line-day{font-size:.68rem!important;font-weight:700!important;letter-spacing:.06em;padding:4px 14px!important;background:rgba(40,24,70,.34)!important;color:#fff!important;backdrop-filter:blur(2px)}
+/* ---- 入力欄 ---- */
+html body #pane-chat .line-composer{background:linear-gradient(#fff,#F8F6FF)!important;border-top:1px solid #ECE8F8!important;box-shadow:0 -6px 18px rgba(60,40,120,.07)!important}
+html body #pane-chat .line-composer .chat-composer-actions{gap:5px!important}
+html body #pane-chat .line-composer .chat-tools-toggle{min-height:36px!important;height:36px!important;padding:0 9px!important;white-space:nowrap;font-size:.74rem!important;font-weight:700!important;border-radius:999px!important;background:#F2EFFC!important;color:#4A3C9A!important;border:1px solid #E3DEF6!important;box-shadow:none!important;letter-spacing:.03em;position:relative}
+html body #pane-chat .line-composer .chat-tools-toggle::after{content:"";position:absolute;inset:-4px -2px}
+html body #pane-chat .line-composer .chat-tools-toggle.on{background:#6D4DF2!important;color:#fff!important;border-color:#6D4DF2!important}
+html body #pane-chat .line-composer #btn-tiktok{border:1px solid #E3DEF6!important;font-weight:700!important}
+html body #pane-chat .line-composer #in-chat{border:1.5px solid #DDD5FA!important;box-shadow:none!important;border-radius:22px!important;background:#fff!important;font-size:1rem!important}
+html body #pane-chat .line-composer #in-chat:focus{border-color:#6D4DF2!important;box-shadow:0 0 0 3px rgba(109,77,242,.16)!important;outline:none!important}
+html body #pane-chat .line-composer #btn-chat-send{background:linear-gradient(150deg,#7C5CFF,#4B2ED6)!important;border:0!important;border-radius:22px!important;box-shadow:0 4px 12px rgba(75,46,214,.38),inset 0 1px 0 rgba(255,255,255,.35)!important;min-height:52px!important;height:52px!important;min-width:60px}
+html body #pane-chat .line-composer #btn-chat-send:active{transform:translateY(1px);box-shadow:0 2px 6px rgba(75,46,214,.35)!important}
+/* ---- 2人だけ の しるし ---- */
+#zg-room-strip{flex:none;display:block;margin:0;padding:5px 12px;text-align:center;font-size:.7rem;font-weight:700;letter-spacing:.04em;color:#4A3C9A;background:linear-gradient(#F6F3FF,#EFEAFE);border-bottom:1px solid #E3DEF6;cursor:pointer;line-height:1.5}
+#zg-room-strip[hidden]{display:none!important}
+html body #pane-chat #chat-log .msg .meta{white-space:nowrap}
+@media (max-width:380px){
+ html body #pane-chat .line-composer .chat-tools-toggle{padding:0 7px!important;font-size:.7rem!important}
+ html body #pane-chat .line-composer .chat-composer-actions{gap:4px!important}
+ html body #pane-chat .lhead #verchip{display:none!important}
+ html body #pane-chat .lhead button{padding:0 9px!important}
+ html body #pane-chat .lhead #btn-sel{padding:0 9px 0 7px!important}
+ body.in-play .bar button.ghost{padding:0 10px!important}
+}
+#zg-room-strip.warn{color:#8A4B12;background:linear-gradient(#FFF7EC,#FDEBD0);border-bottom-color:#F0DDBF}
+/* ---- トップ画面 ---- */
+#s-lobby .hero{border-radius:28px!important;background:linear-gradient(160deg,rgba(255,255,255,.10),rgba(255,255,255,.03))!important;border:1px solid rgba(255,255,255,.20)!important;box-shadow:0 14px 40px rgba(10,6,40,.35),inset 0 1px 0 rgba(255,255,255,.12)!important}
+#s-lobby #btn-solo{border-radius:20px!important;font-size:1.12rem!important;letter-spacing:.14em;box-shadow:0 10px 26px rgba(10,6,40,.38),inset 0 1px 0 rgba(255,255,255,.7)!important;min-height:58px}
+#s-lobby .note,#s-lobby .fine{color:rgba(255,255,255,.66)!important;font-size:.8rem!important;line-height:1.75!important;text-align:center;max-width:34em;margin-left:auto!important;margin-right:auto!important}
+#s-lobby .fine b,#s-lobby .note b{color:#F6D98A}
+#s-lobby .verline{margin-top:22px!important;font-size:.7rem!important;letter-spacing:.18em;color:rgba(255,255,255,.42)!important;text-align:center}
+#s-lobby .verline b{color:rgba(246,231,193,.78)!important;letter-spacing:.1em}
+</style>
 </body>
 </html>
