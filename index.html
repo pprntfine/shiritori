@@ -1424,7 +1424,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v451</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v452</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1498,7 +1498,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v451</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v452</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -2356,6 +2356,15 @@ var HANDSHAKE_TYPES=Object.freeze({join:1,in2:1,in3:1,deny:1,full:1,expired:1,pi
 var PRIV=Object.freeze({reaction:1,'reaction-ack':1,recall:1,'recall-ack':1,purge:1,'live-on':1,'live-see':1,'live-off':1,igh:1,chats:1,chat:1,photo:1,attachment:1,'photo-chunk':1,'photo-ref':1,'photo-again':1,'photo-miss':1,'photo-hq':1,'chat-open':1,'app-live':1,read:1,ack:1,prof:1,unpair:1,rtc2:1,rtc:1,'rtc-bye':1,'call-no':1,'rtc-sdp':1,'rtc-ice':1,'live-jpg':1,'live-ctl':1,'live-frame':1,'live-audio':1,call:1,'call-end':1});
 var outboundScopes=new WeakMap(), inboundScopes=new WeakMap();
 var privateTimers=new Set(), privateAborts=new Set(), photoScopes=Object.create(null);
+/* v452: つなぎなおした あとは 入室の ときの「あいず」が 作れない。かわりに 2人の 鍵から「かぎの しるし」を 作る（2台で 同じなら 同じ 鍵） */
+async function keyMarkFrom(skb64){
+  var raw=unb64(skb64), pre=new TextEncoder().encode('zg-keymark|'), buf=new Uint8Array(pre.length+raw.length);
+  buf.set(pre,0); buf.set(raw,pre.length);
+  var bb=new Uint8Array(await crypto.subtle.digest('SHA-256',buf)), A='23456789ABCDEFGHJKLMNPQRSTUVWXYZ', tag='';
+  for(var i=0;i<4;i++) tag+=A.charAt(bb[i]%32);
+  return tag;
+}
+function sasLabel(){ return S.sas?('あいず '+S.sas):(S.keyMark?('かぎの しるし '+S.keyMark):'あいず ----'); }
 function privateType(t){ return typeof t==='string'&&!Object.prototype.hasOwnProperty.call(HANDSHAKE_TYPES,t); }
 function privateReady(){
   var p=S&&S.opp&&S.opp.id;
@@ -6936,6 +6945,7 @@ async function resumeConnect(silent){
     if(!rk&&!sessionOnly) return false;
     S.hostPinPub=p.h?'':(p.peerPub||'');
     var sk=await crypto.subtle.importKey('raw',unb64(p.sk),{name:'AES-GCM'},true,['encrypt','decrypt']);
+    try{ S.keyMark=await keyMarkFrom(p.sk); }catch(e){ S.keyMark=null; }
     S.isHost=!!p.h;
     S.opp={id:p.peer||null,name:p.peerName||'あいて'};
     S.paired=true; S.sealed=true; S.linked=true; S.sessKey=sk;
@@ -11023,7 +11033,7 @@ function wipePairLocal(){
   try{ stopCall(false); }catch(e){}
   try{ Net.close(); }catch(e){}
   try{ stopAnnounce(); stopPing(); stopWatch(); stopExpiryTick(); }catch(e){}
-  S.linked=false; S.paired=false; S.sealed=false; S.guest=null; S.joinReq=null; S.sessKey=null; S.sas=null;
+  S.linked=false; S.paired=false; S.sealed=false; S.guest=null; S.joinReq=null; S.sessKey=null; S.sas=null; S.keyMark=null;
   S.myECDH=null; S.pairBox=null; S.pairHostPub=null; S.pairDid=null;
   S.opp={id:null,name:''}; S.isHost=null; S._profSent=false;
   S.chat=[]; S.chatRendered=0; S.outbox=[]; S.unread=0; S.peerRead=0; S.lastPeerN=0; S.readSent=0; S.peerAck=0;
@@ -11772,7 +11782,9 @@ async function pushSelfAlert(txt){
     var n=Date.now(); if(n-__psaAt<60000) return false; __psaAt=n;
     if(!('Notification' in window)||Notification.permission!=='granted') return false;
     var t=await myBellTopic(); if(!t) return false;
-    await fetch('https://ntfy.sh/'+t,{method:'POST',headers:{'Content-Type':'text/plain','Title':'雑学王 ⚠','Priority':'high','Tags':'warning'},body:String(txt).slice(0,120)});
+    /* v452: 中継に 文を のこさない（しるし「⚠」だけ。通知の 文は sw.js が きめる）。つうちサーバーが あれば そちらから */
+    if(psrvGet()){ try{ var j=await psrvPush(t,'⚠'); if(j&&j.ok&&(j.sent|0)>0) return true; }catch(e){} }
+    await fetch('https://ntfy.sh/'+t,{method:'POST',headers:{'Content-Type':'text/plain','Priority':'high'},body:'⚠'});
     return true;
   }catch(e){ return false; }
 }
@@ -11889,10 +11901,10 @@ function paintTopicTag(){
   var bad=(!live)||!Net.secure;
   if(bad){
     var msg = live ? 'あんごう かため中…' : 'つなぎ中…';
-    e.textContent=msg+'　あいず '+(S.sas||'----');
+    e.textContent=msg+'　'+sasLabel();
     e.className='link-tag ng';
   }else{
-    e.textContent='あいず '+(S.sas||'----')+' ・ 接続中';
+    e.textContent=sasLabel()+' ・ 接続中';
     e.className='link-tag ok';
   }
   e.title='つうしん あいず '+((function(){try{return topicTag()}catch(x){return '----'}})())
@@ -12745,11 +12757,11 @@ window.addEventListener('pagehide',function(){ closeCam(); stopCall(false); });
         var intr=(S.isHost&&S.intruderN)||0;
         strip.hidden=false;
         strip.className=intr?'warn':'';
-        strip.textContent=(intr?'⚠ 3人目の 入室を ことわりました（'+intr+'回）　':'')+'🔒 2人だけ・あんごう'+(S.sas?'　あいず '+S.sas:'');
+        strip.textContent=(intr?'⚠ 3人目の 入室を ことわりました（'+intr+'回）　':'')+'🔒 2人だけ・あんごう'+((S.sas||S.keyMark)?'　'+sasLabel():'');
       }catch(e){}
     }
     function explain(){
-      try{ toast('この 部屋は ホストが 承認した 2人だけです。3人目は 入れません。'+(S.sas?'「あいず '+S.sas+'」が あいての 画面と 同じなら、まちがいなく あいてです。':'')); }catch(e){}
+      try{ toast('この 部屋は ホストが 承認した 2人だけです。3人目は 入れません。'+((S.sas||S.keyMark)?'「'+sasLabel()+'」が あいての 画面と 同じなら、まちがいなく あいてです。':'')); }catch(e){}
     }
     strip.addEventListener('click',explain);
     strip.addEventListener('keydown',function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); explain(); } });
@@ -12757,7 +12769,6 @@ window.addEventListener('pagehide',function(){ closeCam(); stopCall(false); });
   })();
 })();
 </script>
-<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"08b344934bdd416db94053d34eb889d8","spa":2}' crossorigin="anonymous"></script>
 
 <script>
 /* 選択制御と相手の接続記録は引き続き利用する。 */
@@ -12810,9 +12821,6 @@ try{ if(S&&!S.peerChatT) S.peerChatT=window.__zgsPeerChatOpen||0; }catch(e){}   
 try{ window.__zgsPeerLive=+(sessionStorage.getItem('zg_peer_live')||0)||0; }catch(e){}   /* v183: いきてる しるし（その せッションだけ） */
 })();
 </script>
-<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"08b344934bdd416db94053d34eb889d8","spa":2}' crossorigin="anonymous"></script>
-<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"08b344934bdd416db94053d34eb889d8","spa":2}' crossorigin="anonymous"></script>
-<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"08b344934bdd416db94053d34eb889d8","spa":2}' crossorigin="anonymous"></script>
 
 <!-- v251: えらんで まとめて けす（入り口は 上部、操作は 下部） -->
 <style>
@@ -12962,7 +12970,6 @@ html body #chat-log .msg.out .bubble{width:auto!important;max-width:100%!importa
   setTimeout(boot,1500); setInterval(ensure,4000);
 })();
 </script>
-<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"08b344934bdd416db94053d34eb889d8","spa":2}' crossorigin="anonymous"></script>
 
 <script id="zg-bg-js">
 (function(){

@@ -1,4 +1,4 @@
-# 雑学王（zatsugakuou）引き継ぎメモ  ― 現在 v451
+# 雑学王（zatsugakuou）引き継ぎメモ  ― 現在 v452
 
 ## これは何か
 見た目は「雑学クイズ」アプリ。中身は **2人専用の暗号化チャット**（メッセージ・写真・ライブ映像・電話）。
@@ -19,7 +19,7 @@
    - 持ち主は画面の版番号で「更新できたか」を確認する。変えたら「index.html と sw.js の2つを上げてください」と伝える。
 2. **クイズ（QBANK・qz*・sq*関数）は触らない。**（持ち主の指示）
 3. 部屋は2人まで・ホスト承認必須・暗号化必須（`ROOM_POLICY`）。緩めない。
-4. 端末の「あいず」（`S.sas`）の比較で相手を確かめる設計。表示を消さない。
+4. 端末の「あいず」（`S.sas`、再開後は「かぎの しるし」`S.keyMark`）の比較で相手を確かめる設計。表示を消さない（`sasLabel()`）。
 5. 外部通信は中継サーバー（ntfy.sh、公開MQTT）経由の暗号文のみ。内容を平文で送らない。
 6. 既存CSSは `!important` が何層にも重なっている。見た目の変更は末尾の `<style id="v447-polish">` に、強い詳細度で足す（古い規則を書き換えない）。
 
@@ -40,7 +40,14 @@
   中継所が失敗したら60秒 ntfy.sh に戻す。中継所使用中は ntfy 用の節約（coolUntil/allow）を通さない。添付URLは `relayFileOk` で同じ origin の /r/ だけ許可。
   CSPに wss://*.workers.dev を追加。設定の「とどけ てんけん」に ⑮ を追加。
   試験: wrangler dev(https:443)＋chromium 2台（ntfy/MQTT遮断）で、メッセージ往復・閉じている間の受信・写真・相手が古い版のときntfyに戻る、を確認。
-  ※ 再開後は `S.sas` が空で「あいず」が出ない。必要なら「鍵の しるし」（sk のハッシュ）を出す案あり。
+- v452 総点検（持ち主の依頼：暗号化と2人だけ）。結果と修正:
+  - 確認OK: 本文は seal（AES-GCM・毎回乱数IV・長さを隠す詰め物）。写真/ファイルは putFile で AES-GCM＋SHA-256照合。ライブ(live-frame/audio/jpg)も Net 経由で封緘。
+    電話・ライブ映像は WebRTC（DTLS-SRTP）、SDPは封緘して送る、STUNのみ（TURNなし）。受信 `process` は private 型を「ふたりの鍵・from=相手・to=自分・sec=289」だけ受理。
+    入室は2人で満席（`replyFull`/`intruderAlert`）、承認は必ず手動。sessionOnly 再開中は入室受付そのものが無い。
+  - 修正: `pushSelfAlert` が「3人目が…」の文を平文で ntfy に送っていた → 本文は「⚠」だけ、つうちサーバーがあればそちら優先。
+  - 修正: Cloudflare 解析スクリプト5か所を削除（CSPで止まっていて動いてはいなかった）。
+  - 追加: 再開後は `S.sas` が無いので「かぎの しるし」（`keyMarkFrom(sk)`、`S.keyMark`）を出す。表示は `sasLabel()` に統一。
+  - 試験: 中継所に別の鍵で作った偽メッセージ・乱数を入れても捨てられることを確認。
 
 ## 構造のメモ（行番号は目安。検索で探すこと）
 - メインのスクリプトは `<script>(function(){'use strict'; …})();</script>` の1つの大きな閉じ込み。外から内部は見えない（テスト用に `tools/make_test.py` で `window.__t` を出す）。
@@ -68,5 +75,4 @@ node --check sw.js
     **デプロイ済み**: https://zatsugaku-push.pprnt908.workers.dev （APIで直接書き込み。前の版のKV「SUBS」もバインドし、VAPID鍵と登録を引き継ぐ）。
     この作業環境からは workers.dev に繋がらないので、動作確認は持ち主のスマホで /key を開いてもらう。
   - 注意: 受け手の端末は Worker の鍵で購読し直すので、送り手が ntfy に落ちた分はその端末に届かない（既存の設計のまま）。
-- `index.html` に Cloudflare の解析スクリプト(`static.cloudflareinsights.com`)が5か所ある。機密重視なら削除を提案する（持ち主に確認）。
 - 赤ちゃんスタンプ(約5MB)の軽量化の余地。
