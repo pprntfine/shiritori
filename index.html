@@ -1424,7 +1424,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v447</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v448</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1498,7 +1498,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v447</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v448</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -6926,7 +6926,7 @@ async function resumeConnect(silent){
     Net.lobby=p.topic;
     if(sessionOnly){
       Net.roomKey=null;Net.legacy=null;Net.key=sk;Net.sessionOnly=true;Net.secure=true;
-      storageWarn('legacy','前の部屋の鍵がないため、承認済みの２人だけで再開しました。新しい入室と部屋の鍵交換は無効です。履歴は残しています。');
+      /* v448: ふたりの鍵だけで 再開（安全・入室は 受けつけない）。持ち主の 希望で お知らせは 出さない */
     }else{Net.sessionOnly=false;Net.switchTo(sk);}
     S.phase='play';
     S.chatRendered=-1;
