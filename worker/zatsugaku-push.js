@@ -14,7 +14,8 @@
    - GET  /r/{topic}/file/{id}            ファイルを とる
 
    中身は すべて アプリで 暗号化ずみ。この サーバーは 読めない。12時間で 消える。
-   必要な せってい: Durable Object（クラス ZgRelay）を 変数名 RELAY で バインド（wrangler.toml 参照）。 */
+   必要な せってい: Durable Object（クラス ZgRelay）を 変数名 RELAY で バインド（wrangler.toml 参照）。
+   前の 版の KV「SUBS」が つながって いれば、鍵と とうろくを ひきついで つかう（なくても うごく）。 */
 
 const TOPIC_RE = /^gskb-[0-9a-f]{28}$/;          // 通知（ベル）用
 const RELAY_TOPIC_RE = /^[A-Za-z0-9_-]{6,64}$/;   // 中継所の とおりみち
@@ -92,6 +93,11 @@ async function vapid(env) {
   if (vapidMem) return vapidMem;
   const cfg = box(env, 'cfg');
   let saved = await cfg.get('vapid');
+  if ((!saved || !saved.jwk || !saved.pub) && env.SUBS) {
+    // 前の 版（KV「SUBS」）の 鍵を ひきつぐ。かわると スマホの 通知とうろくが やりなおしに なる
+    const old = await env.SUBS.get('__vapid', 'json');
+    if (old && old.jwk && old.pub) saved = await cfg.putIfAbsent('vapid', { jwk: old.jwk, pub: old.pub });
+  }
   if (!saved || !saved.jwk || !saved.pub) {
     const kp = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
     const jwk = await crypto.subtle.exportKey('jwk', kp.privateKey);
@@ -153,7 +159,8 @@ function validSub(s) {
   return true;
 }
 async function loadSubs(env, topic) {
-  const a = await box(env, 'b:' + topic).get('subs');
+  let a = await box(env, 'b:' + topic).get('subs');
+  if (!Array.isArray(a) && env.SUBS) a = await env.SUBS.get('t:' + topic, 'json');   // 前の 版の とうろくを ひきつぐ
   return Array.isArray(a) ? a.filter(validSub) : [];
 }
 
