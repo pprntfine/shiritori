@@ -1424,7 +1424,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v452</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v453</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1498,7 +1498,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v452</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v453</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -2841,7 +2841,7 @@ var Net={
       /* v282: かけらは 即時路(MQTT)だけを つかう。中継所の 制限中でも とおす */
       /* v336: 即時路が つながって いない とき、かけらを 中継所の 小さい POST で おくる。
          これが 無いと、MQTT が ふさがれた 回線では しゃしんが 絶対に とどかない */
-      var __rb=relaySendBase();
+      var __rb=relayAnyBase();
       if(__ns&&!fastOk){
         if(!__rb&&this.coolUntil&&Date.now()<this.coolUntil) return false;
         if(!__rb&&!this.allow(1)) return false;
@@ -2862,7 +2862,7 @@ var Net={
       if(!__ns) this.postStore(body,scope); return true;
     }
     /* ntfy は 保存用(相手が いない ときの 受けとり用)。制限中は 2本目だけで 成功あつかい */
-    var __rb2=relaySendBase();
+    var __rb2=relayAnyBase();
     if(!__rb2&&this.coolUntil&&Date.now()<this.coolUntil) return fastOk||await viaPush();
     if(!__rb2&&!(env.t==='chats'?this.allowChat():this.allow(typeof prio==='number'?prio:1))) return fastOk||await viaPush();
     /* v122: 即時路で おくれたら 保存路は 待たずに うしろで（つぎの メッセージが つまらない） */
@@ -2918,24 +2918,48 @@ var Net={
       return true;
     }catch(e){ return fastOk||await viaPush(); }
   },
-  /* v451: 中継所へ おく。あいても 対応して いれば じぶんの 中継所（せいげん なし）、だめなら ntfy.sh */
+  /* v451: 中継所へ おく。あいても 対応して いれば じぶんの 中継所（せいげん なし）、だめなら ntfy.sh
+     v453: あいての 対応が まだ わからなくても、ntfy.sh が 上限（429）や 不調の ときは 中継所へ おく（「送信中」の まま 止めない）。
+           中継所の 返事が おそい ときは 待ちつづけず ntfy.sh へ */
+  relayTry:async function(base,topic,init,query){
+    var outer=init&&init.signal, ac=(typeof AbortController!=='undefined')?new AbortController():null;
+    var lim=(init&&init.method==='PUT')?30000:4000, tmo=setTimeout(function(){ try{ if(ac) ac.abort(); }catch(e){} },lim);
+    var onOuter=function(){ try{ if(ac) ac.abort(); }catch(e){} };
+    if(outer){ if(outer.aborted) onOuter(); else outer.addEventListener('abort',onOuter); }
+    try{
+      var rr=await fetch(base+topic+(query||''),Object.assign({},init,{signal:ac?ac.signal:(outer||undefined)}));
+      if(rr.ok){ this.lastVia='relay'; Relay.badUntil=0; return rr; }
+      if(rr.status!==413) Relay.badUntil=Date.now()+60000;
+      return rr;
+    }catch(e){ if(outer&&outer.aborted) throw e; Relay.badUntil=Date.now()+60000; return null; }
+    finally{ clearTimeout(tmo); if(outer) outer.removeEventListener('abort',onOuter); }
+  },
   storeFetch:async function(topic,init,query){
-    var rb=relaySendBase();
-    if(rb){
-      try{
-        var rr=await fetch(rb+topic+(query||''),init);
-        if(rr.ok){ this.lastVia='relay'; return rr; }
-        if(rr.status!==413) Relay.badUntil=Date.now()+60000;
-        else return rr;
-      }catch(e){ if(init&&init.signal&&init.signal.aborted) throw e; Relay.badUntil=Date.now()+60000; }
+    var conf=relaySendBase(), any=relayAnyBase(), rr=null;
+    if(conf){
+      rr=await this.relayTry(conf,topic,init,query);
+      if(rr&&(rr.ok||rr.status===413)) return rr;
     }
-    this.lastVia='ntfy';
-    return fetch('https://ntfy.sh/'+topic+(query||''),init);
+    var cooling=this.coolUntil&&Date.now()<this.coolUntil, nr=null;
+    if(!cooling||!any){
+      try{
+        nr=await fetch('https://ntfy.sh/'+topic+(query||''),init);
+        if(nr.ok){ this.lastVia='ntfy'; return nr; }
+        if(nr.status===429||nr.status===503){ var ra=0; try{ ra=parseInt(nr.headers.get('retry-after')||'0',10); }catch(e){} this.hit429(ra>0?ra*1000:45000); }
+      }catch(e){ if(init&&init.signal&&init.signal.aborted) throw e; if(!any||conf) throw e; }
+    }
+    if(any&&!conf){
+      rr=await this.relayTry(any,topic,init,query);
+      if(rr&&rr.ok) return rr;
+    }
+    if(nr) return nr;
+    if(rr) return rr;
+    throw new Error('送れません');
   },
   postStore:function(body,scope){
     var self=this;
     if(!outboundCurrent(scope)) return;
-    if(!relaySendBase()&&this.coolUntil&&Date.now()<this.coolUntil) return;
+    if(!relayAnyBase()&&this.coolUntil&&Date.now()<this.coolUntil) return;
     try{
       var ac=typeof AbortController!=='undefined'?new AbortController():null; if(ac) privateAborts.add(ac);
       this.storeFetch(scope.topic,{method:'POST',headers:{'Content-Type':'text/plain'},body:body,signal:ac?ac.signal:undefined})
@@ -2987,7 +3011,7 @@ var Net={
     if(env&&messageDeleted({from:env.from,pid:env.id})) return false;
     var scope=outboundScopes.get(env),key=scope&&scope.key;
     if(!privateCurrent(scope)) return false;
-    var __rbf=relaySendBase();
+    var __rbf=relayAnyBase();
     if(!__rbf&&this.coolUntil&&Date.now()<this.coolUntil) return false;
     if(!__rbf&&this.noPutUntil&&Date.now()<this.noPutUntil) return false;   /* v282: 回数制限の あとは しばらく 1回おくりを しない */
     if(!__rbf&&!this.allow(0)) return false;
@@ -7973,7 +7997,7 @@ function sweepChat(){
   if(gone){ chatSweepSig=''; renderChat(true); return; }
   if(S.tab==='chat'&&document.visibilityState==='visible'){
     var sig=chatSweepSigOf();
-    if(sig!==chatSweepSig){ chatSweepSig=sig; renderChat(false); }
+    if(sig!==chatSweepSig) renderChat(false);   /* v453: おぼえるのは 描けた ときだけ（入力中で 保留された ときは つぎの 見まわりで もう一度） */
   }
 }
 var chatSweepSig='';
@@ -12022,6 +12046,8 @@ function relaySendBase(){
   if(Relay.badUntil&&Date.now()<Relay.badUntil) return '';
   return u+'/r/';
 }
+/* v453: じぶんが 中継所を つかえる ときの 送り先（あいての 対応は とわない。ntfy.sh が だめな ときの 予備） */
+function relayAnyBase(){ var u=relayHas(); if(!u) return ''; if(Relay.badUntil&&Date.now()<Relay.badUntil) return ''; return u+'/r/'; }
 function relayFileOk(u){ var b=relayHas(); if(!b) return false; try{ return u.origin===new URL(b).origin&&u.pathname.indexOf('/r/')===0; }catch(e){ return false; } }
 var Relay={ws:null,topic:'',base:'',ts:0,seen:null,ids:[],retry:0,timer:null,pingT:null,badUntil:0,epoch:0,up:false,lastRx:0,
   connect:function(topic){
