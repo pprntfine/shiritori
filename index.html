@@ -1424,7 +1424,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v453</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v454</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1498,7 +1498,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v453</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v454</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -1791,9 +1791,9 @@ body .bar::after{
   <div class="sec">つうちサーバー（アプリを 切っていても とどく）</div>
   <input type="url" id="pf-psrv" placeholder="https://zatsugaku-push.〇〇.workers.dev" style="width:100%;box-sizing:border-box;padding:8px;border-radius:10px;border:1.5px solid #ddd;font-size:.8rem">
   <p id="pf-psrvh" style="font-size:.74rem;color:#556;margin:4px 0 0">1人が 入れれば OK（あいてにも じどうで つたわります）</p>
-  <div class="sec">つながり</div>
+  <div class="sec" style="margin-top:48px">つながり（きけん）</div>
   <button type="button" class="ph" id="pf-unpair" style="background:#FFECEC;color:#C62828;border:1px solid #F5C9C9">つながりを とく（でる）</button>
-  <p style="font-size:.72rem;color:#556;margin:4px 0 0">つながりを とくと、あたらしく 部屋を つくって ペアに ならないと つながりません。2回 おすと 解除されます。</p>
+  <p style="font-size:.72rem;color:#556;margin:4px 0 0">つながりを とくと、あたらしく 部屋を つくって ペアに ならないと つながりません。2回 おして、さいごに「OK」を おすと 解除されます。2台とも トークの きろくが 消えます。</p>
   
   <div class="sec">たんじょうび</div>
   <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 0 4px">
@@ -6966,7 +6966,7 @@ async function resumeConnect(silent){
     var sessionOnly=p.rk===p.sk;
     if(sessionOnly)await archiveLegacyPair();
     var rk=sessionOnly?null:p.rk==='idb-v436'?await pairRoomKeyGet(p.topic):await crypto.subtle.importKey('raw',unb64(p.rk),{name:'AES-GCM'},false,['encrypt','decrypt']);
-    if(!rk&&!sessionOnly) return false;
+    if(!rk&&!sessionOnly){ storageWarn('protect','前の 部屋の 鍵が 見つかりません。つながりと きろくは 消して いません。アプリを 開きなおして ください。'); return false; }
     S.hostPinPub=p.h?'':(p.peerPub||'');
     var sk=await crypto.subtle.importKey('raw',unb64(p.sk),{name:'AES-GCM'},true,['encrypt','decrypt']);
     try{ S.keyMark=await keyMarkFrom(p.sk); }catch(e){ S.keyMark=null; }
@@ -7046,6 +7046,8 @@ function openChatUI(){
 if($('#btn-secret-back')) $('#btn-secret-back').addEventListener('click',function(){ show('lobby'); });
 if($('#btn-home')) $('#btn-home').addEventListener('click',function(){ show('lobby'); });
 if($('#btn-wipe')) $('#btn-wipe').addEventListener('click',function(){
+  /* v454: 1回 おしただけで 消えて いた。かならず たしかめる */
+  if(!window.confirm('この スマホの つながりと トークの きろくを 消します。\nもとに もどせません。ほんとうに 消しますか？')) return;
   pairClear(); unreadClear(); chatClearStore();
   try{ S.chat=[]; }catch(e){}
   note('この端末の きろくを 消しました。','#note2');
@@ -11076,6 +11078,9 @@ function unpairBoth(btn){
     return;
   }
   clearTimeout(unpairT); unpairArmed=false;
+  /* v454: 2回 おしても まだ とかない。さいごに かならず たしかめる（うっかり 防止） */
+  if(btn){ try{ btn.textContent='つながりを とく（でる）'; }catch(e){}
+    if(!window.confirm('つながりを といて 部屋を でます。\n2台とも トークの きろくが 消えて、もとに もどせません。\nほんとうに とき ますか？')) return; }
   var done=false;
   var fin=function(){ if(done) return; done=true; wipePairLocal(); show('lobby'); note('ペアを 解除しました。また つかうときは あたらしく 部屋を つくって ペアに なってください。'); };
   try{
