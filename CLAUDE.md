@@ -1,4 +1,4 @@
-# とー君ニュース（旧 雑学王 / zatsugakuou）引き継ぎメモ  ― 現在 v463
+# とー君ニュース（旧 雑学王 / zatsugakuou）引き継ぎメモ  ― 現在 v464
 
 ## これは何か
 見た目は「とー君ニュース」（ニュースアプリ。v460 までは「雑学クイズ」アプリ）。中身は **2人専用の暗号化チャット**（メッセージ・写真・ライブ映像・電話）。
@@ -88,6 +88,9 @@
   起動中に博士（`#lab`）が一瞬見えていた（隠すCSSがファイル末尾にあり読み込みが遅い）→ `#lab` に style="display:none"、`#zg-caster` に hidden を直接付けた。
 - v463 とー君キャスターに動き: しゃべる間 `.talk`、ジャンル別の小物 `Caster.fx(mood)`（✨💦🚨🎉🌧💴 が頭上/上から）、
   7秒ごとの芸 `Caster.trick()`（spin/hophop/peek/dance/stretch/tilt/flip、`.zc-body` に t-xxx）。とー君を押すと芸→次のニュース。動きを減らす設定では止める。
+- v464 とー君を部品に分けたSVGで描き直し（持ち主：手がずっと同じ）。`TOKUN_SVG`（元絵の寸法・色を測って作成。以前の WebP `TOKUN_CASTER` は削除）。
+  手（aL-down/aR-down/aL-wave/aR-point/aR-mic/aL-cheek/aL-up/aR-up/aR-thumb）・目（e-open/wink/happy/worry/sad）・口（m-smile/big/o/frown）を
+  `#zg-caster[data-mood]` で組み合わせ（hello/toku/jiken/up/down/keizai/bye/thumb）。手を振る・バンザイ・指さし・マイクは動き、まばたき、しゃべる間は口パク。芸に「グッド👍」(thumb)。
   ※ Cloudflare の API トークンは「cfat_」形式（アカウント所有トークン）。確認は /accounts/{id}/tokens/verify。
   持ち主の希望で「この版は 1ファイル…」の説明（#install-hint）を出さない。ニュース枠を広く、件数は 徳島12・事件事故8・経済6。
 
