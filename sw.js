@@ -1,8 +1,8 @@
 'use strict';
 /* とー君ニュース（旧 雑学王）v460。本文は復号しない。鍵は受け取らず、暗号文だけを耐久保存する。
    zg-sw-inbox/pin {b:暗号文,t:時刻} は本体との互換契約。本文に時限削除を行わない。 */
-const SW_VERSION='v487';
-const SHELL_CACHE='zg-v487-shell';
+const SW_VERSION='v488';
+const SHELL_CACHE='zg-v488-shell';
 function unwrapPush(value){
   for(let i=0;i<8;i++){
     if(value&&typeof value==='object'){
@@ -46,12 +46,12 @@ async function getRole(){
 }
 async function handlePush(raw){
   const msg=unwrapPush(raw),body=sealedBody(msg);
-  let tag='mtp-chat',text='新しいメッセージが届いています',data={},saved=false;
+  let tag='mtp-chat',text='新しいニュースが更新されました',data={},saved=false;
   if(body){
     data.zgm=body;
     try{await swInboxSave(body);saved=true;}catch(e){data.saveFailed=true;}
     // 保存できない場合も通知のdataに暗号文を残す。成功と偽らず再取込対象とする。
-    if(!saved)text='メッセージの保存をもう一度試します。アプリを開いてください';
+    if(!saved)text='新しいニュースがあります。アプリを開いてください';
     tag='zgs-'+body.slice(-32);
   }else if(/^zgcall:/.test(msg)){
     tag='mtp-call';text='電話がきています';data.call=true;
@@ -86,7 +86,7 @@ self.addEventListener('notificationclick',event=>{
     const n=event.notification,body=n&&n.data&&n.data.zgm;
     if(body){try{await swInboxSave(body);}catch(e){
       // 唯一の暗号文を閉じる前に再保存。失敗時は新しい通知へ引き継ぐ。
-      await self.registration.showNotification('とー君ニュース',{body:'アプリを開いてメッセージを受け取ってください',tag:n.tag,data:{zgm:body,saveFailed:true}});
+      await self.registration.showNotification('とー君ニュース',{body:'新しいニュースがあります。アプリを開いてください',tag:n.tag,data:{zgm:body,saveFailed:true}});
     }}
     const windows=await self.clients.matchAll({type:'window',includeUncontrolled:true});
     let client=windows.find(c=>c.url.startsWith(self.registration.scope));
