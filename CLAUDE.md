@@ -31,6 +31,15 @@
 - この作業環境から `*.workers.dev` へは届かない。送受信は `tools/run_e2e.sh`（手元で中継所を立てる）で確かめる。Cloudflare の Worker は 2026-11 時点でデプロイ済み（変更したら API で書き込む必要があり、トークンが要る）。
 - 次に聞かれそうな未着手: 閉じている時の電話通知、赤ちゃんスタンプ（約5MB）の軽量化。
 
+**Cloudflare の Worker を書き換える手順（`worker/zatsugaku-push.js` を変えた時だけ。アプリだけの更新では不要）**
+1. `request_credential` で api.cloudflare.com 用のトークンを持ち主にもらう（権限: Workers Scripts 編集・Workers KV 読み取り・Account Analytics 読み取り。トークンはチャットに貼らせない）。
+   保存後は、リクエストに `Authorization: Bearer proxy-injected` と書けば、プロキシが本物に差し替える。確認は `GET /accounts/{id}/tokens/verify`。アカウント ID は `GET /accounts` で分かる。
+2. 書き込みは `PUT /accounts/{id}/workers/scripts/zatsugaku-push`（multipart）。`metadata` に `main_module`、`compatibility_date`、
+   bindings = `RELAY`（`durable_object_namespace`、class `ZgRelay`）と `SUBS`（`kv_namespace`、`GET /accounts/{id}/storage/kv/namespaces` で名前 SUBS の id）。**migrations は付けない**（作成済み）。
+3. 1分ごとの Cron は `PUT /accounts/{id}/workers/scripts/zatsugaku-push/schedules`（`[{"cron":"* * * * *"}]`）。
+4. 状況の確認は GraphQL（`workersInvocationsAdaptive`、`durableObjectsInvocationsAdaptiveGroups`）で、エラー数・呼び出し数が見られる。この環境から workers.dev へは届かない。
+5. 終わったら**持ち主にトークの削除をお願いする**。
+
 ## ファイル構成（すべて同じフォルダに置く／静的ホスティング）
 - `index.html`  本体。1ファイル（約8.6MB）。大半は埋め込み画像(base64)。コードは約1.5MB・約1.3万行。
 - `sw.js`  通知用 Service Worker。本文は復号しない（暗号文だけIndexedDB `zg-sw-inbox/pin` に保存）。互換契約なので形式を変えない。
