@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v466</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v467</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v466</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v467</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -12260,8 +12260,7 @@ var Caster={lines:[],i:0,t:null,typeT:null,sig:'',
   },
   wire:function(box){
     var self=this; this.wired=true;
-    box.querySelector('.zc-tk').addEventListener('click',function(e){ e.stopPropagation(); var d=self.trick()||700; clearTimeout(self.tapT); self.tapT=setTimeout(function(){ self.show(self.i+1); },d); });
-    setInterval(function(){ try{ if(!document.hidden&&News.lobbyOn()&&self.lines.length&&Date.now()-(self.lastTrick||0)>7000) self.trick(); }catch(e){} },2500);
+    box.querySelector('.zc-tk').addEventListener('click',function(e){ e.stopPropagation(); self.show(self.i+1); });   /* v467: 芸は なし */
     var bub=box.querySelector('.zc-bub');
     var go=function(e){ e.stopPropagation(); var l=self.lines[self.i]; if(l&&l.url) window.open(l.url,'_blank','noopener,noreferrer'); else self.show(self.i+1); };
     bub.addEventListener('click',go); bub.addEventListener('keydown',function(e){ if(e.key==='Enter') go(e); });
@@ -12271,6 +12270,7 @@ var Caster={lines:[],i:0,t:null,typeT:null,sig:'',
   FX:{hello:['💜','✨','💜'],toku:['✨','⭐','✨'],jiken:['💦','💦','🚨'],up:['🎉','🎊','✨','🎉'],down:['🌧','💧','💧'],keizai:['💴','🪙','💴'],bye:['💜','👋','✨']},
   fxSet:function(arr){ var keep=this.FX.__c; this.FX.__c=arr; this.fx('__c'); this.FX.__c=keep; },
   fx:function(mood){
+    return;   /* v467: まわりの 小物は なし */
     var box=document.getElementById('zg-caster'); if(!box) return; var lay=box.querySelector('.zc-fx'); if(!lay) return;
     if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     var set=this.FX[mood]||['✨'], fall=(mood==='down'||mood==='keizai'), n=(mood==='up'?9:6);
@@ -12285,6 +12285,7 @@ var Caster={lines:[],i:0,t:null,typeT:null,sig:'',
   IMG:{hello:'desk',bye:'dog:⑱',up:'dog:㉓',toku:'stand',jiken:'dog:⑭',keizai:'desk',down:'dog:⑫'},   /* あっかんべー（wink）は トップでは つかわない（持ち主） */
   /* v466: ニュースの 中身で 絵を えらぶ（持ち主の 本物の 絵と、名前の 入っていない スタンプ ⑫〜㉗ だけを つかう） */
   picFor:function(mood,text){
+    return 'desk';   /* v467: 持ち主の 希望で いつも キャスター席（机と マイク）だけ */
     text=text||'';
     if(mood==='jiken'){ if(/地震|津波|台風|大雨|豪雨|大雪|警報|火事|火災|全焼|事故|衝突|横転|追突|はねられ/.test(text)) return 'dog:㉒'; return 'dog:⑭'; }
     if(mood==='toku'){ if(/祭|阿波おどり|イベント|開幕|オープン|開催|フェス|花火|観光|渦潮|紅葉|温泉|グルメ|おいしい|優勝|勝利/.test(text)) return 'dog:⑲'; return (this.tokuN=(this.tokuN||0)+1)%2?'desk':'stand'; }
@@ -13829,6 +13830,13 @@ body > .v439-giant .v439-dismiss{border:0;background:rgba(255,255,255,.92);color
 #s-lobby #zg-caster.desk .zc-mic{position:absolute;top:-30px;right:16px;width:12px;height:30px;background:#2A2C33;border:3px solid #16171B;border-radius:4px}
 #s-lobby #zg-caster.desk .zc-mic::before{content:"";position:absolute;left:50%;top:-22px;transform:translateX(-50%);width:22px;height:26px;border-radius:11px;background:repeating-linear-gradient(0deg,#5B5F6B 0 3px,#3A3D45 3px 6px);border:3px solid #16171B}
 #s-lobby #zg-caster.desk .zc-body{position:relative}
+
+/* ---- v467: キャスター席だけ・とー君が ゆらゆら ---- */
+#s-lobby #zg-caster .zc-emo,#s-lobby #zg-caster .zc-fx{display:none!important}
+#s-lobby #zg-caster .zc-body,#s-lobby #zg-caster.talk .zc-body{animation:none!important}
+#s-lobby #zg-caster .zc-tk img.tki,#s-lobby #zg-caster .zc-tk.hop img.tki,#s-lobby #zg-caster[data-mood] .zc-tk.hop img.tki{animation:zc-sway 3.2s ease-in-out infinite!important;transform-origin:50% 92%}
+@keyframes zc-sway{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(4deg)}}
+@media (prefers-reduced-motion: reduce){#s-lobby #zg-caster .zc-tk img.tki{animation:none!important}}
 </style>
 </body>
 </html>
