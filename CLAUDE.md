@@ -1,4 +1,4 @@
-# とー君ニュース（旧 雑学王 / zatsugakuou）引き継ぎメモ  ― 現在 v460
+# とー君ニュース（旧 雑学王 / zatsugakuou）引き継ぎメモ  ― 現在 v461
 
 ## これは何か
 見た目は「とー君ニュース」（ニュースアプリ。v460 までは「雑学クイズ」アプリ）。中身は **2人専用の暗号化チャット**（メッセージ・写真・ライブ映像・電話）。
@@ -8,7 +8,7 @@
 ## ファイル構成（すべて同じフォルダに置く／静的ホスティング）
 - `index.html`  本体。1ファイル（約8.6MB）。大半は埋め込み画像(base64)。コードは約1.5MB・約1.3万行。
 - `sw.js`  通知用 Service Worker。本文は復号しない（暗号文だけIndexedDB `zg-sw-inbox/pin` に保存）。互換契約なので形式を変えない。
-- `manifest.webmanifest`, `icon-192.png`, `icon-512.png`  PWA用。
+- `manifest.webmanifest`, `icon-192.png`, `icon-512.png`  PWA用（v461 から とー君のアイコン）。
 - `tools/` 確認用の道具（下記）。※このリポジトリにはまだ入っていない（持ち主の手元のみ）。
 - `worker/` 自分専用サーバー（Cloudflare Worker＋Durable Objects）。通知(/key /sub /push)と中継所(/r/)。`zatsugaku-push.js`、`wrangler.toml`、持ち主向けの手順 `README.md`。
 
@@ -81,8 +81,10 @@
   トップ画面にキャスター `#zg-caster` と `Caster`（ニュースを関西弁で読み上げ、内容のキーワードでひとこと `react`、ジャンルで動き・マーク）。
   絵は持ち主が送った とー君（`TOKUN_CASTER`、背景を抜いた WebP を埋め込み）。名前入りの吹き出し絵（㉘〜㊳）と「かずよ〜♡」コメントは表に出さない。
   とー君（チャットの演出・拡大）はチャット画面を離れたらすぐ消す。クイズのボタンは「今日の 雑学クイズ」としてニュースの下へ（クイズの中身は触っていない）。
-  名前の変更: title・apple-mobile-web-app-title・manifest・通知の題名（index.html と sw.js）・招待文。アイコンはまだ「し」のまま。
+  名前の変更: title・apple-mobile-web-app-title・manifest・通知の題名（index.html と sw.js）・招待文。
   **sw.js が v456〜v459 で空になっていたのを v455 から復元**（通知の受け取りが止まっていた）。
+- v461 アイコンを とー君に（紫の背景＋丸い枠、icon-192/512.png・apple-touch-icon の埋め込み、manifest に maskable）。起動画面の色を紫（background_color #4B2ED6）。
+  起動中に博士（`#lab`）が一瞬見えていた（隠すCSSがファイル末尾にあり読み込みが遅い）→ `#lab` に style="display:none"、`#zg-caster` に hidden を直接付けた。
   ※ Cloudflare の API トークンは「cfat_」形式（アカウント所有トークン）。確認は /accounts/{id}/tokens/verify。
   持ち主の希望で「この版は 1ファイル…」の説明（#install-hint）を出さない。ニュース枠を広く、件数は 徳島12・事件事故8・経済6。
 
