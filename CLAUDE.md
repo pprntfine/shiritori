@@ -1,4 +1,4 @@
-# とー君ニュース（旧 雑学王 / zatsugakuou）引き継ぎメモ  ― 現在 v464
+# とー君ニュース（旧 雑学王 / zatsugakuou）引き継ぎメモ  ― 現在 v465
 
 ## これは何か
 見た目は「とー君ニュース」（ニュースアプリ。v460 までは「雑学クイズ」アプリ）。中身は **2人専用の暗号化チャット**（メッセージ・写真・ライブ映像・電話）。
@@ -91,6 +91,9 @@
 - v464 とー君を部品に分けたSVGで描き直し（持ち主：手がずっと同じ）。`TOKUN_SVG`（元絵の寸法・色を測って作成。以前の WebP `TOKUN_CASTER` は削除）。
   手（aL-down/aR-down/aL-wave/aR-point/aR-mic/aL-cheek/aL-up/aR-up/aR-thumb）・目（e-open/wink/happy/worry/sad）・口（m-smile/big/o/frown）を
   `#zg-caster[data-mood]` で組み合わせ（hello/toku/jiken/up/down/keizai/bye/thumb）。手を振る・バンザイ・指さし・マイクは動き、まばたき、しゃべる間は口パク。芸に「グッド👍」(thumb)。
+- v465 v464 のSVG描き直しは持ち主に不評（「ロボットみたい」「見た目は このままで」）→ **持ち主の本物の絵だけを使う**。
+  `TK_IMG`（wink=最初の絵, stand=立ち姿, fart=プゥ〜ン, fire=たき火。背景を抜いた WebP を埋め込み）。`Caster.IMG` でニュースごとに絵を切替、
+  芸 `fart`/`fire` で絵を2.4秒入れ替え（押したときは2.5秒見せてから次へ）。**とー君の絵を自作しない。新しいポーズは持ち主に絵をもらう。**
   ※ Cloudflare の API トークンは「cfat_」形式（アカウント所有トークン）。確認は /accounts/{id}/tokens/verify。
   持ち主の希望で「この版は 1ファイル…」の説明（#install-hint）を出さない。ニュース枠を広く、件数は 徳島12・事件事故8・経済6。
 
