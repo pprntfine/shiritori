@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v470</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v471</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v470</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v471</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -6602,13 +6602,37 @@ async function retryStorage(){
   }catch(e){storageWarn('chat','まだ保存できません。本文を残しています。アプリを閉じずに、もう一度ためしてください。');return false;}
   finally{storageRetrying=false;storageWarningRender();}
 }
+/* v471: 部屋を つくりなおして 鍵が かわった とき、前の 記録を 消さずに 保管庫（'a'）へ うつして、新しい 部屋の 保存を とおす。
+   これまでは「前の 記録を まもる」ために 新しい 鍵・本文・送信待ちの 保存を すべて 止めて いた（つながりが 保存されず また 消えた）。
+   うつすのは、承認ずみの 2人の 鍵（privateReady）が ある ときだけ。保管庫の 中身は 前の 鍵で 暗号化された まま。 */
+async function archiveStores(reason){
+  var metadata={};[PAIR_KEY,OUT_KEY,UNREAD_KEY,'mtp_hwm_v1','mtp_since_v1'].forEach(function(k){ try{ metadata[k]=localStorage.getItem(k); }catch(e){} });
+  var db=await chatDbOpen();
+  try{ await new Promise(function(res,rej){
+    var tx=db.transaction(['c','p','k','a'],'readwrite'),backup={metadata:metadata,at:Date.now(),reason:reason,stores:{c:[],p:[],k:[]}},left=3;
+    ['c','p','k'].forEach(function(name){ var q=tx.objectStore(name).openCursor(); q.onsuccess=function(){ var cur=q.result;
+      if(cur){ backup.stores[name].push({key:cur.key,value:cur.value}); cur.continue(); }
+      else if(--left===0){ tx.objectStore('a').put(backup,'moved:'+Date.now()); tx.objectStore('c').clear(); tx.objectStore('p').clear(); } }; });
+    tx.oncomplete=res; tx.onerror=tx.onabort=function(){ rej(tx.error||new Error('前の記録を保管できません')); };
+  }); } finally{ db.close(); }
+}
 async function protectExistingHistory(){
   var raw=localStorage.getItem(PAIR_KEY),old=raw?JSON.parse(raw):null;
+  var ready=(function(){ try{ return privateReady(); }catch(e){ return false; } })();
   if(old&&old.sk&&S.sessKey){
-    var current=b64(await crypto.subtle.exportKey('raw',S.sessKey));
-    if(old.sk!==current||old.peer!==(S.opp&&S.opp.id)||old.topic!==Net.topic){
-      storageWarn('protect','前のペアの鍵と履歴を保護しています。新しい鍵では上書きしません。');
-      throw new Error('前のペアの保護');
+    /* v471: 鍵は 文字ではなく 中身（バイト）で くらべる（古い 版は ふつうの base64、今は URL用 base64 で 保存して いる） */
+    var curRaw=new Uint8Array(await crypto.subtle.exportKey('raw',S.sessKey)), oldRaw=null;
+    try{ oldRaw=unb64(old.sk); }catch(e){ oldRaw=null; }
+    var sameKey=!!(oldRaw&&oldRaw.length===curRaw.length&&Array.prototype.every.call(curRaw,function(v,i){ return v===oldRaw[i]; }));
+    if(!sameKey||old.peer!==(S.opp&&S.opp.id)||old.topic!==Net.topic){
+      if(!ready||Net.sessionOnly){   /* 古い 形の 部屋（保存した ペアから 再開中）では けっして 移さない */
+        storageWarn('protect','前のペアの鍵と履歴を保護しています。新しい鍵では上書きしません。');
+        throw new Error('前のペアの保護');
+      }
+      await archiveStores('new-pair');   /* 新しい 部屋が できた → 前の ペアの 記録を 保管庫へ */
+      try{ localStorage.removeItem(PAIR_KEY); }catch(e){}
+      storageResolved('protect');
+      return;
     }
   }
   // A missing metadata field is not evidence that shared history may be overwritten.
@@ -6616,7 +6640,11 @@ async function protectExistingHistory(){
   if(record&&record.ct){
     if(!S.sessKey)throw new Error('履歴の鍵なし');
     try{await crypto.subtle.decrypt({name:'AES-GCM',iv:record.iv},S.sessKey,record.ct);}
-    catch(e){storageWarn('protect','保存済みの履歴を今の鍵で読めません。履歴と写真は消さずに残しています。');throw e;}
+    catch(e){
+      if(!ready||!S.paired){ storageWarn('protect','保存済みの履歴を今の鍵で読めません。履歴と写真は消さずに残しています。');throw e; }
+      await archiveStores('unreadable');   /* 今の 鍵で 読めない 記録（前の 部屋の もの）を 保管庫へ */
+      storageResolved('protect');
+    }
   }
 }
 async function archiveLegacyPair(){
