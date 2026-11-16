@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v469</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v470</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v469</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v470</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -6516,7 +6516,7 @@ function tapSecret(){
     tapN=0;
     /* v117: つながりが あれば トーク画面へ。なければ ルーム画面へ */
     if(S.linked&&Net.topic){ show('play'); setTab('chat'); renderChat(true); updateTalkbackBadges(); return; }
-    if(pairHasKeys()){ resumeConnect(false).then(function(ok){ if(!ok){ show('secret'); renderMush(); } }); return; }
+    if(pairHasKeys()){ resumeConnect(true).then(function(ok){ if(!ok){ show('secret'); renderMush(); return; } try{ show('play'); setTab('chat'); renderChat(true); updateTalkbackBadges(); }catch(e){} }); return; }   /* v470: つなぎなおしたら そのまま トークへ（トップに もどって すすめなく 見えていた） */
     show('secret'); renderMush();
   }
 }
@@ -6906,7 +6906,8 @@ async function chatSaveSnapshot(){
 }
 function persistChat(){
   if(chatSaveT) return;
-  chatSaveT=setTimeout(function(){ chatSaveT=null; chatSaveNow().catch(function(e){ storageWarn('chat','本文を保存できません。保存をやり直してください。'); }); },1200);
+  /* v470: つながる 前（鍵の じゅんび前）は 保存できないのが ふつう。失敗の お知らせは 出さない */
+  chatSaveT=setTimeout(function(){ chatSaveT=null; if(!privateScope()||!S.chatLoaded) return; chatSaveNow().catch(function(e){ storageWarn('chat','本文を保存できません。保存をやり直してください。'); }); },1200);
 }
 async function chatRestore(sk){
   await deletionLoad(); await reactionLoad();
@@ -12158,7 +12159,7 @@ document.addEventListener('visibilitychange',function(){ if(!document.hidden){ t
    じぶんの サーバー（つうちサーバー）の /news から だけ とる。スマホは ニュースの サイトに 直接 つながらない。
    アプリを ひらく たび・もどる たびに あたらしく する（サーバー側で 5分 おぼえる）。 */
 var News={at:0,busy:false,
-  base:function(){ var u=psrvRaw(); return (u&&psrvOk(u))?u.replace(/\/+$/,''):''; },
+  base:function(){ var u=psrvRaw(); return (u&&psrvOk(u))?u.replace(/\/+$/,''):'https://zatsugaku-push.pprnt908.workers.dev'; },   /* v470: 設定が なくても 自分の 中継所から とる */
   lobbyOn:function(){ var l=document.getElementById('s-lobby'); return !!(l&&l.classList.contains('on')); },
   load:async function(force){
     var box=document.getElementById('zg-news'); if(!box) return;
