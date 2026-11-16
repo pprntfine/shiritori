@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v475</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v476</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v475</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v476</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -7913,6 +7913,7 @@ function metaText(m,mine,at,groupEnd){
   /* v292: 「未読」は あいてが うけとった 証拠（受領証）が ある ときだけ。中継所に 着いた だけ では 出さない */
   if(m.peerAck) return 'とどいた・未読 '+tm;
   if(m.acked) return 'おくった（とどいたか わからない）'+tm;
+  if(m.sent) return 'おくった・あいて まち '+tm;   /* v476: 送り出せた。あいてが アプリを ひらくと「とどいた」に かわる */
   return '送信中…'+tm;   /* v292: 中継所の 返事だけでは 「とどいた」と 言わない */
 }
 function scrollChatBottom(){
@@ -10884,13 +10885,14 @@ function outSave(){
   var a=(S.outbox||[]).map(function(x){return {text:x.text,at:x.at,mid:x.mid};});
   S.__outCache=a;
   outSavePending=outSavePending.catch(function(){}).then(async function(){
-    if(revision!==outSaveRevision)return false;
+    if(revision!==outSaveRevision)return true;   /* v476: あとの 保存が 引きつぐ（送信を 止めない） */
     if(!privateCurrent(scope))return false;
     await protectExistingHistory();
     if(!a.length){localStorage.removeItem(OUT_KEY);S.__outCache=null;return true;}
     var iv=crypto.getRandomValues(new Uint8Array(12));
     var ct=await crypto.subtle.encrypt({name:'AES-GCM',iv:iv},scope.key,new TextEncoder().encode(JSON.stringify(a)));
-    if(revision!==outSaveRevision||!privateCurrent(scope))return false;
+    if(revision!==outSaveRevision)return true;
+    if(!privateCurrent(scope))return false;
     var all=new Uint8Array(12+ct.byteLength);all.set(iv);all.set(new Uint8Array(ct),12);
     localStorage.setItem(OUT_KEY,b64(all));return true;
   }).catch(function(e){storageWarn('outbox','送信待ちを保存できません。本文は消していません。保存をやり直してください。');return false;});
@@ -10956,7 +10958,10 @@ async function flushOutbox(){
   /* v296: まえの 送信の 返事を 待たずに つぎも 送る（待つと 1通が おそい とき 全部 つまる）。
      いま 送っている 最中（S.inflight）の ものだけ はずして、のこりを まとめて 出す */
   S.inflight=S.inflight||[];
-  var pool=S.outbox.filter(function(it){ return S.inflight.indexOf(it)<0&&Date.now()-(it.lastTry||0)>=retryGap(it.tries||0); });
+  /* v476: 返事が もどらない まま 40秒 たった ものは「送り中」を といて 送りなおす */
+  S.inflight=S.inflight.filter(function(it){ return Date.now()-(it.lastTry||0)<40000; });
+  var __gapCap=relayAnyBase()?20000:600000;
+  var pool=S.outbox.filter(function(it){ return S.inflight.indexOf(it)<0&&Date.now()-(it.lastTry||0)>=Math.min(__gapCap,retryGap(it.tries||0)); });
   if(!pool.length) return;
   /* 1通の 封筒に 入る ぶんだけ まとめる（入りきらないと 送れなかった） */
   var items=[], bytes=0;
@@ -10972,6 +10977,7 @@ async function flushOutbox(){
   S.inflight=S.inflight.concat(items);
   var same=S.flushEnv&&S.flushEnv.items.length===items.length&&items.every(function(x,i){ return x===S.flushEnv.items[i]; });
   var onDoneF=function(ok){
+    try{ window.__sendDiag={at:Date.now(),ok:!!ok,via:Net.lastVia||'',st:Net.lastPostStatus||0,n:items.length}; }catch(e){}
     /* v296: scopeが かわっても 印は かならず 消す（のこすと 送信が 二度と 出なく なる） */
     S.inflight=(S.inflight||[]).filter(function(x){ return items.indexOf(x)<0; });
     S.flushing=false;
@@ -12150,10 +12156,25 @@ var Relay={ws:null,topic:'',base:'',ts:0,seen:null,ids:[],retry:0,timer:null,pin
     var self=this;
     if(this.timer||!this.topic) return;
     var d=Math.min(30000,1000*Math.pow(2,this.retry++));
-    if(this.retry>=4) this.badUntil=Date.now()+60000;   /* つながらない あいだは ntfy.sh で おくる */
+    /* v476: うけとり線（WebSocket）が きれても、送り（POST）は 中継所を つかい つづける（iPhone は 裏で よく きれる） */
     this.timer=setTimeout(function(){ self.timer=null; if(self.topic) self.open(); },d);
   },
   wake:function(){ if(!this.topic) return; if(!this.ws||this.ws.readyState>1||Date.now()-(this.lastRx||0)>75000){ if(this.ws){ try{ this.ws.onclose=null; this.ws.close(); }catch(e){} this.ws=null; } if(this.timer){ clearTimeout(this.timer); this.timer=null; } this.open(); } },
+  /* v476: うけとり線が きれて いる あいだは 5秒ごとに とりに いく（あいての「とどいた」も ここで 受ける。送信中… の ままに しない） */
+  pollBusy:false,
+  poll:async function(){
+    if(!this.topic||this.pollBusy) return;
+    var self=this, ep=this.epoch, topic=this.topic;
+    this.pollBusy=true;
+    try{
+      var r=await fetch(this.base+'/r/'+topic+'/json?poll=1&since='+Math.max(0,this.ts),{cache:'no-store',credentials:'omit',signal:(typeof AbortSignal!=='undefined'&&AbortSignal.timeout)?AbortSignal.timeout(8000):undefined});
+      if(!r.ok) return;
+      var t=await r.text();
+      if(ep!==this.epoch||this.topic!==topic) return;
+      t.split('\n').forEach(function(line){ if(!line) return; var d; try{ d=JSON.parse(line); }catch(e){ return; } self.handle(d); });
+    }catch(e){}
+    finally{ this.pollBusy=false; }
+  },
   close:function(){
     this.epoch++; this.topic=''; this.up=false;
     if(this.timer){ clearTimeout(this.timer); this.timer=null; }
@@ -12189,7 +12210,8 @@ var Relay={ws:null,topic:'',base:'',ts:0,seen:null,ids:[],retry:0,timer:null,pin
     return rx+'／'+tx;
   }
 };
-document.addEventListener('visibilitychange',function(){ if(!document.hidden){ try{ Relay.wake(); }catch(e){} try{ if(psrvRaw()&&!psrvGet()) relayBoot(); }catch(e){} } });
+setInterval(function(){ try{ if(Relay.topic&&(!Relay.up||!Relay.ws||Relay.ws.readyState!==1||Date.now()-(Relay.lastRx||0)>45000)) Relay.poll(); }catch(e){} },5000);
+document.addEventListener('visibilitychange',function(){ if(!document.hidden){ try{ Relay.wake(); Relay.poll(); }catch(e){} try{ if(psrvRaw()&&!psrvGet()) relayBoot(); }catch(e){} } });
 /* v473: 中継所の アドレスが ない スマホにも 自分の 中継所を 入れる。通知の 許可が なくても（iPhone の Safari など）使えるか たしかめて、中継所で 送受信する。
    これまでは アドレスが 入って いて、しかも 通知を 許可した スマホ だけが 中継所を つかえた（相手の iPhone は ntfy.sh の 250通 制限の まま だった） */
 var DEFAULT_PSRV='https://zatsugaku-push.pprnt908.workers.dev';
@@ -12835,6 +12857,7 @@ function recvProf(m){
       say('⑨ しゃしん送信の さいごの 応答: '+(Net.lastFileStatus?('HTTP '+Net.lastFileStatus+'（'+new Date(Net.lastFileAt).toLocaleTimeString('ja-JP')+'）'):'まだ なし'));
     try{ say('しゃしんの さいご: '+photoDiagText()); }catch(e){}
       try{ say('⑮ じぶんの 中継所: '+Relay.status()); }catch(e){}
+      try{ var __sd=window.__sendDiag||null; say('⑯ 送信待ち: '+((S.outbox||[]).length)+'件（送り中 '+((S.inflight||[]).length)+'）／さいごの 送信: '+(__sd?(new Date(__sd.at).toLocaleTimeString('ja-JP')+' '+(__sd.ok?'できた':'だめ')+'・'+(__sd.via||'?')+(__sd.st?(' '+__sd.st):'')):'まだ なし')); }catch(e){}
       say('⑩ つながり: '+(Net.topic&&Net.key?'あり':'なし')+'／まちの のこり: '+((Net.coolUntil&&Net.coolUntil>Date.now())?Math.ceil((Net.coolUntil-Date.now())/1000)+'秒':'なし'));
       say('⑫ けした 控え（この 端末）: '+(function(){ try{ var t=tombAll(), sc=tombScope(), m=t[sc]||{}; return Object.keys(m).length+'件'; }catch(e){ return '?'; } })()+'／入力の 保留: '+(chatComposing?'止まって いる':'なし')+'／画面の 残り: '+(function(){ try{ var b=document.getElementById('chat-log'); var k=0; b.querySelectorAll('.msg').forEach(function(r){ if(tombRowGone(r)) k++; }); return k+'件'; }catch(e){ return '?'; } })());
       say('⑬ あいての 画面から 消す 合図: '+(function(){ try{ return purgePending().length+'件 まだ おくって いない'; }catch(e){ return '?'; } })()+'／この 画面で まだ けせて いない 合図: '+(function(){ try{ return purgeInAll().length+'件'; }catch(e){ return '?'; } })()+'／あいてから とどいた 合図: '+(function(){ try{ return (window.__purgeIn||0)+'件'+(window.__purgeAt?('（'+new Date(window.__purgeAt).toLocaleTimeString('ja-JP')+'）'):''); }catch(e){ return '?'; } })());
