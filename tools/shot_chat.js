@@ -1,0 +1,18 @@
+const {chromium}=require('playwright');
+const DIR=process.argv[2];const SK=Buffer.alloc(32,9).toString('base64'),TOPIC='gskr3s-'+'c'.repeat(24);
+(async()=>{const b=await chromium.launch();const ctx=await b.newContext({viewport:{width:390,height:844},deviceScaleFactor:2});
+ await ctx.addInitScript(({SK,TOPIC})=>{ localStorage.setItem('mtp_id_v1','aaaaaaaa11'); localStorage.setItem('mtp_pair_v1',JSON.stringify({sid:'p',h:1,peer:'bbbbbbbb22',peerName:'あいて',topic:TOPIC,rk:SK,sk:SK,at:Date.now(),exp:Date.now()+9e9})); },{SK,TOPIC});
+ await ctx.route('**/*',async r=>{const u=r.request().url(); if(u.startsWith('https://zg.test/'))return r.fulfill({path:DIR+'/'+(u.split('/').pop().split('?')[0]||'index.html')}); return r.abort();});
+ const pg=await ctx.newPage(); const errs=[]; pg.on('pageerror',e=>errs.push(e.message)); await pg.goto('https://zg.test/index.html'); await pg.waitForTimeout(3500);
+ await pg.evaluate(()=>{ const w=document.getElementById('storage-warning'); if(w) w.hidden=true; __t.show('play'); __t.setTab('chat'); __t.S.sealed=true; __t.S.paired=true; __t.S.opp={id:'bbbbbbbb22',name:'相手'}; __t.S.keyMark='H2J3';
+   const now=Date.now();
+   __t.S.chat.push({uid:'u1',mid:'m1',from:'bbbbbbbb22',text:'おはよう！',at:now-600000,sent:true,n:1});
+   __t.S.chat.push({uid:'u2',mid:'m2',from:'aaaaaaaa11',text:'おはよう〜今日は雨やね',at:now-500000,sent:true,n:2,read:true,rad:now-60000});
+   __t.S.chat.push({uid:'u3',mid:'m3',from:'aaaaaaaa11',text:'夜ごはん何にする？',at:now-60000,sent:true,n:3,peerAck:true});
+   __t.S.chat.push({uid:'u4',mid:'m4',from:'aaaaaaaa11',text:'帰りに買い物して帰るね',at:now-10000,sent:true,n:4});
+   __t.renderChat(true); });
+ await pg.waitForTimeout(6000);
+ await pg.screenshot({path:'k_chat.png'});
+ await pg.evaluate(()=>{ __t.show('secret'); }); await pg.waitForTimeout(500); await pg.screenshot({path:'k_secret.png'});
+ console.log('errs',errs.filter(e=>!/ServiceWorker/.test(e)));
+ await b.close();})();

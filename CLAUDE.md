@@ -10,7 +10,7 @@
 - `index.html`  本体。1ファイル（約8.6MB）。大半は埋め込み画像(base64)。コードは約1.5MB・約1.3万行。
 - `sw.js`  通知用 Service Worker。本文は復号しない（暗号文だけIndexedDB `zg-sw-inbox/pin` に保存）。互換契約なので形式を変えない。
 - `manifest.webmanifest`, `icon-192.png`, `icon-512.png`  PWA用（v461 から とー君のアイコン）。
-- `tools/` 確認用の道具（下記）。※このリポジトリにはまだ入っていない（持ち主の手元のみ）。
+- `tools/` 確認用の道具（`tools/README.md`）。構文チェック・テスト用ビルド・2台の送受信テスト（wrangler dev の中継所つき）。公開はしない。
 - `worker/` 自分専用サーバー（Cloudflare Worker＋Durable Objects）。通知(/key /sub /push)と中継所(/r/)。`zatsugaku-push.js`、`wrangler.toml`、持ち主向けの手順 `README.md`。
 
 ## 絶対のルール
@@ -188,10 +188,11 @@
 
 ## 確認のしかた
 ```
-python3 tools/make_test.py index.html test.html
-node tools/shot_chat.js test.html shot 390 800     # 実画面に近い画像が出る（playwright必要）
 node tools/check_syntax.js index.html              # 全scriptの構文チェック（scripts N errors 0 になること）
-node --check sw.js
+node --check sw.js && wc -c sw.js                  # sw.js が空でないか
+python3 tools/make_test.py index.html /tmp/zg      # テスト用（内部を window.__t に出す）を作る
+node tools/shot_chat.js /tmp/zg                    # トーク画面の画像
+bash tools/run_e2e.sh tools/e2e/relay_basic.js     # 2台の送受信テスト（中継所を手元で立てる）。ほかのテストは tools/README.md
 ```
 通信（実際の送受信・ライブ・電話）は、ここでは試せない。**2台のスマホで確認してもらう。**
 
