@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v479</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v480</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v479</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v480</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -7803,7 +7803,7 @@ function renderChatFull(forceBottom, __tailFrom){
     if(m.photo){
       var prow=document.createElement('div');
       prow.dataset.idx=String(i);
-      prow.className='msg '+(mine?'out':'in')+(cont?' cont':'');
+      prow.className='msg '+(mine?'out':'in')+(cont?' cont':'')+((knownMessages&&knownMessages.has(String(m.from)+':'+String(m.pid||m.uid||m.n||m.at)))?' zg-still':'');
       var pbub=document.createElement('div'); pbub.className='bubble photo-b';
       var pim=document.createElement('img'); pim.className='photo-msg'; if(m.data) pim.src=m.data; pim.alt=(m.data?'しゃしん':'しゃしんを よみこめません'); pim.setAttribute('decoding','async'); pim.__pid=m.pid||'';   /* v233: しゃしんの prepare は 裏で（画面の ふりおろしを やわらげる） */
       pim.addEventListener('load',function(){
@@ -7844,7 +7844,7 @@ function renderChatFull(forceBottom, __tailFrom){
     }
     var row=document.createElement('div');
     row.dataset.idx=String(i);
-    row.className='msg '+(mine?'out':'in')+(cont?' cont':'');
+    row.className='msg '+(mine?'out':'in')+(cont?' cont':'')+((knownMessages&&knownMessages.has(String(m.from)+':'+String(m.pid||m.uid||m.n||m.at)))?' zg-still':'');
     var bub=document.createElement('div');
     bub.className='bubble';
     if(m.file) bub.appendChild(attachmentLink(m,{ticket:renderTicket,userTicket:userTicket,stick:stick,top:previousTop})); else if(DOG_STK[m.text]){ var dgi=document.createElement('img'); dgi.className='dog-stk'; dgi.src=DOG_STK[m.text]; dgi.alt=''; dgi.setAttribute('aria-hidden','true'); bub.appendChild(dgi); bub.classList.add('dog-b'); } else bub.textContent=m.text;
@@ -8029,7 +8029,8 @@ function sweepChat(){
   if(gone){ chatSweepSig=''; renderChat(true); return; }
   if(S.tab==='chat'&&document.visibilityState==='visible'){
     var sig=chatSweepSigOf();
-    if(sig!==chatSweepSig) renderChat(false);   /* v453: おぼえるのは 描けた ときだけ（入力中で 保留された ときは つぎの 見まわりで もう一度） */
+    if(sig!==chatSweepSig) renderChat(false);
+    else vanishMetaTick();   /* v453: おぼえるのは 描けた ときだけ（入力中で 保留された ときは つぎの 見まわりで もう一度） */
   }
 }
 var chatSweepSig='';
@@ -8040,15 +8041,34 @@ function chatSweepSigOf(){
       var m=S.chat[i]; if(!m) continue;
       if(m.sys){ out.push('s'+(m.text||'')); continue; }
       var mine=(m.from===S.me.id);
-      out.push([m.uid,m.mid||'',m.n||0,m.at||0,m.sent?1:0,m.acked?1:0,m.peerAck?1:0,m.read?1:0,m.failed?1:0,m.waiting?1:0,m.__chunked?1:0,
+      out.push([m.uid,m.mid||'',m.n?1:0,m.at||0,m.sent?1:0,m.acked?1:0,m.peerAck?1:0,m.read?1:0,m.failed?1:0,m.waiting?1:0,m.__chunked?1:0,
         m.photo?1:0,m.file?1:0,m.lost?1:0,m.fileName||'',(m.text||'').length,(m.data||'').length,m.pid||'',
-        (m.rad&&m.read)?Math.ceil((m.rad+VANISH_MS-now)/60000):0,
+        (m.rad&&m.read)?1:0,   /* v480: 「あと N分」の 数字は ここに 入れない（毎分 作りなおして ちかっと していた）。vanishMetaTick で 文字だけ かえる */
         (mine&&!m.sent&&!m.failed&&typeof m.at==='number'&&now-m.at>75000)?1:0].join(','));
     }
     out.push(vanishOn()?1:0, new Date(now).toDateString());
     try{ out.push(peerName(), meName()); }catch(e){}
     return out.join('|');
   }catch(e){ return String(Math.random()); }
+}
+/* v480: 「既読・あと N分で きえる」の 数字だけを その場で かきかえる（ふきだしは さわらない） */
+function vanishMetaTick(){
+  try{
+    var box=$('#chat-log'); if(!box) return;
+    for(var i=0;i<S.chat.length;i++){
+      var m=S.chat[i];
+      if(!m||m.sys||m.from!==S.me.id||!m.read||!m.rad) continue;
+      var row=null;
+      if(m.uid) row=box.querySelector('.msg[data-uid="'+String(m.uid).replace(/[^\w-]/g,'')+'"]');
+      if(!row&&m.n) row=box.querySelector('.msg[data-n="'+String(m.n).replace(/[^\w-]/g,'')+'"]');
+      if(!row) continue;
+      var meta=row.querySelector('.meta'); if(!meta) continue;
+      var nx=S.chat[i+1], at=(typeof m.at==='number'?m.at:Date.now());
+      var gEnd=!(nx&&!nx.sys&&nx.from===m.from&&sameDay(nx.at||at,at)&&(((nx.at||at)-at)<LINE_GROUP_MS));
+      var t=metaText(m,true,at,gEnd);
+      if(meta.textContent!==t) meta.textContent=t;
+    }
+  }catch(e){}
 }
 setInterval(sweepChat,5000);
 try{ document.addEventListener('visibilitychange',function(){ if(document.visibilityState==='visible') setTimeout(sweepChat,300); }); }catch(e){}
@@ -11013,6 +11033,8 @@ async function flushOutbox(){
   };
   var envSent=same?Net.sendEnv(S.flushEnv.env,onDoneF):Net.send({t:'chats',items:payload},onDoneF);
   if(envSent&&envSent.n){ if(!same) S.flushEnv={items:items.slice(),env:envSent}; msgs.forEach(function(m){ m.n=envSent.n; m.env=envSent; }); }
+  /* v480: 送りなおしで 番号(n)が かわっても 画面を 作りなおさない（行の 目印だけ かえる）。作りなおしで 自分の メッセージが ちかっと 消えて いた */
+  try{ if(envSent&&envSent.n) msgs.forEach(function(m){ if(!m||!m.uid) return; var r=document.querySelector('#chat-log .msg[data-uid="'+String(m.uid).replace(/[^\w-]/g,'')+'"]'); if(r) r.dataset.n=String(m.n); }); }catch(e){}
   if(!envSent){ S.flushing=false; S.inflight=S.inflight.filter(function(x){ return items.indexOf(x)<0; }); }
 }
 function submitChat(){
@@ -13968,6 +13990,9 @@ body .line-composer .tools button#btn-settings::before{content:'';display:block;
 
 /* v479: 古い クイズ画面は 出さない */
 body #s-play #pane-game,body #s-play #pane-game.on{display:none!important}
+
+/* v480: 作りなおしの とき、もう 出て いた メッセージは 出てくる 動きを しない（ちかっと 消えない） */
+body #chat-log .msg.zg-still,body #chat-log .msg.zg-still:not(.cont){animation:none!important;opacity:1!important}
 </style>
 </body>
 </html>
