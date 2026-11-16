@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとしてインストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">新しい版に更新する</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンでアプリとして入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v488</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v489</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">相手を待っています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v488</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v489</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">名前</b> さんが入室を求めています</p>
         <p class="jr-fp">合図 <b id="jr-fp">----</b> ／ 相手の画面と同じかくににて確認</p>
@@ -6910,7 +6910,9 @@ function chatSaveNow(){
     if(!privateCurrent(scope)||!S.chatLoaded) throw new Error('本文の保存準備前');
     return chatSaveSnapshot();
   });
-  var watched=job.catch(function(e){storageWarn('chat','本文を保存できません。アプリを閉じずに、保存をやり直してください。');throw e;});
+  /* v489: 起動直後（トークの 記録を 読みこむ 前）に メッセージが 届くと「準備前」で 失敗し、警告が 出て いた。
+     これは 故障では ない（届いた メッセージは あとで 取りなおして 保存する）ので 出さない。保存が うまく いったら 警告を 自動で 消す */
+  var watched=job.then(function(v){ try{ if(storageWarnings.chat) storageResolved('chat'); }catch(e2){} return v; },function(e){ chatSaveFailed(e); throw e; });
   chatSaveQueue=watched; return watched;
 }
 async function chatSaveSnapshot(){
@@ -6942,10 +6944,29 @@ async function chatSaveSnapshot(){
     try{ localStorage.removeItem(UNREAD_KEY); }catch(e){}   /* 古い あずかり箱は もう いらない */
   }finally{ chatSaving=false; }
 }
+/* v489: 保存の 失敗を すぐ 警告に しない。
+   ・起動直後や ペアの 切りかえ中（準備前・鍵なし・ペアが変わった）は 故障では ないので 出さない
+   ・それ以外（画面を 裏に した 瞬間に 保存が 中断された など）は 2.5秒後に 1回 自動で やりなおし、それも だめな ときだけ 出す */
+var chatSaveRetryT=null;
+function chatSaveFailed(e){
+  var msg=String((e&&e.message)||'');
+  if(/準備前|鍵がありません|ペアが変わりました/.test(msg)) return;
+  if(chatSaveRetryT) return;
+  chatSaveRetryT=setTimeout(function(){
+    chatSaveRetryT=null;
+    if(!privateScope()||!S.chatLoaded) return;
+    var scope=privateScope();
+    chatSaveQueue=chatSaveQueue.catch(function(){}).then(function(){ if(!privateCurrent(scope)||!S.chatLoaded) throw new Error('本文の保存準備前'); return chatSaveSnapshot(); })
+      .then(function(){ try{ if(storageWarnings.chat) storageResolved('chat'); }catch(e3){} },function(e2){
+        var m2=String((e2&&e2.message)||'');
+        if(!/準備前|鍵がありません|ペアが変わりました/.test(m2)) storageWarn('chat','本文を保存できません。アプリを閉じずに、保存をやり直してください。');
+      });
+  },2500);
+}
 function persistChat(){
   if(chatSaveT) return;
   /* v470: つながる 前（鍵の じゅんび前）は 保存できないのが ふつう。失敗の お知らせは 出さない */
-  chatSaveT=setTimeout(function(){ chatSaveT=null; if(!privateScope()||!S.chatLoaded) return; chatSaveNow().catch(function(e){ storageWarn('chat','本文を保存できません。保存をやり直してください。'); }); },1200);
+  chatSaveT=setTimeout(function(){ chatSaveT=null; if(!privateScope()||!S.chatLoaded) return; chatSaveNow().catch(function(e){}); },1200);   /* v489: 警告は chatSaveFailed が 出す */
 }
 async function chatRestore(sk){
   await deletionLoad(); await reactionLoad();
