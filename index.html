@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v458</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v459</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v458</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v459</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -9995,6 +9995,33 @@ var callOutMode='earpiece', callOutState='';
 var liveUI=false;
 try{ if(localStorage.getItem('zg_call_out')==='speaker') callOutMode='speaker'; }catch(e){}
 function callOutLabel(m){ return m==='speaker'?'スピーカー':'受話口'; }
+/* v459: ライブ・電話の ボタンを 絵つきに（マイク・カメラ切替・画面を隠す・音の出し先） */
+var CALL_ICO={
+  mic:'<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/>',
+  micOff:'<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/><path d="M3.5 3.5l17 17" stroke-width="2.4"/>',
+  flip:'<path d="M3.5 8.5h3l2-3h7l2 3h3V19h-17z"/><path d="M9 12.5a3.2 3.2 0 0 1 5.6-1.3M15 13.8a3.2 3.2 0 0 1-5.6 1.3"/><path d="M14.8 9.6v1.8H13M9.2 16.6v-1.8H11"/>',
+  eye:'<path d="M2 12s3.8-6.5 10-6.5S22 12 22 12s-3.8 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+  eyeOff:'<path d="M2 12s3.8-6.5 10-6.5S22 12 22 12s-3.8 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="3"/><path d="M3.5 3.5l17 17" stroke-width="2.4"/>',
+  spk:'<path d="M4 9.5h3.5L13 5v14l-5.5-4.5H4z"/><path d="M16.5 9a4 4 0 0 1 0 6M19 6.5a7.5 7.5 0 0 1 0 11"/>',
+  ear:'<path d="M6.5 3.5h3l1.5 4.5-2.2 1.6a11 11 0 0 0 5.6 5.6l1.6-2.2 4.5 1.5v3a2 2 0 0 1-2 2A15.5 15.5 0 0 1 4.5 5.5a2 2 0 0 1 2-2z"/>'
+};
+function callToolSet(id,ico,label,state){
+  var b=document.getElementById(id); if(!b) return;
+  b.innerHTML='<span class="ct-ico"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+CALL_ICO[ico]+'</svg></span><span class="ct-lab">'+label+'</span>';
+  b.setAttribute('data-state',state||'');
+  b.setAttribute('aria-label',label.replace(/<br>/g,''));
+}
+function callToolPaint(){
+  try{
+    var src=callStream||micStream, at=src&&src.getAudioTracks?src.getAudioTracks()[0]:null, micOnNow=!at||at.enabled;
+    callToolSet('call-mic',micOnNow?'mic':'micOff',micOnNow?'マイク<br>オン':'マイク<br>オフ',micOnNow?'on':'off');
+    callToolSet('call-flip','flip','カメラ<br>切替','');
+    callToolSet('call-hide',callHide?'eyeOff':'eye',callHide?'映像を<br>出す':'画面を<br>隠す',callHide?'off':'');
+    var sp=(callOutMode==='speaker');
+    callToolSet('call-spk',sp?'spk':'ear',sp?'スピーカー':'受話口',sp?'on':'');
+    var sb=document.getElementById('call-spk'); if(sb){ sb.classList.toggle('off',callOutState!=='ok'); sb.title=(callOutState==='ok')?('いまの 音: '+callOutLabel(callOutMode)):'この 端末では アプリから 出し先を えらべません'; }
+  }catch(e){}
+}
 /* v309: よびだし中の のこり秒を 出す */
 var callRingT=null, callRingEnd=0;
 function stopRingCount(){ if(callRingT){ clearTimeout(callRingT); callRingT=null; } }
@@ -10012,6 +10039,9 @@ function startRingCount(sec){
 function callPanel(kind,big,sub){
   var c=$('#call-center'), b=$('#call-big'), s=$('#call-sub'), t=$('#call-elapsed');
   if(!c||!b) return;
+  /* v459: 電話（声だけ）でも 電話の 画面を ひらく（これまで ライブの ときだけ ひらいて いた） */
+  var cbx=$('#call-box'); if(cbx&&cbx.hidden&&!callVideo&&(rtcOn||callOn||micStream)){ openCallUI(); }
+  if(kind==='on'&&!c.classList.contains('on')){ callT0=Date.now(); }
   c.hidden=false; callModeSet();
   var pn=document.getElementById('call-peer');
   if(pn) pn.textContent=(kind==='ring'||kind==='on')?peerName():'';
@@ -10069,8 +10099,7 @@ function callAudioEls(){
 }
 function paintCallOut(){
   var b=$('#call-spk'); if(!b) return;
-  b.textContent=callOutLabel(callOutMode);
-  b.classList.toggle('off',callOutState!=='ok');
+  callToolPaint();
   b.title=(callOutState==='ok')?('いまの 音: '+callOutLabel(callOutMode))
     :'この 端末では アプリから 出し先を えらべません';
 }
@@ -10100,7 +10129,7 @@ function openCallUI(){
   callModeSet();
   var lv=$('#call-local');
   if(lv&&callStream){ lv.srcObject=callStream; try{ lv.play(); }catch(e){} }
-  var hs=$('#call-hide'); if(hs) hs.textContent='画面を隠す';
+  callToolPaint();
   var st=$('#call-state'); if(st) st.textContent=callVideo?'ライブ中':'つないでいます…';
   if(callVideo){ callPanelHide(); }
   else callPanel('ring','よびだして います…','すこし おまちください。');
@@ -10444,7 +10473,7 @@ function rtcStart(isCaller){
       if(cb) cb.textContent='通話中';
       if(stt) stt.textContent='つながりました';
       if(callVideo) callPanelHide();
-      else callPanel('on','つながりました','通話中です。おわるときは 赤い「終了」を おして ください。');
+      else callPanel('on','通話中','終わるときは、赤い「電話を切る」を押してください。');
       paintCallOut();
       if(fbT){ clearTimeout(fbT); fbT=0; }
       tuneSenders();
@@ -10467,7 +10496,7 @@ function rtcStart(isCaller){
       if(cb) cb.textContent='つなぐ中…';
       if(stt) stt.textContent='つなぎなおしています…';
       if(callVideo) callPanelHide();
-      else callPanel('ring','つなぎ直し中…','でんわが きれました。もどらない ときは 赤い「終了」で かけ直して ください。');
+      else callPanel('ring','つなぎ直し中…','電話が途切れました。戻らないときは、「電話を切る」を押してかけ直してください。');
       if(!fbT) fbT=setTimeout(function(){
         fbT=0;
         if(!rtcOn) return;
@@ -10562,6 +10591,7 @@ async function rtcHandleSdp(m,sdp){
         if(gm!==true){ note('マイクを つかえません（'+((gm&&gm.name)||'')+'）。','#note2'); try{ Net.send({t:'call-no',r:'mic'}); }catch(e){} return; }
       }
       rtcStart(false);
+      if(m.vid!==1){ try{ callPanel('wait','つないでいます…','少しお待ちください。'); }catch(e){} }   /* v459: でた あと すぐ 電話の 画面を 出す */
       var answerPC=pc, answerTicket=callMediaTicket;
       function answerCurrent(){ if(answerTicket!==callMediaTicket||pc!==answerPC||!privateIncoming(m)) throw new Error('closed'); return answerPC; }
       if(m.vid===1&&mode==='watch'){ try{ pc.addTransceiver('video',{direction:'recvonly'}); pc.addTransceiver('audio',{direction:'recvonly'}); }catch(e){} }
@@ -10631,6 +10661,7 @@ async function rtcRecvSdp(m){
         if(gm!==true){ note('マイクを つかえません（'+((gm&&gm.name)||'')+'）。','#note2'); try{ Net.send({t:'call-no',r:'mic'}); }catch(e){} return; }
       }
       rtcStart(false);
+      if(m.vid!==1){ try{ callPanel('wait','つないでいます…','少しお待ちください。'); }catch(e){} }   /* v459: でた あと すぐ 電話の 画面を 出す */
       var answerPC=pc, answerTicket=callMediaTicket;
       function answerCurrent(){ if(answerTicket!==callMediaTicket||pc!==answerPC||!privateIncoming(m)) throw new Error('closed'); return answerPC; }
       if(m.vid===1&&mode==='watch'){ try{ pc.addTransceiver('video',{direction:'recvonly'}); pc.addTransceiver('audio',{direction:'recvonly'}); }catch(e){} }
@@ -11822,16 +11853,17 @@ async function pushSelfAlert(txt){
 
 $('#call-flip').addEventListener('click',function(){ flipCam(); });
 $('#call-mic').addEventListener('click',function(){
-  if(!callStream) return;
-  var at=callStream.getAudioTracks()[0]; if(!at) return;
+  var src=callStream||micStream;   /* v459: 電話（声だけ）でも マイクを 切りかえる */
+  if(!src) return;
+  var at=src.getAudioTracks()[0]; if(!at) return;
   at.enabled=!at.enabled;
-  this.textContent='マイク:'+(at.enabled?'オン':'オフ');
-  this.classList.toggle('off',!at.enabled);
+  callToolPaint();
+  try{ toast(at.enabled?'マイクを オンに しました':'マイクを オフに しました（相手に 声が とどきません）'); }catch(e){}
 });
 $('#call-hide').addEventListener('click',function(){
   callHide=!callHide;
   var b=$('#call-box'); if(b) b.classList.toggle('hidevid',callHide);
-  this.textContent=callHide?'映像を出す':'画面を隠す';
+  callToolPaint();
 });
 $('#call-end').addEventListener('click',function(){ stopCall(); });
 $('#call-end-big').addEventListener('click',function(){ stopCall(); });
@@ -13583,6 +13615,21 @@ body > .v439-giant .v439-words:has(.v439-caption:empty){display:none}
 body > .v439-giant .v439-caption{color:#29364c;font-size:20px;font-weight:700;line-height:1.5;text-align:center;white-space:pre-wrap;overflow-wrap:anywhere;max-height:30vh}
 body > .v439-giant .v439-label,body > .v439-giant .v439-trail,body > .v439-giant .v439-scroll-note{display:none!important}
 body > .v439-giant .v439-dismiss{border:0;background:rgba(255,255,255,.92);color:#29364c;border-radius:999px;min-height:44px;padding:0 22px;font-size:.9rem;font-weight:800}
+
+/* ---- v459: ライブ・電話の ボタンを 絵つきに・自分の 小窓を 1.4倍 ---- */
+#call-box .ig-tools{gap:14px!important;bottom:76px!important;align-items:flex-start}
+#call-box.mode-call .ig-tools{bottom:calc(40px + env(safe-area-inset-bottom))!important}
+#call-box .ig-tools button{display:flex!important;flex-direction:column!important;align-items:center!important;gap:5px!important;background:none!important;border:0!important;padding:0!important;min-height:0!important;width:64px!important;color:#fff!important;box-shadow:none!important}
+#call-box .ig-tools button .ct-ico{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.16);border:1.5px solid rgba(255,255,255,.28);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);transition:background .15s,transform .1s}
+#call-box .ig-tools button .ct-ico svg{width:27px;height:27px}
+#call-box .ig-tools button .ct-lab{font-size:.68rem!important;font-weight:800;line-height:1.25;text-align:center;white-space:nowrap;text-shadow:0 1px 3px rgba(0,0,0,.6)}
+#call-box .ig-tools button:active .ct-ico{transform:scale(.93)}
+#call-box .ig-tools button[data-state="off"] .ct-ico{background:#E5323B;border-color:#E5323B}
+#call-box .ig-tools button[data-state="on"] .ct-ico{background:rgba(255,255,255,.92);border-color:#fff;color:#1F2433}
+#call-box .ig-tools button#call-mic[data-state="on"] .ct-ico{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.28);color:#fff}
+#call-box .ig-tools button#call-spk.off{opacity:.55}
+#call-box .ig-comments{bottom:150px!important}
+#call-box #call-local{width:34%!important;max-width:146px!important}
 </style>
 </body>
 </html>
