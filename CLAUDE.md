@@ -1,4 +1,4 @@
-# 雑学王（zatsugakuou）引き継ぎメモ  ― 現在 v455
+# 雑学王（zatsugakuou）引き継ぎメモ  ― 現在 v456
 
 ## これは何か
 見た目は「雑学クイズ」アプリ。中身は **2人専用の暗号化チャット**（メッセージ・写真・ライブ映像・電話）。
@@ -60,6 +60,10 @@
   取得先は自分のWorkerの `GET /news` だけ（スマホはニュースサイトへ直接つながない）。開くたび・戻るたび・5分ごとに更新、前回分は localStorage `zg_news`。
   Worker側 `handleNews`: Google ニュースRSS（徳島）、NHK RSS cat1（事件事故）、Google ニュース「株価」/NHK cat5、日経平均・ドル円は Yahoo chart（予備 stooq）。5分キャッシュ（DO 'news'）。
   リンクは https のみ、target=_blank rel=noopener noreferrer。表示は textContent のみ。隠し入口（5回タップ）が動くことを確認。
+- v456 ニュースが遅い（持ち主）。Worker: 1分ごとの Cron（`scheduled` → `refreshNews`）で先に取っておく。`/news` は45秒以内ならそのまま、古くても1時間以内なら
+  古い物を即返して裏で更新（stale-while-revalidate）、`?fresh=1`（↻・開いた時・戻った時）は15秒に1回まで。取得タイムアウト6→4秒、一部のソースが失敗しても前の分で埋める。
+  Cron は API `PUT /workers/scripts/zatsugaku-push/schedules` で設定済み（wrangler.toml の [triggers] も同じ）。アプリ側は90秒ごと＋開いた/戻った/↻で fresh 取得。
+  ※ Cloudflare の API トークンは「cfat_」形式（アカウント所有トークン）。確認は /accounts/{id}/tokens/verify。
   持ち主の希望で「この版は 1ファイル…」の説明（#install-hint）を出さない。ニュース枠を広く、件数は 徳島12・事件事故8・経済6。
 
 ## 構造のメモ（行番号は目安。検索で探すこと）

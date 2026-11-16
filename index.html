@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v455</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v456</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v455</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v456</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -12137,10 +12137,10 @@ var News={at:0,busy:false,
     var b=this.base(); if(!b){ box.hidden=true; return; }
     box.hidden=false;
     if(!this.shown){ this.shown=true; try{ var c=JSON.parse(localStorage.getItem('zg_news')||'null'); if(c&&c.at) this.render(c); else this.msg('ニュースを よみこんで います…'); }catch(e){} }
-    if(this.busy||(!force&&Date.now()-this.at<60000)) return;
+    if(this.busy||(!force&&Date.now()-this.at<20000)) return;
     this.busy=true;
     try{
-      var r=await fetch(b+'/news',{cache:'no-store',credentials:'omit',signal:(typeof AbortSignal!=='undefined'&&AbortSignal.timeout)?AbortSignal.timeout(15000):undefined});
+      var r=await fetch(b+'/news'+(force?'?fresh=1':''),{cache:'no-store',credentials:'omit',signal:(typeof AbortSignal!=='undefined'&&AbortSignal.timeout)?AbortSignal.timeout(15000):undefined});
       var j=await r.json();
       if(!j||!j.ok) throw 0;
       this.at=Date.now(); this.render(j);
@@ -12192,9 +12192,9 @@ var News={at:0,busy:false,
 };
 setTimeout(function(){ try{ News.load(true); }catch(e){} },800);
 document.addEventListener('visibilitychange',function(){ if(!document.hidden&&News.lobbyOn()){ try{ News.load(true); }catch(e){} } });
-setInterval(function(){ try{ if(!document.hidden&&News.lobbyOn()) News.load(false); }catch(e){} },5*60*1000);
+setInterval(function(){ try{ if(!document.hidden&&News.lobbyOn()) News.load(true); }catch(e){} },90*1000);   /* v456: 5分 → 90秒 */
 try{ var __znre=document.getElementById('zn-re'); if(__znre) __znre.addEventListener('click',function(e){ e.stopPropagation(); News.load(true); }); }catch(e){}
-try{ new MutationObserver(function(){ if(News.lobbyOn()&&Date.now()-News.at>60000) News.load(false); }).observe(document.getElementById('s-lobby'),{attributes:true,attributeFilter:['class']}); }catch(e){}
+try{ new MutationObserver(function(){ if(News.lobbyOn()&&Date.now()-News.at>20000) News.load(false); }).observe(document.getElementById('s-lobby'),{attributes:true,attributeFilter:['class']}); }catch(e){}
 window.addEventListener('online',function(){ try{ Relay.wake(); }catch(e){} });
 async function psrvPush(topic,payload){
   var u=psrvGet(); if(!u) return false;

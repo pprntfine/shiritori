@@ -7,7 +7,7 @@
    - POST /push  {topic, msg}        そのトピックの 端末へ Web Push（RFC8291 aes128gcm + RFC8292 VAPID）
 
    ■ 最新ニュース
-   - GET  /news  徳島・事件事故・株価（日経平均・ドル円）。5分ごとに 取りなおす
+   - GET  /news  徳島・事件事故・株価（日経平均・ドル円）。1分ごとに 先に 取っておく（?fresh=1 で 今すぐ）
 
    ■ 中継所（ntfy.sh と 同じ 受け答え。1日250通の せいげんが ない）
    - POST /r/{topic}                     本文（暗号文）を おく
@@ -260,7 +260,9 @@ async function handleRelay(req, env, parts) {
 /* ---------- 最新ニュース（トップ画面用） ----------
    アプリを ひらく たびに よばれる。ニュースの サイトへは この サーバーが 取りに いく
    （スマホは ニュースの サイトに 直接 つながらない）。5分 おぼえて おいて、それより 古ければ 取りなおす。 */
-const NEWS_TTL = 5 * 60 * 1000;
+const NEWS_TTL = 45 * 1000;          // これより 新しければ そのまま かえす
+const NEWS_STALE = 60 * 60 * 1000;   // これより 古く なければ、古い ものを すぐ かえして 裏で 取りなおす
+const NEWS_FORCE_GAP = 15 * 1000;    // 「↻」を れんだ されても 15秒に 1回 まで
 const GN = q => 'https://news.google.com/rss/search?q=' + encodeURIComponent(q) + '&hl=ja&gl=JP&ceid=JP:ja';
 const NEWS_SRC = {
   tokushima: [GN('徳島 when:2d'), GN('徳島')],
@@ -298,7 +300,7 @@ function parseRss(xml) {
   return out;
 }
 async function getText(url) {
-  const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (zatsugaku-news)', Accept: '*/*' }, signal: AbortSignal.timeout(6000), cf: { cacheTtl: 120 } });
+  const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (zatsugaku-news)', Accept: '*/*' }, signal: AbortSignal.timeout(4000), cf: { cacheTtl: 30 } });
   if (!r.ok) throw new Error('http ' + r.status);
   return r.text();
 }
@@ -318,7 +320,7 @@ async function newsGroup(key) {
 async function quote(sym) {
   try {
     const r = await fetch('https://query1.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(sym) + '?interval=1d&range=5d',
-      { headers: { 'User-Agent': 'Mozilla/5.0 (zatsugaku-news)' }, signal: AbortSignal.timeout(6000) });
+      { headers: { 'User-Agent': 'Mozilla/5.0 (zatsugaku-news)' }, signal: AbortSignal.timeout(4000) });
     const j = await r.json();
     const meta = j.chart.result[0].meta;
     const v = meta.regularMarketPrice, p = meta.chartPreviousClose ?? meta.previousClose;
@@ -335,27 +337,53 @@ async function quote(sym) {
   } catch (e) {}
   return null;
 }
-async function buildNews() {
+async function buildNews(prev) {
   const [tokushima, jiken, keizai, nikkei, usdjpy] = await Promise.all([
     newsGroup('tokushima'), newsGroup('jiken'), newsGroup('keizai'), quote('^N225'), quote('JPY=X'),
   ]);
-  return { at: Date.now(), tokushima, jiken, keizai, market: { nikkei, usdjpy } };
+  const pm = (prev && prev.market) || {};
+  // 一部が とれなかった ときは、前の ぶんで うめる（空に しない）
+  return {
+    at: Date.now(),
+    tokushima: tokushima.length ? tokushima : (prev && prev.tokushima) || [],
+    jiken: jiken.length ? jiken : (prev && prev.jiken) || [],
+    keizai: keizai.length ? keizai : (prev && prev.keizai) || [],
+    market: { nikkei: nikkei || pm.nikkei || null, usdjpy: usdjpy || pm.usdjpy || null },
+    got: tokushima.length + jiken.length + keizai.length,
+  };
 }
-async function handleNews(env, ctx) {
-  const now = Date.now();
-  if (newsMem && now - newsMem.at < NEWS_TTL) return json({ ok: true, ...newsMem });
-  const b = box(env, 'news');
-  try { const saved = await b.get('v'); if (saved && now - saved.at < NEWS_TTL) { newsMem = saved; return json({ ok: true, ...saved }); } } catch (e) {}
-  const fresh = await buildNews();
-  const got = fresh.tokushima.length + fresh.jiken.length + fresh.keizai.length;
-  if (got) {
+let newsBusy = null;
+async function refreshNews(env) {
+  if (newsBusy) return newsBusy;   // 同時に 何本も 取りに いかない
+  newsBusy = (async () => {
+    const b = box(env, 'news');
+    let prev = newsMem;
+    if (!prev) { try { prev = await b.get('v'); } catch (e) {} }
+    const fresh = await buildNews(prev);
+    if (!fresh.got) return prev || null;
+    delete fresh.got;
     newsMem = fresh;
-    const p = b.put('v', fresh).catch(() => {});
+    try { await b.put('v', fresh); } catch (e) {}
+    return fresh;
+  })().finally(() => { newsBusy = null; });
+  return newsBusy;
+}
+async function handleNews(req, env, ctx) {
+  const now = Date.now();
+  const force = new URL(req.url).searchParams.get('fresh') === '1';
+  let saved = newsMem;
+  if (!saved) { try { saved = await box(env, 'news').get('v'); if (saved) newsMem = saved; } catch (e) {} }
+  const age = saved ? now - saved.at : Infinity;
+  if (saved && age < (force ? NEWS_FORCE_GAP : NEWS_TTL)) return json({ ok: true, ...saved });
+  if (saved && age < NEWS_STALE && !force) {
+    // 古い ものを すぐ かえして、裏で あたらしく する（待たせない）
+    const p = refreshNews(env);
     if (ctx && ctx.waitUntil) ctx.waitUntil(p);
-    return json({ ok: true, ...fresh });
+    return json({ ok: true, ...saved });
   }
-  // とれなかった ときは 前の ぶんを かえす（古い しるし つき）
-  try { const saved = newsMem || await b.get('v'); if (saved) return json({ ok: true, stale: 1, ...saved }); } catch (e) {}
+  const fresh = await refreshNews(env);
+  if (fresh) return json({ ok: true, ...fresh });
+  if (saved) return json({ ok: true, stale: 1, ...saved });
   return json({ ok: false, err: 'news unavailable' }, 502);
 }
 
@@ -492,6 +520,8 @@ export class ZgRelay {
 }
 
 export default {
+  // 1分ごとに ニュースを 先に 取っておく（アプリが ひらいた とき すぐ だせる）
+  async scheduled(event, env, ctx) { if (env.RELAY) ctx.waitUntil(refreshNews(env)); },
   async fetch(req, env, ctx) {
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
     if (!env.RELAY) return json({ ok: false, err: 'Durable Object RELAY is not bound' }, 500);
@@ -499,7 +529,7 @@ export default {
     try {
       if (path.startsWith('/r/')) return await handleRelay(req, env, path.slice(3).split('/'));
       if (path === '/key' && req.method === 'GET') return json({ key: (await vapid(env)).pub, relay: 1 });
-      if (path === '/news' && req.method === 'GET') return await handleNews(env, ctx);
+      if (path === '/news' && req.method === 'GET') return await handleNews(req, env, ctx);
       if (path === '/sub' && req.method === 'POST') return await handleSub(req, env);
       if (path === '/push' && req.method === 'POST') return await handlePush(req, env, ctx);
       if (path === '/') return json({ ok: true, app: 'zatsugaku-push', relay: 1 });
