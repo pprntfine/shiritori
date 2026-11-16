@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v467</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v468</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v467</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v468</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -1585,7 +1585,7 @@ body .bar::after{
 
   <div id="pane-chat" class="pane chatpane on">
     <div class="lhead"><span class="lh-av" id="lh-av">🐱</span><span class="lh-nm" id="lh-nm"></span><span class="lh-dot" id="lh-dot"></span><button type="button" id="btn-prof">名前</button><button type="button" id="btn-top2">トップ</button></div>
-    <div id="zg-room-strip" role="button" tabindex="0" hidden></div>
+    <div id="zg-room-strip" hidden></div>
     <div id="chat-log" class="line-chat" role="log" aria-live="polite"></div>
     <form id="form-chat" class="line-composer" autocomplete="off">
       <div class="chat-tool-menu">
@@ -13014,8 +13014,8 @@ window.addEventListener('pagehide',function(){ closeCam(); stopCall(false); });
     function explain(){
       try{ toast('この 部屋は ホストが 承認した 2人だけです。3人目は 入れません。'+((S.sas||S.keyMark)?'「'+sasLabel()+'」が あいての 画面と 同じなら、まちがいなく あいてです。':'')); }catch(e){}
     }
-    strip.addEventListener('click',explain);
-    strip.addEventListener('keydown',function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); explain(); } });
+    /* v468: 帯を さわっても お知らせを 出さない（持ち主: 毎回 出て いらない） */
+    try{ strip.removeAttribute('role'); strip.removeAttribute('tabindex'); }catch(e){}
     setInterval(paint,2000); setTimeout(paint,300);
   })();
 })();
