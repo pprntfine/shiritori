@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v482</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v483</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v482</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v483</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -7126,14 +7126,15 @@ function renderMem(){
     b.innerHTML='';
     S.mem.forEach(function(e){
       var d=document.createElement('div');
-      d.textContent=fmtTime(e.t)+' ／ '+String(e.x||'');
+      d.textContent=fmtTime(e.t)+'　'+String(e.x||'');
       b.appendChild(d);
     });
   }
 }
 function memAdd(txt){
   if(!S.isHost) return;
-  S.mem.push({t:Date.now(),x:txt});
+  var __mx={'あいてが アプリを ひらいた':'相手が アプリを 開きました','つながった':'相手と つながりました','きれた':'相手との 接続が 切れました'};
+  S.mem.push({t:Date.now(),x:__mx[txt]||txt});
   if(S.mem.length>200) S.mem.shift();
   renderMem();
 }
@@ -7156,12 +7157,12 @@ function openProof(fg,g){
   return 'screen';
 }
 function openProofLabel(p){
-  return p==='touch'?'あいてが じぶんで ひらいた（手で さわった）'
-    :p==='screen'?'あいての 画面に アプリが 出た（さわって いない）'
-    :p==='back'||p==='net'?'あいての アプリが 裏で つながった だけ（開いて いない）'
-    :p==='push'?'あいてが ひらいた（スマホが うけとった 合図）'
-    :p==='guess'?'（推定）あいてが ひらいた かも'
-    :'あいてが アプリを ひらいた（ふるい 版・りゆう ふめい）';
+  return p==='touch'?'画面を さわって 操作していました'
+    :p==='screen'?'画面に 表示されました（操作は ありません）'
+    :p==='back'||p==='net'?'裏で 回線が つながっただけです（開いていません）'
+    :p==='push'?'通知サーバー経由で 届いた合図です'
+    :p==='guess'?'通信の ようすからの 推定です'
+    :'古い版からの 合図です';
 }
 function sendAppOpen(reason){
   if(!(S.paired||S.linked)) return;
@@ -7186,7 +7187,8 @@ function sendAppOpen(reason){
   var __fg=(typeof document!=='undefined'&&document.visibilityState==='visible')?1:0;
   var __g=gestAgeSec();
   /* v268: 理由(r)と 自分の 版(pv)も のせる。あいては「なぜ 増えたか」を 時刻つきで 見られる */
-  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:'v436'}); }catch(e){}
+  var __pv='v436'; try{ var __ve=document.getElementById('ver'); if(__ve&&peerVersion(__ve.textContent.trim())) __pv=__ve.textContent.trim(); }catch(e){}   /* v483: 本当の 版を のせる（ずっと v436 と 出て いた） */
+  try{ Net.send({t:'chat-open',at:t,fg:__fg,g:__g,r:__r,pv:__pv}); }catch(e){}
   /* v263: アプリを とじて いても 鳴る ように、あいての「ベル用とおりみち」へ 1通だけ おくる。
      この とおりみちは あいてだけが うけとる（こちらには もどらない）。中身は 時刻だけ。 */
   try{ if(peerOpenOn()&&peerKeepOn()&&__r!=='conn') pushPeerOpen(t,__fg,true); }catch(e){}   /* v284: 本物の 起動は 画面判定で 落とさない */   /* v267/v268: 本物の 開封だけ スマホの ベルへ */
@@ -7238,16 +7240,14 @@ async function peerOpenSweep(){
   }catch(e){}
 }
 function peerLine(){
-  var ts=+(window.__zgsPeerLast||0)||0;   /* v166: 相手からの 受信だけ。v183: あいてが アプリを ひらいた 記録だけに */
-  var str='あいて:'+(ts?('さいご '+fmtTime(ts)):'—');
+  /* v483: ふつうの 文章に */
+  var ts=+(window.__zgsPeerLast||0)||0;
   var live=Math.max(ts,+(window.__zgsPeerLive||0)||0);
-  if(live&&Date.now()-live<70000) str+='（いま つながり中）';   /* v183: アプリを だしている あいだ */
-  else{
-    var pr=window.__zgsPeerProof||'';   /* v266: さいごの 合図の たしからしさ */
-    var m2={touch:'手で ひらいた',screen:'画面に 出た',back:'裏で つながった',push:'スマホが うけとめた',guess:'推定'};
-    if(pr&&Object.prototype.hasOwnProperty.call(m2,pr)) str+='（'+m2[pr]+'）'; if(peerVersion(S.peerVer)) str+=' '+peerVersion(S.peerVer);
-  }
-  return str;
+  if(live&&Date.now()-live<70000) return '相手は いま アプリを 開いています';
+  if(!ts) return '相手が アプリを 開いた記録は まだありません';
+  var m=Math.round((Date.now()-ts)/60000);
+  var ago=m<1?'たった今':(m<60?m+'分前':(m<1440?Math.round(m/60)+'時間前':Math.round(m/1440)+'日前'));
+  return '最後に開いたのは '+fmtTime(ts)+'（'+ago+'）';
 }
 function peerChatOpen(at,late,proof,meta){
   var t=(at&&Date.now()-at>=0&&Date.now()-at<600000)?at:Date.now();   /* v187: あいてが 合図を 出した ときを そのまま 記録（おくれて とどいた 合図を いま の 時刻に しない） */
@@ -7410,13 +7410,13 @@ function plogTimeLine(e){
     var b=(typeof e.marr==='number'&&e.marr>0)?plogHM(e.marr):'';
     var d=(typeof e.dly==='number')?e.dly:null;
     var out='';
-    if(a||b) out='おくった '+(a||'—')+'／うけとった '+(b||'—');
+    if(a||b) out='送信 '+(a||'—')+'／受信 '+(b||'—');
     if(d!==null){
       var ad=Math.abs(d);
-      var lab=(ad<2000?'ほぼ 同時':(ad<60000?Math.round(ad/1000)+'秒':(ad<3600000?Math.round(ad/60000)+'分':Math.round(ad/3600000)+'時間')));
-      if(d>=2000) out+='（'+lab+' おくれ）';
-      else if(d<=-5000) out+='（'+lab+' すすんで いる）';
-      else out+='（ほぼ 同時）';
+      var lab=(ad<2000?'ほぼ同時':(ad<60000?Math.round(ad/1000)+'秒':(ad<3600000?Math.round(ad/60000)+'分':Math.round(ad/3600000)+'時間')));
+      if(d>=2000) out+='（'+lab+'遅れ）';
+      else if(d<=-5000) out+='（時計が '+lab+'進んでいます）';
+      else out+='（ほぼ同時）';
     }
     return out;
   }catch(err){ return ''; }
@@ -7445,6 +7445,19 @@ function plogAdd(kind,at,proof,meta){
         if(!e0||(e0.k!=='open'&&e0.k!=='late')) continue;
         if(Math.abs((e0.t||0)-t)<2500&&((e0.r||'')===((meta&&meta.r)||''))) return;
       }
+    }
+    /* v483: 「推定」(app-live) の すぐ あとに 本物の 合図が きたら、1件に まとめる（1回 ひらいたのが 2回に 数えられて いた） */
+    if((kind==='open'||kind==='late')&&proof!=='guess'){
+      for(var q2=l.length-1;q2>=0&&q2>=l.length-4;q2--){
+        var g0=l[q2];
+        if(g0&&(g0.k==='open'||g0.k==='late')&&g0.p==='guess'&&Math.abs(t-(g0.t||0))<180000){
+          g0.p=proof||''; if(meta&&meta.r) g0.r=String(meta.r); if(meta&&peerVersion(meta.pv)) g0.pv=peerVersion(meta.pv); g0.t=Math.min(g0.t||t,t);
+          plogSave(l); plogRender(); return;
+        }
+      }
+    }
+    if((kind==='open'||kind==='late')&&proof==='guess'){
+      for(var q3=l.length-1;q3>=0&&q3>=l.length-4;q3--){ var g1=l[q3]; if(g1&&(g1.k==='open'||g1.k==='late')&&Math.abs(t-(g1.t||0))<180000) return; }   /* 本物が もう ある */
     }
     var rec={t:t,k:kind,p:proof||''};
     /* v327: 出し手は つねに あいて。自分を 入れて いた ため、読みこみ時に「自分の 記録」として 消えて いた */
@@ -7481,65 +7494,47 @@ function __countable(e){ return !!(e&&(e.k==='open'||e.k==='late')); }   /* v186
 function plogRender(){
   try{ openLogGuard(); }catch(e){}
   try{
-    var b=$('#mem-plog-list'); if(!b) return;   /* v186: プロフからは けした。裏画面（▶めも の 窓）だけに 表示する */
-    var l=plogClean(),h='';
-    /* v269: 上に「まとめ」を 大きく 出す。下に 時こく順で 1件ずつ */
-    var __t0=new Date(); __t0.setHours(0,0,0,0);
-    var __cnt=0,__lastT=0;
-    for(var __i=0;__i<l.length;__i++){ var __e=l[__i]; if((__e.k==='open'||__e.k==='late')&&(__countable(__e))&&(__e.t||0)>=__t0.getTime()){ __cnt++; if((__e.t||0)>__lastT) __lastT=__e.t; } }
-    var __hdr='<div style="display:flex;gap:8px;align-items:center;background:rgba(255,255,255,.10);border-radius:10px;padding:10px 12px;margin:6px 0 10px">'
-      +'<div style="font-size:1.9rem;font-weight:800;line-height:1;color:#8ef0b0">'+__cnt+'</div>'
-      +'<div style="font-size:.8rem;line-height:1.4"><b>きょう ひらいた 回数</b><br>'
-      +( __lastT ? ('さいご <b style="font-size:.95rem">'+plogHM(__lastT)+'</b>') : 'まだ ありません')
-      +'</div></div>'
-      +'<div style="font-size:.7rem;opacity:.6;margin:-6px 0 6px 2px">さいきん 10件まで のこして います</div>';
-    var __lastDay='',__shown=0;   /* v324: ひょうじは さいきん 10件まで */
+    var b=$('#mem-plog-list'); if(!b) return;
+    var l=plogClean().slice().sort(function(x,y){ return (x.t||0)-(y.t||0); }),h='',E=recordEscape;   /* v483: 時刻の 順に ならべる */
+    try{ var ml=$('#mem-line'); if(ml){ ml.textContent=peerLine(); var lv=Math.max(+(window.__zgsPeerLast||0)||0,+(window.__zgsPeerLive||0)||0); ml.className=(lv&&Date.now()-lv<70000)?'zl-st on':'zl-st'; } }catch(e){}
+    var t0=new Date(); t0.setHours(0,0,0,0);
+    var cnt=0,lastT=0;
+    for(var a=0;a<l.length;a++){ var ea=l[a]; if(__countable(ea)&&(ea.t||0)>=t0.getTime()){ cnt++; if((ea.t||0)>lastT) lastT=ea.t; } }
+    h+='<div class="zl-sum"><div class="zl-num">'+cnt+'<small>回</small></div><div><b>今日 開いた回数</b><span>'+(lastT?('最後は '+plogHM(lastT)):'今日は まだ 開いていません')+'</span></div></div>';
+    var lastDay='',shown=0,RL={launch:'アプリを 起動しました',resume:'アプリに 戻ってきました',play:'トーク画面を 開きました'};
     for(var i=l.length-1;i>=0;i--){
       var e=l[i]; if(!e) continue;
-      if(__shown>=10) break; __shown++;
-      /* v269: 1件ずつ「大きな 時刻」＋「やさしい 言葉」＋「色」で 出す */
-      var big='',sub='',col='#d8d8d8',ico='',ic='#9a9a9a';
-      var __rlab={launch:'アプリを ひらいた',resume:'画面を つけた（もどった）',play:'トークを ひらいた'};
-      if(e.k==='off'){ ico='○'; ic='#e0a060'; big='つながりが きれた'; col='#c9c9c9'; sub='あいての アプリが とじた'; }
-      else if(e.k==='net'||e.k==='conn'){ ico='×'; ic='#8f8f8f'; big='つながっただけ'; col='#9a9a9a'; sub='アプリは ひらいて いない（回線が つながり直した だけ）'; }
-      else if(e.r&&Object.prototype.hasOwnProperty.call(__rlab,e.r)){ ico='●'; ic='#4ade80'; big=__rlab[e.r]; col='#8ef0b0'; sub=(e.r==='launch'?'アプリを たちあげた とき（いちばん たしか）':(e.r==='resume'?'アプリが 画面に もどった とき':'あいてが トークを 開いた とき')); }
-      else { ico='●'; ic='#eab308'; big='アプリを ひらいた'; col='#f0e68c'; sub=openProofLabel(e.p); }
-      if(e.k==='late') sub='おくれて とどいた 合図／'+sub;
-      /* v324: ひらいた だけ か、メッセージも おくった か */
-      if(e.k==='open'||e.k==='late'){
-        var __mc=(e.m||0);
-        if(__mc>0){
-          var __tl=plogTimeLine(e);
-          sub+='<div style="margin-top:3px;white-space:nowrap"><b style="color:#8ef0b0">＋ メッセージ '+__mc+'通</b></div>'
-              +( __tl?('<div style="font-size:.72rem;opacity:.85;margin-top:1px;'+((typeof e.dly==='number'&&(e.dly<=-5000||e.dly>=120000))?'color:#fcd34d':'')+'">'+__tl+'</div>') : '' );
-        }
-        else if(Date.now()-e.t>5*60*1000){ sub+='<div style="margin-top:3px;white-space:nowrap;opacity:.75">メッセージは なし</div>'; }
-        else { sub+='<div style="margin-top:3px;white-space:nowrap;opacity:.75">（メッセージ まち）</div>'; }
+      if(shown>=10) break; shown++;
+      var kind='open',title='',sub='',chips=[];
+      if(e.k==='off'){ kind='off'; title='接続が 切れました'; sub='相手の アプリが 閉じられました'; }
+      else if(e.k==='net'||e.k==='conn'){ kind='net'; title='回線が つながっただけ'; sub='アプリは 開いていません'; }
+      else if(e.k==='msg'){ kind='msg'; title='メッセージを 受け取りました'; sub='開いた合図は 届いていません'; }
+      else if(e.r&&Object.prototype.hasOwnProperty.call(RL,e.r)){ title=RL[e.r]; sub=(e.p&&e.p!=='old')?openProofLabel(e.p):''; }
+      else { kind=(e.p==='guess')?'guess':'open'; title=(e.p==='guess')?'アプリを 開いたようです':'アプリを 開きました'; sub=openProofLabel(e.p); }
+      if(e.k==='late') sub=(sub?sub+'／':'')+'あとから 届いた合図です';
+      if(e.k==='open'||e.k==='late'||e.k==='msg'){
+        var mc=e.m||0;
+        if(mc>0) chips.push('<i class="c-msg">✉ メッセージ '+mc+'通</i>');
+        else if(e.k!=='msg'){ chips.push(Date.now()-e.t>5*60*1000?'<i class="c-dim">メッセージなし</i>':'<i class="c-dim">メッセージ待ち</i>'); }
+        var tl=plogTimeLine(e); if(tl&&mc>0) sub+=(sub?'<br>':'')+E(tl);
       }
-      if(e.k==='msg'){ ico='✉'; ic='#7dd3fc'; big='メッセージを おくった'; col='#bae6fd'; var __tl2=plogTimeLine(e); sub=(e.m>1?(e.m+'通'):'1通')+'（ひらいた 記録は なし）'+(__tl2?('<div style="font-size:.72rem;opacity:.85;margin-top:2px;'+((typeof e.dly==='number'&&(e.dly<=-5000||e.dly>=120000))?'color:#fcd34d':'')+'">'+__tl2+'</div>'):''); }
-      var __pl=plogPeerLine(e); if(__pl) sub+='<div style="font-size:.7rem;opacity:.68;margin-top:2px">'+__pl+'</div>';   /* v327 */
-      /* その あと 既読が かえって きた か */
-      if(e.k!=='off'){
+      if(e.k!=='off'&&e.k!=='net'&&e.k!=='conn'){
         var rk=plogReadNear(e.t);
-        if(rk>=0) sub+='　<b style="color:#8ef0b0">✓ '+(rk<90000?(Math.max(1,Math.round(rk/1000))+'秒'):(Math.round(rk/60000)+'分'))+'で 既読</b>';
-        else if(Date.now()-e.t>10*60*1000) sub+='　<span style="opacity:.65">既読 なし</span>';
+        if(rk>=0) chips.push('<i class="c-ok">✓ '+(rk<90000?(Math.max(1,Math.round(rk/1000))+'秒後に 既読'):(Math.round(rk/60000)+'分後に 既読'))+'</i>');
+        else if(Date.now()-e.t>10*60*1000) chips.push('<i class="c-dim">既読なし</i>');
       }
-      /* 日付の 区切り */
-      var d=new Date(e.t), dk=d.getFullYear()+'-'+d.getMonth()+'-'+d.getDate();
-      var dt=new Date(); var tk=dt.getFullYear()+'-'+dt.getMonth()+'-'+dt.getDate();
-      var dy=new Date(Date.now()-86400000); var yk=dy.getFullYear()+'-'+dy.getMonth()+'-'+dy.getDate();
-      var dn = dk===tk?'きょう':(dk===yk?'きのう':((d.getMonth()+1)+'月'+d.getDate()+'日'));
-      if(dn!==__lastDay){
-        __lastDay=dn;
-        h+='<div style="margin:12px 0 4px;font-size:.78rem;font-weight:800;letter-spacing:.06em;opacity:.8;border-bottom:1px solid rgba(255,255,255,.22);padding-bottom:3px">'+dn+'</div>';
-      }
-      h+='<div style="display:flex;gap:10px;align-items:flex-start;padding:7px 2px;border-bottom:1px dashed rgba(255,255,255,.10)">'
-        +'<div style="min-width:4.6em;font-variant-numeric:tabular-nums;font-weight:800;font-size:1.05rem;color:'+col+'">'+plogHM(e.t)+'</div>'
-        +'<div style="flex:1;min-width:0"><div style="font-weight:700;font-size:.95rem;color:'+col+'"><span style="color:'+ic+'">'+ico+'</span> '+big+'</div>'
-        +'<div style="font-size:.78rem;opacity:.8;line-height:1.45;margin-top:2px">'+sub+'</div></div></div>';
+      var pl=''; try{ var nm=(e.pn&&String(e.pn).trim())||'', pv=peerVersion(e.pv); if(nm||pv) pl=(nm?E(nm):'')+(nm&&pv?'・':'')+(pv?E(pv):''); }catch(e2){}
+      var d=new Date(e.t), dk=d.toDateString(), dn=dk===new Date().toDateString()?'今日':(dk===new Date(Date.now()-86400000).toDateString()?'昨日':((d.getMonth()+1)+'月'+d.getDate()+'日'));
+      if(dn!==lastDay){ lastDay=dn; h+='<div class="zl-day">'+dn+'</div>'; }
+      h+='<div class="zl-it k-'+kind+'"><div class="zl-tm">'+plogHM(e.t)+'</div><div class="zl-bd"><div class="zl-tt">'+title+'</div>'
+        +(sub?'<div class="zl-sub">'+sub+'</div>':'')
+        +(chips.length?'<div class="zl-ch">'+chips.join('')+'</div>':'')
+        +(pl?'<div class="zl-pl">'+pl+'</div>':'')+'</div></div>';
     }
-    var __ft='<div style="margin-top:10px;padding-top:6px;border-top:1px solid rgba(255,255,255,.18);font-size:.68rem;opacity:.55;line-height:1.5">あいず 自分 '+recordEscape(deviceTag(S.me.id))+'／いまの あいて '+recordEscape(deviceTag(S.opp&&S.opp.id))+'</div>';
-    b.innerHTML=__hdr+(h||'<div style="opacity:.7">まだ きろくは ありません</div>')+(l.length?__ft:'');
+    if(!shown) h+='<div class="zl-empty">まだ 記録は ありません</div>';
+    h+='<div class="zl-ft">この記録は この端末だけに 保存され、相手には 見えません。最新10件を 表示しています。'
+      +'<br>あいず　自分 '+E(deviceTag(S.me.id))+'／相手 '+E(deviceTag(S.opp&&S.opp.id))+(peerVersion(S.peerVer)?('　相手の版 '+E(peerVersion(S.peerVer))):'')+'</div>';
+    b.innerHTML=h;
   }catch(e){}
 }
 setInterval(function(){ try{ if(memBox) plogRender(); }catch(e){} },3000);   /* v186: 裏画面を 出している あいだは 履歴を 新しくする */
@@ -7574,13 +7569,14 @@ if(brand) brand.addEventListener('click',function(){
   brandTaps=0; brandLast=0;
   if(memBox){ memBox.remove(); memBox=null; return; }
   if(!S.isHost||S.phase!=='play'){ note('じゅんび ちゅうです。','#note2'); return; }
-  memBox=document.createElement('div'); memBox.id='mem-box';
-  memBox.innerHTML='<span id="mem-line">'+recordEscape(peerLine())+'</span>'
- +'<details id="mem-plog" open><summary style="font-weight:700">あいてが アプリを ひらいた 記録</summary>'
- +'<div style="font-size:.72rem;opacity:.75;margin:3px 0 2px;line-height:1.5">この 端末が 見た 分だけ。あいてには みえません。'+(peerVersion(S.peerVer)?('　あいての 版 <b>'+recordEscape(peerVersion(S.peerVer))+'</b>'):'')+'</div>'
- +'<div id="mem-plog-list" style="font-size:.8rem;line-height:1.5;max-height:52vh;overflow:auto;margin-top:4px"></div></details>'
- +'<details id="mem-det"><summary>めも</summary><div id="mem-list"></div></details>';
+  memBox=document.createElement('div'); memBox.id='mem-box'; memBox.setAttribute('role','dialog'); memBox.setAttribute('aria-label','相手の アクセス履歴');
+  /* v483: 見た目と 文章を 作りなおし（明るい カード・ふつうの 文章） */
+  memBox.innerHTML='<div class="zl-hd"><b>相手の アクセス履歴</b><button type="button" class="zl-x" aria-label="閉じる">×</button></div>'
+ +'<div id="mem-line" class="zl-st"></div>'
+ +'<div id="mem-plog-list" class="zl-list"></div>'
+ +'<details id="mem-det" class="zl-memo"><summary>接続の メモ（この端末が 起動してから）</summary><div id="mem-list"></div></details>';
   document.body.appendChild(memBox);
+  memBox.querySelector('.zl-x').addEventListener('click',function(){ if(memBox){ memBox.remove(); memBox=null; } });
   renderMem(); plogRender();
 });
 function startWatch(){
@@ -14004,6 +14000,44 @@ body #chat-log .msg.zg-still,body #chat-log .msg.zg-still:not(.cont){animation:n
 html body #pane-chat .line-composer .chat-composer-actions{flex-wrap:nowrap!important;gap:clamp(3px,1vw,5px)!important}
 html body #pane-chat .line-composer .chat-composer-actions > .chat-tools-toggle{flex:1 1 auto!important;min-width:0!important;width:auto!important;padding:0 clamp(2px,1.1vw,7px)!important;font-size:clamp(9.5px,3vw,12px)!important;letter-spacing:0!important;justify-content:center;text-align:center;overflow:hidden!important;text-overflow:clip}
 html body #pane-chat .line-composer .chat-composer-actions > button#btn-live::before,html body #pane-chat .line-composer .chat-composer-actions > button#btn-call::before{margin-right:1px!important}
+
+/* v483: 相手の アクセス履歴（タイトル5回タップ）を 明るい カードに */
+html body #mem-box{position:fixed!important;left:12px!important;right:12px!important;top:calc(64px + env(safe-area-inset-top,0px))!important;max-width:460px!important;margin:0 auto!important;max-height:78vh!important;overflow:auto!important;z-index:9000!important;
+  background:#fff!important;color:#2A2338!important;border:0!important;border-radius:20px!important;padding:0 0 12px!important;font-size:14px!important;box-shadow:0 18px 50px rgba(40,20,90,.35),0 0 0 1px rgba(91,61,245,.10)!important;font-family:inherit}
+#mem-box .zl-hd{position:sticky;top:0;z-index:1;display:flex;align-items:center;justify-content:space-between;padding:14px 14px 12px 18px;background:linear-gradient(135deg,#6D4DF2,#4B2ED6);color:#fff;border-radius:20px 20px 0 0}
+#mem-box .zl-hd b{font-size:16px;letter-spacing:.04em}
+#mem-box .zl-x{width:34px;height:34px;border-radius:50%;border:0;background:rgba(255,255,255,.2);color:#fff;font-size:20px;line-height:1;cursor:pointer}
+#mem-box .zl-st{display:flex;align-items:center;gap:8px;margin:12px 14px 0;padding:10px 12px;border-radius:12px;background:#F4F2FB;color:#4A3C9A;font-weight:700;font-size:13.5px}
+#mem-box .zl-st::before{content:'';width:10px;height:10px;border-radius:50%;background:#B7B0CC;flex:none}
+#mem-box .zl-st.on{background:#E8F8EE;color:#1E7A45}
+#mem-box .zl-st.on::before{background:#22C55E;box-shadow:0 0 0 4px rgba(34,197,94,.2)}
+#mem-box .zl-list{padding:0 14px}
+#mem-box .zl-sum{display:flex;align-items:center;gap:14px;margin:10px 0 4px;padding:12px 14px;border-radius:14px;background:linear-gradient(135deg,#F1EDFF,#FBF9FF);border:1px solid #E6E0FA}
+#mem-box .zl-num{font-size:34px;font-weight:800;line-height:1;color:#5B3DF5;font-variant-numeric:tabular-nums}
+#mem-box .zl-num small{font-size:13px;margin-left:2px}
+#mem-box .zl-sum b{display:block;font-size:14px}
+#mem-box .zl-sum span{display:block;font-size:12.5px;color:#6B6585;margin-top:2px}
+#mem-box .zl-day{margin:14px 0 4px;font-size:12px;font-weight:800;color:#7A72A0;letter-spacing:.08em}
+#mem-box .zl-it{display:flex;gap:12px;padding:10px 12px;margin:6px 0;border-radius:14px;background:#FAF9FE;border:1px solid #EEEAF8;border-left:4px solid #6D4DF2}
+#mem-box .zl-it.k-guess{border-left-color:#EAB308}
+#mem-box .zl-it.k-msg{border-left-color:#38BDF8}
+#mem-box .zl-it.k-off{border-left-color:#F59E0B;background:#FFFBF4}
+#mem-box .zl-it.k-net{border-left-color:#C9C4D8;opacity:.7}
+#mem-box .zl-tm{min-width:3.2em;font-size:17px;font-weight:800;color:#2A2338;font-variant-numeric:tabular-nums;line-height:1.3}
+#mem-box .zl-bd{flex:1;min-width:0}
+#mem-box .zl-tt{font-weight:700;font-size:14px;line-height:1.4}
+#mem-box .zl-sub{font-size:12px;color:#6B6585;line-height:1.5;margin-top:2px}
+#mem-box .zl-ch{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+#mem-box .zl-ch i{font-style:normal;font-size:11.5px;font-weight:700;padding:2px 9px;border-radius:999px;background:#EEEAF8;color:#5A5080}
+#mem-box .zl-ch i.c-msg{background:#E0F2FE;color:#0369A1}
+#mem-box .zl-ch i.c-ok{background:#DCFCE7;color:#15803D}
+#mem-box .zl-ch i.c-dim{background:#F1F0F5;color:#8B86A0}
+#mem-box .zl-pl{font-size:11px;color:#9A94B2;margin-top:4px}
+#mem-box .zl-empty{padding:18px 0;text-align:center;color:#8B86A0}
+#mem-box .zl-ft{margin:12px 0 0;padding-top:10px;border-top:1px solid #EEEAF8;font-size:11px;color:#8B86A0;line-height:1.6}
+#mem-box .zl-memo{margin:10px 14px 0;font-size:12.5px;color:#5A5080}
+#mem-box .zl-memo summary{cursor:pointer;font-weight:700;padding:6px 0}
+#mem-box #mem-list div{padding:3px 0;border-bottom:1px dashed #EEEAF8;font-variant-numeric:tabular-nums}
 </style>
 </body>
 </html>
