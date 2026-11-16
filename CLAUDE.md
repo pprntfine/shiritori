@@ -1,4 +1,4 @@
-# 雑学王（zatsugakuou）引き継ぎメモ  ― 現在 v456
+# 雑学王（zatsugakuou）引き継ぎメモ  ― 現在 v457
 
 ## これは何か
 見た目は「雑学クイズ」アプリ。中身は **2人専用の暗号化チャット**（メッセージ・写真・ライブ映像・電話）。
@@ -63,6 +63,9 @@
 - v456 ニュースが遅い（持ち主）。Worker: 1分ごとの Cron（`scheduled` → `refreshNews`）で先に取っておく。`/news` は45秒以内ならそのまま、古くても1時間以内なら
   古い物を即返して裏で更新（stale-while-revalidate）、`?fresh=1`（↻・開いた時・戻った時）は15秒に1回まで。取得タイムアウト6→4秒、一部のソースが失敗しても前の分で埋める。
   Cron は API `PUT /workers/scripts/zatsugaku-push/schedules` で設定済み（wrangler.toml の [triggers] も同じ）。アプリ側は90秒ごと＋開いた/戻った/↻で fresh 取得。
+- v457 設定（チャット→名前）画面を作り直し（持ち主：見にくい・きちんとした文章に）。`#prof-modal .pm.zs`、カード `.zs-card`、行 `.zs-row`、
+  オン/オフは `.zs-tg`（小さなscriptで `data-state` を付けて色分け）。ID・動作は変えず、文章を漢字かな交じりの普通の文に。作業メモ（v203等）を削除。
+  ※ この画面だけは「ひらがな多め・スペース区切り」ではなく普通の文章（持ち主の希望）。
   ※ Cloudflare の API トークンは「cfat_」形式（アカウント所有トークン）。確認は /accounts/{id}/tokens/verify。
   持ち主の希望で「この版は 1ファイル…」の説明（#install-hint）を出さない。ニュース枠を広く、件数は 徳島12・事件事故8・経済6。
 

@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v456</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v457</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v456</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v457</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -1694,124 +1694,100 @@ body .bar::after{
 </div>
 
 
-<div id="prof-modal"><div class="pm">
-  <h3>名前と アイコン</h3>
-  <div class="sec">じぶん（あいてにも この名前・アイコンで みえます）</div>
-  <div class="row"><span class="big" id="pf-me-av">🐷</span><input type="text" id="pf-me-nm" maxlength="12" placeholder="じぶんの 名前"></div>
-  <div class="emo" id="pf-me-emo"></div>
-  <button type="button" class="ph" id="pf-me-photo">写真を アイコンに する</button>
-  <input type="file" id="pf-file" accept="image/*" hidden>
-  <div class="sec">あいての 名前・アイコンは あいてが きめた ものが でます（v203）</div>
-  <div class="sec">つうち</div>
-  <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 0 4px">
-    <span style="font-size:.84rem">音（アプリが ならす おと）</span>
-    <button type="button" class="ph" id="pf-snd" style="padding:4px 14px" disabled>なし</button>
-  </div>
-  <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 0 4px">
-    <span style="font-size:.84rem">バイブ（アプリを ひらいている とき）</span>
-    <button type="button" class="ph" id="pf-sound" style="padding:4px 14px">オン</button>
-  </div>
-  <p style="font-size:.72rem;color:#556;margin:0 0 10px"><b>アプリは もう 音を ならしません（v280）。</b>おしらせは バイブと 画面だけで します。鳴るのは <b>あいてが おくった 声の メッセージ・通話の 声・ライブの 声</b> だけです。アプリを とじている ときは スマホの 通知（設定 → 通知 → 雑学王 → 音／バイブ）で きまります。<b>iPhoneは きまりで バイブを うごかせません。</b></p>
-  <div id="pf-peeropen-box">
-  <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 0 4px">
-    <span style="font-size:.84rem">あいてが アプリを ひらいたら しらせる</span>
-    <button type="button" class="ph" id="pf-peeropen" style="padding:4px 14px">オン</button>
-  </div>
-  <p style="font-size:.72rem;color:#556;margin:0 0 10px">あいてが トークを ひらいた ときに、バイブと 画面の しらせを だします（音は なりません）。<b>アプリを とじて いても 鳴ります</b>（スマホの 通知として とどきます）。<b>あいての 画面には なにも でません</b>ので、しらせが あること 自体は 知れません。ただし リアルタイムで 鳴らす ため、<b>あいての 端末の ベル用とおりみちへ「ひらいた 時刻」だけを 1通 おくります</b>（30分に 1回まで・最長12時間 中継所に のこる・とおりみちの 名前は 2人の 鍵から 作る 合言葉）。オフに すると 1通も おくらず、アプリを ひらいて いる ときだけ 鳴ります。</p>
-  <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 0 4px">
-    <span style="font-size:.84rem">アプリを とじて いる 間の 分も あとで 分かる</span>
-    <button type="button" class="ph" id="pf-peerkeep" style="padding:4px 14px">オン</button>
-  </div>
-  <p style="font-size:.72rem;color:#556;margin:0 0 10px">オンの ときは、「ひらいた」合図の <b>あんごう文</b>を 中継所に 最長12時間 のこします。アプリを とじて いても、つぎに 開いた ときに 履歴で 分かります（音・バイブは 鳴りません）。<b>あいての 端末には なにも とどかず、あいての 画面にも でません</b>。あんごう文は かぎを もつ 2人 以外は よめません。オフに すると 中継所には なにも のこりません（とじている 間の 分は 分からなく なります）。</p>
-  </div>
-  <button type="button" class="ph" id="pf-vtest">バイブを テストする（音は なりません）</button>
-  <p id="pf-vres" style="font-size:.78rem;color:#556;margin:6px 0 0;white-space:pre-line"></p>
-  <button type="button" class="ph" id="pf-vcopy" style="display:none;margin-top:6px">けっかを コピーする</button>
-  <div class="sec">トーク</div>
-  <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 0 4px">
-    <span style="font-size:.84rem">既読から 15分で きえる</span>
-    <button type="button" class="ph" id="pf-vanish" style="padding:4px 14px">オフ</button>
-  </div>
-  <p style="font-size:.72rem;color:#556;margin:0 0 10px">あいてが 読んでから 15分で、じぶんの スマホからも あいての スマホからも きえます。<b>もとに もどせません。</b>オンに した あとで 既読に なった ものだけが たいしょうです。あいてが つながって いない 間に 読んだ ときは、つながった ときに 15分が はじまります。スマホの 時計の ずれで 数十秒 ちがう ことが あります。スクショは ふせげません。</p>
-    <div class="sec">とー君</div>
-  <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 0 4px">
-    <span style="font-size:.84rem">とー君が あらわれる</span>
-    <button type="button" class="ph" id="pf-tokun" style="padding:4px 14px">オン</button>
-  </div>
-  <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 0 4px">
-    <span style="font-size:.84rem">あらわれる 間隔</span>
-    <button type="button" class="ph" id="pf-tokun-iv" style="padding:4px 14px">10秒ごと</button>
-  </div>
-  <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 0 4px">
-    <span style="font-size:.84rem">とー君 拡大</span>
-    <button type="button" class="ph" id="pf-tokun-big" style="padding:4px 14px">オフ</button>
-  </div>
-  <p style="font-size:.72rem;color:#556;margin:0 0 10px">とー君が トークに ひょっこり あらわれます。オフに すると あらわれません。間隔の ボタンを おすたびに かわります（10秒→15秒→20秒→25秒→30秒→35秒→40秒→45秒→50秒→55秒→60秒→なし→連続）。拡大を オンに すると、とー君が 画面いっぱいに 巨大で あらわれ、紙吹雪と クラッカーで だいだんさ します。この 設定は この 端末だけの もので、あいてには つたわりません。</p>
-  <div class="sec">とー君の コメント</div>
-  <div style="display:flex;align-items:center;gap:8px;margin:6px 0">
-    <span style="font-size:.78rem;width:8.5em;flex:none">トラック</span>
-    <input type="text" id="pf-tcm-🐶㉘" maxlength="40" placeholder="コメント" style="flex:1;min-width:0;box-sizing:border-box;padding:7px 9px;border-radius:9px;border:1.5px solid #ddd;font-size:.8rem">
-  </div>
-  <div style="display:flex;align-items:center;gap:8px;margin:6px 0">
-    <span style="font-size:.78rem;width:8.5em;flex:none">バイク</span>
-    <input type="text" id="pf-tcm-🐶㉙" maxlength="40" placeholder="コメント" style="flex:1;min-width:0;box-sizing:border-box;padding:7px 9px;border-radius:9px;border:1.5px solid #ddd;font-size:.8rem">
-  </div>
-  <div style="display:flex;align-items:center;gap:8px;margin:6px 0">
-    <span style="font-size:.78rem;width:8.5em;flex:none">キャンピングカー</span>
-    <input type="text" id="pf-tcm-🐶㉚" maxlength="40" placeholder="コメント" style="flex:1;min-width:0;box-sizing:border-box;padding:7px 9px;border-radius:9px;border:1.5px solid #ddd;font-size:.8rem">
-  </div>
-  <div style="display:flex;align-items:center;gap:8px;margin:6px 0">
-    <span style="font-size:.78rem;width:8.5em;flex:none">オートバイ</span>
-    <input type="text" id="pf-tcm-🐶㉛" maxlength="40" placeholder="コメント" style="flex:1;min-width:0;box-sizing:border-box;padding:7px 9px;border-radius:9px;border:1.5px solid #ddd;font-size:.8rem">
-  </div>
-  <div style="display:flex;align-items:center;gap:8px;margin:6px 0">
-    <span style="font-size:.78rem;width:8.5em;flex:none">筋トレ</span>
-    <input type="text" id="pf-tcm-🐶㉜" maxlength="40" placeholder="コメント" style="flex:1;min-width:0;box-sizing:border-box;padding:7px 9px;border-radius:9px;border:1.5px solid #ddd;font-size:.8rem">
-  </div>
-  <div style="display:flex;align-items:center;gap:8px;margin:6px 0">
-    <span style="font-size:.78rem;width:8.5em;flex:none">ランニング</span>
-    <input type="text" id="pf-tcm-🐶㉝" maxlength="40" placeholder="コメント" style="flex:1;min-width:0;box-sizing:border-box;padding:7px 9px;border-radius:9px;border:1.5px solid #ddd;font-size:.8rem">
-  </div>
-  <div style="display:flex;align-items:center;gap:8px;margin:6px 0">
-    <span style="font-size:.78rem;width:8.5em;flex:none">スケボー</span>
-    <input type="text" id="pf-tcm-🐶㉞" maxlength="40" placeholder="コメント" style="flex:1;min-width:0;box-sizing:border-box;padding:7px 9px;border-radius:9px;border:1.5px solid #ddd;font-size:.8rem">
-  </div>
-  <div style="display:flex;align-items:center;gap:8px;margin:6px 0">
-    <span style="font-size:.78rem;width:8.5em;flex:none">キック</span>
-    <input type="text" id="pf-tcm-🐶㉟" maxlength="40" placeholder="コメント" style="flex:1;min-width:0;box-sizing:border-box;padding:7px 9px;border-radius:9px;border:1.5px solid #ddd;font-size:.8rem">
-  </div>
-  <div style="display:flex;align-items:center;gap:8px;margin:6px 0">
-    <span style="font-size:.78rem;width:8.5em;flex:none">腕立て</span>
-    <input type="text" id="pf-tcm-🐶㊲" maxlength="40" placeholder="コメント" style="flex:1;min-width:0;box-sizing:border-box;padding:7px 9px;border-radius:9px;border:1.5px solid #ddd;font-size:.8rem">
-  </div>
-  <div style="display:flex;align-items:center;gap:8px;margin:6px 0">
-    <span style="font-size:.78rem;width:8.5em;flex:none">たきび</span>
-    <input type="text" id="pf-tcm-🐶㊳" maxlength="40" placeholder="コメント" style="flex:1;min-width:0;box-sizing:border-box;padding:7px 9px;border-radius:9px;border:1.5px solid #ddd;font-size:.8rem">
-  </div>
-  <p style="font-size:.72rem;color:#556;margin:4px 0 10px">入力すると、とー君が あらわれるときに ふきだしで コメントが でます。からっぽに すると でません。この 設定は この 端末だけの ものです。</p>
-  <button type="button" class="ph" id="pf-ntest">通知を テストする（10秒後に とどきます。その間に ホーム画面へ）</button>
-  <p id="pf-nres" style="font-size:.78rem;color:#556;margin:6px 0 0"></p>
-  <button type="button" class="ph" id="pf-ptest">とどけ てんけん（アプリを うしろに まわして 30秒 待つ）</button>
-  <p id="pf-pres" style="font-size:.78rem;color:#556;margin:6px 0 0;white-space:pre-line"></p>
-  <div class="sec">つうちサーバー（アプリを 切っていても とどく）</div>
-  <input type="url" id="pf-psrv" placeholder="https://zatsugaku-push.〇〇.workers.dev" style="width:100%;box-sizing:border-box;padding:8px;border-radius:10px;border:1.5px solid #ddd;font-size:.8rem">
-  <p id="pf-psrvh" style="font-size:.74rem;color:#556;margin:4px 0 0">1人が 入れれば OK（あいてにも じどうで つたわります）</p>
-  <div class="sec" style="margin-top:48px">つながり（きけん）</div>
-  <button type="button" class="ph" id="pf-unpair" style="background:#FFECEC;color:#C62828;border:1px solid #F5C9C9">つながりを とく（でる）</button>
-  <p style="font-size:.72rem;color:#556;margin:4px 0 0">つながりを とくと、あたらしく 部屋を つくって ペアに ならないと つながりません。2回 おして、さいごに「OK」を おすと 解除されます。2台とも トークの きろくが 消えます。</p>
-  
-  <div class="sec">たんじょうび</div>
-  <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 0 4px">
-    <span style="font-size:.84rem">じぶんの たんじょうび</span>
-    <input type="text" id="pf-bd1" inputmode="numeric" maxlength="5" placeholder="4/6" style="width:96px;text-align:center;font-size:16px;padding:8px;border:1px solid #D9DEE5;border-radius:10px">
-  </div>
-  <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 0 4px">
-    <span style="font-size:.84rem">あいての たんじょうび</span>
-    <input type="text" id="pf-bd2" inputmode="numeric" maxlength="5" placeholder="11/20" style="width:96px;text-align:center;font-size:16px;padding:8px;border:1px solid #D9DEE5;border-radius:10px">
-  </div>
-  <p style="font-size:.72rem;color:#556;margin:0 0 10px">つき／ひ の かたちで 入れて ください（れい: 4/6）。その 日は <b>おいわいの しゃしん</b>に かわり、<b>🎉 おめでとう</b> が 3秒 出ます。からに すると その 日は つかいません。</p>
-  <div class="acts"><button type="button" class="ng" id="pf-cancel">やめる</button><button type="button" class="ok" id="pf-save">ほぞん</button></div>
+<div id="prof-modal"><div class="pm zs">
+  <header class="zs-top"><h3>設定</h3><p>プロフィール・通知・トークの設定</p></header>
+
+  <section class="zs-card">
+    <h4 class="zs-h">プロフィール</h4>
+    <div class="row"><span class="big" id="pf-me-av">🐷</span><input type="text" id="pf-me-nm" maxlength="12" placeholder="自分の名前"></div>
+    <p class="zs-desc">この名前とアイコンは、相手の画面にも表示されます。</p>
+    <div class="emo" id="pf-me-emo"></div>
+    <button type="button" class="ph zs-wide" id="pf-me-photo">写真をアイコンにする</button>
+    <input type="file" id="pf-file" accept="image/*" hidden>
+    <p class="zs-desc">相手の名前とアイコンは、相手が設定したものが表示されます。</p>
+  </section>
+
+  <section class="zs-card">
+    <h4 class="zs-h">通知</h4>
+      <div class="zs-row"><span class="zs-lab">アプリの音</span><button type="button" class="ph zs-tg" id="pf-snd" disabled>なし</button></div>
+      <div class="zs-row"><span class="zs-lab">バイブ（アプリを開いているとき）</span><button type="button" class="ph zs-tg" id="pf-sound">オン</button></div>
+      <p class="zs-desc">このアプリは音を鳴らさず、バイブと画面表示でお知らせします。音が出るのは、相手から届いた音声メッセージ・通話・ライブの音声だけです。アプリを閉じているときの通知音とバイブは、スマホの設定（設定 → 通知 → 雑学王）で変えられます。iPhone では、アプリからバイブを動かすことはできません。</p>
+    <div id="pf-peeropen-box">
+      <div class="zs-row"><span class="zs-lab">相手がアプリを開いたら知らせる</span><button type="button" class="ph zs-tg" id="pf-peeropen">オン</button></div>
+      <p class="zs-desc">相手がトークを開いたときに、バイブと画面でお知らせします（音は鳴りません）。アプリを閉じていても、スマホの通知として届きます。相手の画面には何も表示されません。お知らせのために「開いた時刻」だけを暗号化して送ります（30分に1回まで、中継所に最長12時間残ります）。オフにすると何も送らず、アプリを開いているときだけお知らせします。</p>
+      <div class="zs-row"><span class="zs-lab">閉じているあいだの分も記録する</span><button type="button" class="ph zs-tg" id="pf-peerkeep">オン</button></div>
+      <p class="zs-desc">オンにすると、「開いた」合図の暗号文を中継所に最長12時間残し、次にアプリを開いたときに履歴で確認できます（音・バイブは鳴りません）。暗号文は2人以外には読めません。オフにすると中継所には何も残りません。</p>
+    </div>
+    <div class="zs-btns">
+      <button type="button" class="ph" id="pf-vtest">バイブをテストする</button>
+      <p id="pf-vres" class="zs-res"></p>
+      <button type="button" class="ph" id="pf-vcopy" style="display:none">結果をコピーする</button>
+      <button type="button" class="ph" id="pf-ntest">通知をテストする</button>
+      <p class="zs-hint">10秒後に届きます。そのあいだにホーム画面へ戻ってください。</p>
+      <p id="pf-nres" class="zs-res"></p>
+      <button type="button" class="ph" id="pf-ptest">通知の届き方を点検する</button>
+      <p class="zs-hint">アプリを裏に回して、30秒ほど待ってください。</p>
+      <p id="pf-pres" class="zs-res" style="white-space:pre-line"></p>
+    </div>
+  </section>
+
+  <section class="zs-card">
+    <h4 class="zs-h">トーク</h4>
+      <div class="zs-row"><span class="zs-lab">既読から15分で消える</span><button type="button" class="ph zs-tg" id="pf-vanish">オフ</button></div>
+      <p class="zs-desc">相手が読んでから15分たつと、自分と相手の両方のスマホから消えます。元に戻すことはできません。対象は、オンにしたあとで既読になったメッセージだけです。相手がつながっていないあいだに読んだ場合は、つながった時点から15分を数えます。スクリーンショットは防げません。</p>
+  </section>
+
+  <section class="zs-card">
+    <h4 class="zs-h">とー君</h4>
+      <div class="zs-row"><span class="zs-lab">とー君が現れる</span><button type="button" class="ph zs-tg" id="pf-tokun">オン</button></div>
+      <div class="zs-row"><span class="zs-lab">現れる間隔</span><button type="button" class="ph zs-tg" id="pf-tokun-iv">10秒ごと</button></div>
+      <div class="zs-row"><span class="zs-lab">とー君を拡大する</span><button type="button" class="ph zs-tg" id="pf-tokun-big">オフ</button></div>
+      <p class="zs-desc">とー君がトークにときどき現れます。「間隔」はボタンを押すたびに変わります（10秒〜60秒・なし・連続）。「拡大」をオンにすると、画面いっぱいに大きく現れ、紙吹雪でお祝いします。この設定はこのスマホだけのもので、相手には伝わりません。</p>
+    <h5 class="zs-sub">とー君のコメント</h5>
+    <div class="zs-cms">
+      <label class="zs-cm"><span>トラック</span><input type="text" id="pf-tcm-🐶㉘" maxlength="40" placeholder="コメントを入力"></label>
+      <label class="zs-cm"><span>バイク</span><input type="text" id="pf-tcm-🐶㉙" maxlength="40" placeholder="コメントを入力"></label>
+      <label class="zs-cm"><span>キャンピングカー</span><input type="text" id="pf-tcm-🐶㉚" maxlength="40" placeholder="コメントを入力"></label>
+      <label class="zs-cm"><span>オートバイ</span><input type="text" id="pf-tcm-🐶㉛" maxlength="40" placeholder="コメントを入力"></label>
+      <label class="zs-cm"><span>筋トレ</span><input type="text" id="pf-tcm-🐶㉜" maxlength="40" placeholder="コメントを入力"></label>
+      <label class="zs-cm"><span>ランニング</span><input type="text" id="pf-tcm-🐶㉝" maxlength="40" placeholder="コメントを入力"></label>
+      <label class="zs-cm"><span>スケボー</span><input type="text" id="pf-tcm-🐶㉞" maxlength="40" placeholder="コメントを入力"></label>
+      <label class="zs-cm"><span>キック</span><input type="text" id="pf-tcm-🐶㉟" maxlength="40" placeholder="コメントを入力"></label>
+      <label class="zs-cm"><span>腕立て</span><input type="text" id="pf-tcm-🐶㊲" maxlength="40" placeholder="コメントを入力"></label>
+      <label class="zs-cm"><span>たきび</span><input type="text" id="pf-tcm-🐶㊳" maxlength="40" placeholder="コメントを入力"></label>
+    </div>
+    <p class="zs-desc">入力すると、とー君が現れたときに吹き出しで表示されます。空欄にすると表示されません。</p>
+  </section>
+
+  <section class="zs-card">
+    <h4 class="zs-h">誕生日</h4>
+    <label class="zs-row"><span class="zs-lab">自分の誕生日</span><input type="text" id="pf-bd1" inputmode="numeric" maxlength="5" placeholder="4/6"></label>
+    <label class="zs-row"><span class="zs-lab">相手の誕生日</span><input type="text" id="pf-bd2" inputmode="numeric" maxlength="5" placeholder="11/20"></label>
+    <p class="zs-desc">「月/日」の形で入力してください（例：4/6）。その日は背景がお祝いの写真に変わり、「🎉 おめでとう」が3秒間表示されます。空欄にすると使いません。</p>
+  </section>
+
+  <section class="zs-card">
+    <h4 class="zs-h">通知サーバー</h4>
+    <p class="zs-desc" style="margin-top:0">アプリを閉じていても、メッセージや通知が届くようにする専用サーバーです。どちらか1人が設定すれば、相手にも自動で伝わります。</p>
+    <input type="url" id="pf-psrv" placeholder="https://zatsugaku-push.〇〇.workers.dev">
+    <p id="pf-psrvh" class="zs-res">どちらか1人が設定すれば大丈夫です。</p>
+  </section>
+
+  <section class="zs-card zs-danger">
+    <h4 class="zs-h">つながりの解除</h4>
+    <p class="zs-desc" style="margin-top:0">解除すると、2台ともトークの記録が消え、元に戻せません。もう一度使うには、部屋を作り直してペアになる必要があります。ボタンを2回押したあと、確認画面で「OK」を押すと解除されます。</p>
+    <button type="button" class="ph zs-wide" id="pf-unpair">つながりを解除する</button>
+  </section>
+
+  <div class="acts"><button type="button" class="ng" id="pf-cancel">閉じる</button><button type="button" class="ok" id="pf-save">保存する</button></div>
 </div></div>
+<script>
+/* v457: 設定の オン/オフ ボタンに 状態を つける（色で わかる ように） */
+(function(){
+  function paint(b){ var t=(b.textContent||'').trim(); b.setAttribute('data-state', t==='オン'?'on':((t==='オフ'||t==='なし')?'off':'val')); }
+  document.querySelectorAll('#prof-modal .zs-tg').forEach(function(b){ paint(b); new MutationObserver(function(){ paint(b); }).observe(b,{childList:true,characterData:true,subtree:true}); });
+})();
+</script>
 <script>
 (function(){
 'use strict';
@@ -11078,13 +11054,13 @@ function wipePairLocal(){
 var unpairArmed=false, unpairT=null;
 function unpairBoth(btn){
   if(btn&&!unpairArmed){
-    unpairArmed=true; var old=btn.textContent; btn.textContent='もう一度 おすと ペア解除';
+    unpairArmed=true; var old=btn.textContent; btn.textContent='もう一度押すと解除';
     unpairT=setTimeout(function(){ unpairArmed=false; btn.textContent=old; },3000);
     return;
   }
   clearTimeout(unpairT); unpairArmed=false;
   /* v454: 2回 おしても まだ とかない。さいごに かならず たしかめる（うっかり 防止） */
-  if(btn){ try{ btn.textContent='つながりを とく（でる）'; }catch(e){}
+  if(btn){ try{ btn.textContent='つながりを解除する'; }catch(e){}
     if(!window.confirm('つながりを といて 部屋を でます。\n2台とも トークの きろくが 消えて、もとに もどせません。\nほんとうに とき ますか？')) return; }
   var done=false;
   var fin=function(){ if(done) return; done=true; wipePairLocal(); show('lobby'); note('ペアを 解除しました。また つかうときは あたらしく 部屋を つくって ペアに なってください。'); };
@@ -12448,9 +12424,9 @@ function recvProf(m){
     $('#pf-me-nm').value=meName();
     try{
       $('#pf-psrv').value=psrvRaw();
-      $('#pf-psrvh').textContent = psrvGet() ? 'つうちサーバー：せってい ずみ ✓'
-        : (psrvRaw() ? 'つうちサーバー：つながりません（いまは 予備の 経路で とどきます。空に して ほぞん すれば もとに もどります）'
-                     : '1人が 入れれば OK（あいてにも じどうで つたわります）');
+      $('#pf-psrvh').textContent = psrvGet() ? '通知サーバー：設定済み ✓'
+        : (psrvRaw() ? '通知サーバーにつながりません。いまは予備の経路で届きます（空欄にして保存すると元に戻ります）。'
+                     : 'どちらか1人が設定すれば大丈夫です。');
     }catch(e){}
     draw(); paintSoundBtn(); paintPeerOpenBtn(); paintPeerKeepBtn();
     /* v260: この 項目は ホストの ときだけ 出す（あいての 端末には 存在 自体を みせない） */
@@ -12480,15 +12456,15 @@ function recvProf(m){
   $('#pf-save').addEventListener('click',async function(){
     var pu=($('#pf-psrv').value||'').trim().replace(/\/+$/,'');
     if(pu!==psrvRaw()){   /* v241: 空に して ほぞん すれば サーバーを やめられる */
-      if(pu&&!psrvOk(pu)){ $('#pf-psrvh').textContent='アドレスが ちがいます。https:// で はじまり .workers.dev で おわる アドレスを 入れてください。'; return; }
+      if(pu&&!psrvOk(pu)){ $('#pf-psrvh').textContent='アドレスが正しくありません。https:// で始まり .workers.dev で終わるアドレスを入力してください。'; return; }
       if(pu){
-        $('#pf-psrvh').textContent='つうちサーバーを たしかめて います…';
+        $('#pf-psrvh').textContent='通知サーバーを確認しています…';
         try{ var kr=await fetch(pu+'/key',{cache:'no-store'}); var kj=await kr.json(); if(!kj||!kj.key) throw 0; relayMark(pu,kj.relay===1); }
-        catch(e){ $('#pf-psrvh').textContent='つうちサーバーに つながりません。アドレスと「デプロイ」を たしかめてください。'; return; }
+        catch(e){ $('#pf-psrvh').textContent='通知サーバーにつながりません。アドレスを確認してください。'; return; }
       }
       psrvSet(pu);
       try{ if(Notification.permission!=='granted') await Notification.requestPermission(); }catch(e){}
-      try{ var ok=await psrvSetup(); $('#pf-psrvh').textContent = ok ? 'つうちサーバー：せってい ずみ ✓' : 'つうちサーバー：とうろくに しっぱい。「通知:オン」を おして から また ほぞん してください。'; }catch(e){}
+      try{ var ok=await psrvSetup(); $('#pf-psrvh').textContent = ok ? '通知サーバー：設定済み ✓' : '通知サーバーへの登録に失敗しました。通知をオンにしてから、もう一度保存してください。'; }catch(e){}
     }
     var nm=($('#pf-me-nm').value||'').trim().slice(0,12);   /* v388: 未入力なら 空の まま */
     PROF.me={name:nm,emo:pick,img:img};
@@ -13509,6 +13485,48 @@ html body #pane-chat #chat-log .msg .meta{white-space:nowrap}
 #s-lobby #zg-news h3{color:#F6E7C1!important}
 #s-lobby #zg-news a.zn-it,#s-lobby #zg-news a.zn-it:visited{color:#F3EEFF!important}
 #s-lobby #zg-news a.zn-it small{color:#CFC6EA!important;opacity:1!important}
+
+/* ---- v457: 設定（名前）画面を カード型に ---- */
+#prof-modal .pm.zs{background:#F5F3FA!important;color:#1F2433!important;padding-top:0!important;font-feature-settings:"palt" 1;letter-spacing:.01em}
+#prof-modal .pm.zs .zs-top{position:sticky;top:0;z-index:3;margin:0 -16px 6px;padding:16px 18px 12px;background:linear-gradient(180deg,#F5F3FA 75%,#F5F3FA00)}
+#prof-modal .pm.zs .zs-top h3{margin:0!important;font-size:1.25rem!important;font-weight:800;color:#1F2433!important;letter-spacing:.04em}
+#prof-modal .pm.zs .zs-top p{margin:2px 0 0;font-size:.78rem;color:#7A7F8F}
+#prof-modal .pm.zs .zs-card{background:#FFFFFF;border-radius:18px;padding:14px 16px 12px;margin:0 0 12px;box-shadow:0 1px 2px #1F24330D,0 6px 18px #4B2ED60A;border:1px solid #ECE8F6}
+#prof-modal .pm.zs .zs-h{margin:0 0 8px;font-size:.95rem;font-weight:800;color:#4B2ED6;letter-spacing:.06em;display:flex;align-items:center;gap:8px}
+#prof-modal .pm.zs .zs-h::before{content:"";width:4px;height:16px;border-radius:4px;background:linear-gradient(#7C5CFF,#4B2ED6)}
+#prof-modal .pm.zs .zs-sub{margin:14px 0 6px;font-size:.82rem;font-weight:800;color:#3A3F52}
+#prof-modal .pm.zs .zs-row{display:flex!important;align-items:center;justify-content:space-between;gap:12px;min-height:48px;margin:0!important;padding:6px 0;border-top:1px solid #F0EDF7}
+#prof-modal .pm.zs .zs-card > .zs-row:first-of-type,#prof-modal .pm.zs .zs-h + .zs-row{border-top:0}
+#prof-modal .pm.zs .zs-lab{font-size:.9rem;font-weight:600;color:#1F2433;line-height:1.45}
+#prof-modal .pm.zs .zs-desc{margin:4px 0 8px;font-size:.78rem;line-height:1.7;color:#6B7080}
+#prof-modal .pm.zs .zs-hint{margin:2px 2px 6px;font-size:.72rem;color:#8A8FA0}
+#prof-modal .pm.zs .zs-res{margin:2px 2px 6px;font-size:.78rem;line-height:1.6;color:#4B2ED6}
+#prof-modal .pm.zs .zs-res:empty{display:none}
+#prof-modal .pm.zs button.zs-tg{min-width:76px;min-height:36px!important;padding:6px 14px!important;border-radius:999px!important;border:1.5px solid #DAD4EE!important;background:#F6F4FC!important;color:#5A5F70!important;font-size:.82rem!important;font-weight:800!important;transition:background .15s,color .15s,border-color .15s}
+#prof-modal .pm.zs button.zs-tg[data-state="on"]{background:#6D4DF2!important;border-color:#6D4DF2!important;color:#fff!important}
+#prof-modal .pm.zs button.zs-tg[data-state="off"]{background:#FFFFFF!important;color:#8A8FA0!important}
+#prof-modal .pm.zs button.zs-tg:disabled{opacity:.55}
+#prof-modal .pm.zs .zs-btns{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+#prof-modal .pm.zs .zs-btns > button,#prof-modal .pm.zs button.zs-wide{width:100%;min-height:44px;padding:10px 14px!important;border-radius:12px!important;border:1.5px solid #DAD4EE!important;background:#FFFFFF!important;color:#4B2ED6!important;font-size:.88rem!important;font-weight:800!important;text-align:center}
+#prof-modal .pm.zs .row{margin:4px 0 6px!important}
+#prof-modal .pm.zs .big{background:#EFEBFB!important;box-shadow:0 0 0 3px #fff,0 0 0 5px #E3DCFA}
+#prof-modal .pm.zs input[type=text],#prof-modal .pm.zs input[type=url]{width:100%;box-sizing:border-box;min-height:44px;padding:10px 12px!important;border:1.5px solid #E1DCF0!important;border-radius:12px!important;background:#FBFAFE!important;font-size:16px!important;color:#1F2433}
+#prof-modal .pm.zs input:focus{outline:none;border-color:#7C5CFF!important;background:#fff!important;box-shadow:0 0 0 3px #7C5CFF22}
+#prof-modal .pm.zs .zs-row input[type=text]{width:110px!important;flex:none;text-align:center}
+#prof-modal .pm.zs .emo button{background:#F6F4FC!important;border-radius:12px!important}
+#prof-modal .pm.zs .emo button.sel{border-color:#6D4DF2!important;background:#EFEBFF!important}
+#prof-modal .pm.zs .zs-cms{display:flex;flex-direction:column;gap:6px}
+#prof-modal .pm.zs .zs-cm{display:grid;grid-template-columns:6.8em 1fr;align-items:center;gap:8px}
+#prof-modal .pm.zs .zs-cm span{font-size:.8rem;font-weight:600;color:#3A3F52}
+#prof-modal .pm.zs .zs-cm input{min-height:40px!important;padding:8px 10px!important;font-size:15px!important}
+#prof-modal .pm.zs .zs-danger{border-color:#F6D4D4;background:#FFFBFB}
+#prof-modal .pm.zs .zs-danger .zs-h{color:#C62828}
+#prof-modal .pm.zs .zs-danger .zs-h::before{background:#E5484D}
+#prof-modal .pm.zs .zs-danger button.zs-wide{border-color:#F2B8B8!important;color:#C62828!important;background:#FFF!important}
+#prof-modal .pm.zs .acts{position:sticky;bottom:calc(-18px - env(safe-area-inset-bottom));z-index:3;margin:4px -16px 0!important;padding:12px 16px calc(14px + env(safe-area-inset-bottom));background:linear-gradient(180deg,#F5F3FA00,#F5F3FA 30%)}
+#prof-modal .pm.zs .acts button{min-height:50px;border-radius:14px!important;font-size:.98rem!important}
+#prof-modal .pm.zs .acts .ok{background:linear-gradient(135deg,#7C5CFF,#4B2ED6)!important;color:#fff!important;box-shadow:0 6px 16px #4B2ED633}
+#prof-modal .pm.zs .acts .ng{background:#FFFFFF!important;color:#3A3F52!important;border:1.5px solid #E1DCF0!important}
 </style>
 </body>
 </html>
