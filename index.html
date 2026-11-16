@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとしてインストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">新しい版に更新する</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンでアプリとして入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v489</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v490</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">相手を待っています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v489</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v490</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">名前</b> さんが入室を求めています</p>
         <p class="jr-fp">合図 <b id="jr-fp">----</b> ／ 相手の画面と同じかくににて確認</p>
@@ -8416,6 +8416,7 @@ function camPreview(on){
         var msg={photo:true,from:S.me.id,at:Date.now(),data:url,pid:pid,uid:String(++UID),sent:false,n:0};
         S.chat.push(msg);
         renderChat(true);
+        try{ chatJumpBottom(); }catch(e2){}
         sendPhoto(msg);
     }catch(e){ closeCam(); }
   });
@@ -9334,8 +9335,8 @@ async function attachmentSelected(input,isPhoto){
     if(!privateCurrent(scope)) return;
     if(dataURLBytes(data).length>ATTACH_MAX){ toast('送信できる大きさを超えています。2 MB 以下にしてください。'); return; }
     var msg={from:S.me.id,at:Date.now(),data:data,pid:'A'+Date.now().toString(36)+Math.random().toString(36).slice(2,8),uid:String(++UID),sent:false,n:0};
-    if(isPhoto){ msg.photo=true; S.chat.push(msg); renderChat(true); sendPhoto(msg); }
-    else{ msg.file=true; msg.fileName=file.name.slice(0,180); msg.fileSize=file.size; S.chat.push(msg); renderChat(true); sendAttachment(msg); }
+    if(isPhoto){ msg.photo=true; S.chat.push(msg); renderChat(true); chatJumpBottom(); sendPhoto(msg); }
+    else{ msg.file=true; msg.fileName=file.name.slice(0,180); msg.fileSize=file.size; S.chat.push(msg); renderChat(true); chatJumpBottom(); sendAttachment(msg); }
   }catch(e){ toast(isPhoto?'写真を読みこめませんでした。JPEGやPNGの写真でお試しください。':'ファイルを読みこめませんでした。もう一度選んでください。'); }
 }
 $('#chat-photo-file').addEventListener('change',function(){ attachmentSelected(this,true); });
@@ -10989,6 +10990,18 @@ function outSave(){
   return outSavePending;
 }
 
+/* v490: 自分が 送った あとは 一番下へ。キーボードの 開け閉め・入力欄の 高さの 変化・画像の 読みこみが おちつくまで 何回か 合わせる。
+   その あいだに 指で 記録欄を 動かしたら やめる */
+var chatJumpT=[],chatJumpTouch=0;
+function chatJumpBottom(){
+  var l=$('#chat-log'); if(!l) return;
+  chatJumpT.forEach(clearTimeout); chatJumpT=[];
+  var t0=Date.now();
+  var go=function(){ if(chatJumpTouch>t0) return; try{ l.scrollTop=l.scrollHeight; }catch(e){} };
+  go();
+  [30,120,300,600,1000,1600].forEach(function(t){ chatJumpT.push(setTimeout(go,t)); });
+}
+try{ (function(){ var l=$('#chat-log'); if(l){ l.addEventListener('touchmove',function(){ chatJumpTouch=Date.now(); },{passive:true}); l.addEventListener('wheel',function(){ chatJumpTouch=Date.now(); },{passive:true}); } })(); }catch(e){}
 function queueChat(txt,at){
   var scope=privateScope(); if(!scope) return null;
   S.outbox=S.outbox||outLoad();
@@ -11000,6 +11013,7 @@ function queueChat(txt,at){
   S.chat.push(msg);
   item.msg=msg;
   renderChat(true);
+  chatJumpBottom();   /* v490: 送ったら かならず 一番下（送った メッセージ）を 見せる */
   newStickerFullscreen(msg);
   if(!S.flushT) S.flushT=setTimeout(function(){ S.flushT=null; flushOutbox(); },0);
   return msg;
