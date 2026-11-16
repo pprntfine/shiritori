@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v457</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v458</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v457</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v458</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -1601,6 +1601,7 @@ body .bar::after{
         <button id="btn-photo" type="button" class="notify-btn" title="しゃしんを おくる">カメラ</button>
         <button id="btn-attach-photo" type="button" class="notify-btn">写真・動画</button>
         <input id="chat-photo-file" type="file" accept="image/*,video/*" hidden>
+        <button id="btn-settings" type="button" class="notify-btn">⚙ 設定</button>
         <button id="btn-notify" type="button" class="notify-btn" title="メッセージ通知(内容は表示しません)">通知:オフ</button>
       </div>
       </div>
@@ -1782,6 +1783,14 @@ body .bar::after{
   <div class="acts"><button type="button" class="ng" id="pf-cancel">閉じる</button><button type="button" class="ok" id="pf-save">保存する</button></div>
 </div></div>
 <script>
+/* v458: トーク画面の「ライブ」「電話」が つかわれて いる ときは 赤く */
+(function(){
+  [['btn-live','ライブ'],['btn-call','電話']].forEach(function(p){
+    var b=document.getElementById(p[0]); if(!b) return;
+    var paint=function(){ var t=(b.textContent||'').trim(); b.setAttribute('data-active',(t!==p[1]&&t!=='電話 不可')?'1':'0'); };
+    paint(); new MutationObserver(paint).observe(b,{childList:true,characterData:true,subtree:true});
+  });
+})();
 /* v457: 設定の オン/オフ ボタンに 状態を つける（色で わかる ように） */
 (function(){
   function paint(b){ var t=(b.textContent||'').trim(); b.setAttribute('data-state', t==='オン'?'on':((t==='オフ'||t==='なし')?'off':'val')); }
@@ -10003,7 +10012,7 @@ function startRingCount(sec){
 function callPanel(kind,big,sub){
   var c=$('#call-center'), b=$('#call-big'), s=$('#call-sub'), t=$('#call-elapsed');
   if(!c||!b) return;
-  c.hidden=false;
+  c.hidden=false; callModeSet();
   var pn=document.getElementById('call-peer');
   if(pn) pn.textContent=(kind==='ring'||kind==='on')?peerName():'';
   if(kind==='ring') startRingCount(50); else stopRingCount();
@@ -10022,6 +10031,16 @@ function callPanel(kind,big,sub){
   if(s){ s.textContent=sub||''; s.hidden=!sub; }
   if(t) t.hidden=(kind!=='on');
   var st=$('#call-state'); if(st) st.textContent=big;
+}
+/* v458: ライブと 電話を はっきり 分ける（電話では ライブ用の 印・コメントを 出さない。終わる ボタンを 赤く 大きく） */
+function callModeSet(){
+  try{
+    var b=$('#call-box'); if(!b) return;
+    b.classList.toggle('mode-live',!!callVideo); b.classList.toggle('mode-call',!callVideo);
+    var x=$('#call-end'); if(x) x.textContent=callVideo?'ライブを終了':'電話を切る';
+    var eb=$('#call-end-big'); if(eb) eb.textContent='電話を切る';
+    var lv=document.querySelector('#call-box .ig-live'); if(lv&&lv.lastChild&&lv.lastChild.nodeType===3) lv.lastChild.nodeValue='ライブ中';
+  }catch(e){}
 }
 function callPanelHide(){ stopRingCount(); var c=$('#call-center'); if(c) c.hidden=true; }
 /* v310: 「きれた」を はっきり 出す。reason= me / peer / noanswer / lost */
@@ -10078,6 +10097,7 @@ async function applyCallOutput(mode){
 function openCallUI(){
   var b=$('#call-box'); if(!b) return;
   b.hidden=false; b.classList.remove('hidevid'); callHide=false;
+  callModeSet();
   var lv=$('#call-local');
   if(lv&&callStream){ lv.srcObject=callStream; try{ lv.play(); }catch(e){} }
   var hs=$('#call-hide'); if(hs) hs.textContent='画面を隠す';
@@ -10093,7 +10113,7 @@ function openCallUI(){
     var el=$('#call-time'); if(el) el.textContent=txt;
     var el2=$('#call-elapsed'); if(el2&&!el2.hidden) el2.textContent=txt;
   },1000);
-  var bl=$('#btn-live'); if(bl) bl.textContent='ライブ止';
+  var bl=$('#btn-live'); if(bl) bl.textContent=callVideo?'ライブ終了':'ライブ';
   /* v290: まず 受話口を ためす。かなわなければ そのまま 鳴らし、画面で 伝える */
   if(callOutMode==='earpiece') setTimeout(function(){ if(callOn) applyCallOutput('earpiece'); },400);
 }
@@ -10366,7 +10386,7 @@ $('#btn-call').addEventListener('click',async function(){
   /* v330: 電話の よびだしを 相手の スマホへ push しない（アプリを ひらいて いるときだけ 鳴らす）。
      とじている ときは 通知しない。ひらいて いれば これまで どおり この 端末の 合図で 鳴る。 */
   rtcStart(true).then(function(){ if(voiceTicket!==callMediaTicket) return; self2.textContent='よびだし中…'; toast(peerName()+' を よびだしています…');
-      callPanel('ring','よびだし中…','あいてが でると つながります。やめるときは 赤い「終了」を おして ください。');
+      callPanel('ring','よびだし中…','相手が出るとつながります。やめるときは、赤い「電話を切る」を押してください。');
       setTimeout(function(){ if(voiceTicket===callMediaTicket&&rtcOn&&!callVideo&&pc&&pc.connectionState!=='connected'){ stopCall(true,'noanswer'); } },50000); })
     .catch(function(e){ if(voiceTicket!==callMediaTicket) return; callDiagLog('rtcStart-voice',e); stopMic(); self2.textContent='電話 不可'; toast('電話を はじめられませんでした（'+(e&&e.name||'')+'）。'); });
 });
@@ -12435,6 +12455,7 @@ function recvProf(m){
   }
   window.openProf=open;
   var bp=$('#btn-prof'); if(bp) bp.addEventListener('click',open); var bp2=$('#btn-prof2'); if(bp2) bp2.addEventListener('click',open);
+  var bp3=$('#btn-settings'); if(bp3) bp3.addEventListener('click',open);   /* v458: メニューの「設定」 */
   $('#pf-cancel').addEventListener('click',function(){ $('#prof-modal').classList.remove('on'); });
   $('#prof-modal').addEventListener('click',function(e){ if(e.target===this) this.classList.remove('on'); });
   $('#pf-me-photo').addEventListener('click',function(){ $('#pf-file').click(); });
@@ -12827,7 +12848,7 @@ setInterval(function(){
 appNav.init();
 new MutationObserver(function(){ appNav.changed(); }).observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['class','hidden']});
 window.addEventListener('pagehide',function(){ closeCam(); stopCall(false); });
-  window.DOG_STK=DOG_STK;
+  window.DOG_STK=DOG_STK; window.__zgConfetti=confettiBurst;
   /* v447: 部屋が「2人だけ・暗号化」であることを トーク画面に 見せる。タップで せつめい */
   (function(){
     var strip=document.getElementById('zg-room-strip'); if(!strip) return;
@@ -13255,7 +13276,8 @@ try{(function(){
   var el=document.createElement('div');el.className='v439-tokun';el.dataset.key=p.img;
   var drive=['🐶㉘','🐶㉙','🐶㉚','🐶㉛','🐶㉞','🐶㉟'].indexOf(p.img)>=0;
   el.dataset.path=drive?'drive':p.img==='🐶㊲'?'strength':'greet';
-  if(saved('mtp_tokun_big'))el.classList.add('v439-big');
+  var giant=!!saved('mtp_tokun_big');   /* v458: 拡大は 画面の まんなかに 大きく＋紙吹雪 */
+  if(giant)el.classList.add('v439-giant');
   var art=document.createElement('div');art.className='v439-art';
   var img=document.createElement('img');img.alt='とー君';img.decoding='async';img.src=src;art.appendChild(img);
   var words=document.createElement('div');words.className='v439-words';
@@ -13267,8 +13289,14 @@ try{(function(){
   // 上端29%は焼き込み吹き出し。原画を変更せず表示窓から外す。
   // 編集可能な文字は独立した一つのDOM。空文字も尊重する。
   var trail=document.createElement('span');trail.className='v439-trail';trail.setAttribute('aria-hidden','true');el.appendChild(trail);
-  dock.hidden=false;dock.appendChild(el);cur=el;fitCaption(caption);
-  if(el.animate)el.animate([{opacity:0,transform:'translate3d('+(drive?'24px':'0')+',8px,0)'},{opacity:1,transform:'translate3d(0,0,0)'}],{duration:380,easing:'cubic-bezier(.2,.7,.3,1)'});
+  if(giant){
+   document.body.appendChild(el);
+   el.addEventListener('click',function(e){ if(e.target===el) stop(); });
+   try{ if(window.__zgConfetti) window.__zgConfetti(); }catch(e){}
+  } else { dock.hidden=false;dock.appendChild(el); }
+  cur=el;fitCaption(caption);
+  if(giant){ if(art.animate)art.animate([{opacity:0,transform:'scale(.3) rotate(-8deg)'},{opacity:1,transform:'scale(1.08) rotate(3deg)',offset:.65},{opacity:1,transform:'scale(1) rotate(0)'}],{duration:620,easing:'cubic-bezier(.2,.8,.3,1)'}); }
+  else if(el.animate)el.animate([{opacity:0,transform:'translate3d('+(drive?'24px':'0')+',8px,0)'},{opacity:1,transform:'translate3d(0,0,0)'}],{duration:380,easing:'cubic-bezier(.2,.7,.3,1)'});
   removeTimer=setTimeout(function(){
    if(cur!==el)return;
    if(el.animate){var a=el.animate([{opacity:1,transform:'translate3d(0,0,0)'},{opacity:0,transform:drive?'translate3d(-24px,0,0)':'translate3d(0,8px,0)'}],{duration:280,easing:'ease-in',fill:'forwards'});a.onfinish=stop;}
@@ -13527,6 +13555,34 @@ html body #pane-chat #chat-log .msg .meta{white-space:nowrap}
 #prof-modal .pm.zs .acts button{min-height:50px;border-radius:14px!important;font-size:.98rem!important}
 #prof-modal .pm.zs .acts .ok{background:linear-gradient(135deg,#7C5CFF,#4B2ED6)!important;color:#fff!important;box-shadow:0 6px 16px #4B2ED633}
 #prof-modal .pm.zs .acts .ng{background:#FFFFFF!important;color:#3A3F52!important;border:1.5px solid #E1DCF0!important}
+
+/* ---- v458: ライブ・電話を わかりやすく ---- */
+html body #pane-chat .chat-composer-actions button#btn-live::before{content:"🎥"!important;display:inline!important;position:static!important;margin-right:3px!important;width:auto!important;height:auto!important;background:none!important;opacity:1!important}
+html body #pane-chat .chat-composer-actions button#btn-call::before{content:"📞"!important;display:inline!important;position:static!important;margin-right:3px!important;width:auto!important;height:auto!important;background:none!important;opacity:1!important}
+#pane-chat #btn-live[data-active="1"],#pane-chat #btn-call[data-active="1"]{background:#E5323B!important;color:#fff!important;border-color:#E5323B!important;animation:zg-callpulse 1.6s ease-in-out infinite}
+@keyframes zg-callpulse{0%,100%{box-shadow:0 0 0 0 #E5323B55}50%{box-shadow:0 0 0 6px #E5323B00}}
+#call-box #center-note{display:none!important}
+#call-box .ig-x{background:#E5323B!important;color:#fff!important;font-size:.86rem!important;font-weight:900!important;padding:9px 16px!important;border-radius:999px!important;box-shadow:0 4px 14px #E5323B66!important;min-height:40px}
+#call-box.mode-live .ig-live{font-size:.78rem!important;padding:4px 10px!important;border-radius:999px!important}
+#call-box.mode-call .ig-live,#call-box.mode-call .ig-view,#call-box.mode-call .ig-comments,#call-box.mode-call .ig-heart-layer,#call-box.mode-call .ig-bottom,
+#call-box.mode-call #call-flip,#call-box.mode-call #call-hide,#call-box.mode-call #call-local{display:none!important}
+#call-box.mode-call .ig-x{display:none!important}
+#call-box #call-end-big{width:auto!important;min-width:150px;height:64px!important;border-radius:999px!important;padding:0 26px!important;font-size:1.05rem!important;font-weight:900!important}
+#call-box #call-end-big::before{content:"📞";display:inline-block;transform:rotate(135deg);margin-right:8px}
+#call-box .ig-tools{right:auto!important;left:50%!important;transform:translateX(-50%);bottom:74px!important;flex-direction:row!important;gap:8px!important}
+#call-box.mode-call .ig-tools{bottom:calc(36px + env(safe-area-inset-bottom))!important}
+#call-box .ig-tools button{white-space:nowrap!important;width:auto!important;flex:none!important;writing-mode:horizontal-tb!important;font-size:.78rem!important;padding:9px 14px!important;border-radius:999px!important;background:rgba(255,255,255,.14)!important;border:1px solid rgba(255,255,255,.22)!important;min-height:40px}
+#call-box #call-local{top:calc(66px + env(safe-area-inset-top))!important;bottom:auto!important}
+#call-box .ig-comments{bottom:128px!important}
+/* とー君 拡大（画面の まんなか） */
+body > .v439-tokun.v439-giant{position:fixed;inset:0;z-index:260;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:20px;background:rgba(24,18,48,.55);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
+body > .v439-giant .v439-art{--g:min(82vw,380px);width:var(--g);height:calc(var(--g) * .71);overflow:hidden;position:relative;flex:none}
+body > .v439-giant .v439-art>img{position:absolute;left:0;top:calc(var(--g) * -.29);width:var(--g);height:var(--g);max-width:none;object-fit:contain;display:block!important}
+body > .v439-giant .v439-words{max-width:min(88vw,440px);background:#fff;border-radius:20px;padding:12px 18px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+body > .v439-giant .v439-words:has(.v439-caption:empty){display:none}
+body > .v439-giant .v439-caption{color:#29364c;font-size:20px;font-weight:700;line-height:1.5;text-align:center;white-space:pre-wrap;overflow-wrap:anywhere;max-height:30vh}
+body > .v439-giant .v439-label,body > .v439-giant .v439-trail,body > .v439-giant .v439-scroll-note{display:none!important}
+body > .v439-giant .v439-dismiss{border:0;background:rgba(255,255,255,.92);color:#29364c;border-radius:999px;min-height:44px;padding:0 22px;font-size:.9rem;font-weight:800}
 </style>
 </body>
 </html>
