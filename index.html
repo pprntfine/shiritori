@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとしてインストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">新しい版に更新する</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンでアプリとして入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v490</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v491</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">相手を待っています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v490</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v491</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">名前</b> さんが入室を求めています</p>
         <p class="jr-fp">合図 <b id="jr-fp">----</b> ／ 相手の画面と同じかくににて確認</p>
@@ -6924,7 +6924,8 @@ async function chatSaveSnapshot(){
   try{
     var savedMessages=S.chat.slice();
     var __ps=[];
-    var list=S.chat.filter(function(m){ return m&&!m.sys&&!messageDeleted(m)&&(m.text||m.data||m.photo||m.file); }   /* v335: 中身が 欠けても 行は のこす */).map(function(m){
+    var list=S.chat.filter(function(m){ return m&&((m.sys&&m.callLog&&m.text)||(!m.sys&&!messageDeleted(m)&&(m.text||m.data||m.photo||m.file))); }   /* v335: 中身が 欠けても 行は のこす。v491: 電話の 記録も */).map(function(m){
+      if(m.sys) return {mid:m.mid||('cl'+(m.at||0)),f:'',t:m.text,cl:1,a:m.at||0};
       var __pt=!!(m.photo||m.file);
       if(__pt&&m.data){ var __k=photoKeyOf(m); if(__k) __ps.push({k:__k,v:m.data,l:m.data.length,m:m}); }
       return {mid:m.mid||'',f:m.from,t:m.text||'',p:m.photo?1:0,pd:__pt?1:0,d:'',file:m.file?1:0,fn:m.fileName||'',fs:m.fileSize||0,failed:m.failed?1:0,a:m.at||0,n:m.n||0,s:m.sent===false?0:1,k:m.acked?1:0,r:m.read?1:0,ra:m.rad||0,u:m.pid||''};
@@ -6984,6 +6985,7 @@ async function chatRestore(sk){
       if(!it||!(it.t||it.d||it.p||it.pd||it.file)) return;   /* v335: しゃしん・ファイルを よみこみで 捨てない */
       var key=it.mid ? it.f+':mid:'+it.mid : it.f+':'+(it.n||0)+':'+(it.t||it.u||'');
       if(have[key]) return; have[key]=1;
+      if(it.cl){ S.chat.push({sys:true,callLog:true,text:String(it.t).slice(0,80),at:it.a||Date.now(),mid:it.mid||''}); return; }   /* v491: 電話の 記録 */
       var m={mid:it.mid||'',from:it.f,at:it.a||Date.now(),n:it.n||0,sent:!!it.s,acked:!!it.k,read:!!it.r,rad:it.ra||0,uid:String(++UID)};
       if(it.p){ m.photo=true; m.data=(ph[key]||it.d||''); if(!m.data) m.lost=1; m.__ps=(typeof phRaw[key]==='string')?0:(m.data?m.data.length:0); m.pid=it.u||''; }
       else if(it.file){ m.file=true; m.data=(ph[key]||it.d||''); if(!m.data) m.lost=1; m.__ps=(typeof phRaw[key]==='string')?0:(m.data?m.data.length:0); m.fileName=String(it.fn||'ファイル').slice(0,180); m.fileSize=it.fs||0; m.pid=it.u||''; m.failed=!!it.failed||!it.s; }
@@ -7805,7 +7807,7 @@ function renderChatFull(forceBottom, __tailFrom){
     var m=S.chat[i];
     var at=(typeof m.at==='number'?m.at:Date.now());
     if(m.sys){
-      var sd=document.createElement('div'); sd.className='line-sys'; sd.dataset.idx=String(i); sd.textContent=m.text;
+      var sd=document.createElement('div'); sd.className='line-sys'+(m.callLog?' zg-call':''); sd.dataset.idx=String(i); sd.textContent=m.text;
       box.appendChild(sd); continue;
     }
     if(curDay===null||!sameDay(at,curDay)){
@@ -7943,6 +7945,23 @@ function scrollChatBottom(){
   go();
   try{ (window.requestAnimationFrame||setTimeout)(go,16); }catch(e){}
   setTimeout(go,120);
+}
+/* v491: 電話の 記録を トークに 残す（LINE の ように）。この 端末だけの 記録（相手へは 送らない）。保存して、開きなおしても 残る */
+var callLogS=null;   /* {dir:'out'|'in', at, conn} */
+function callLogAdd(text){
+  var at=Date.now();
+  S.chat.push({sys:true,callLog:true,text:'📞 '+text+'　'+fmtTime(at),at:at,mid:'cl'+at});
+  try{ persistChat(); }catch(e){}
+  if(S.tab==='chat'){ renderChat(true); try{ chatJumpBottom(); }catch(e){} }
+}
+function callLogBegin(dir){ callLogS={dir:dir,at:Date.now(),conn:0}; }
+function callLogConnected(){ if(callLogS&&!callLogS.conn) callLogS.conn=Date.now(); }
+function callLogEnd(reason){
+  var c=callLogS; callLogS=null; if(!c) return;
+  var head=(c.dir==='out')?'発信':'着信';
+  if(c.conn){ var sec=Math.max(1,Math.round((Date.now()-c.conn)/1000)); callLogAdd(head+'・通話 '+Math.floor(sec/60)+':'+('0'+(sec%60)).slice(-2)); return; }
+  if(c.dir==='out') callLogAdd(reason==='noanswer'?'発信・応答なし':(reason==='peer'?'発信・相手が切りました':'発信・キャンセル'));
+  else callLogAdd('着信・つながりませんでした');
 }
 function sysChat(text){ S.chat.push({sys:true,text:text,at:Date.now()}); if(S.tab==='chat') renderChat(true); }
 /* v146: トーク画面が ほんとうに 目に みえて いるか（裏で つながって いる だけ では ない） */
@@ -10496,6 +10515,7 @@ function stopCall(notify,reason){
   callPanelHide();
   /* v337: ライブを おえた ときは「でんわを きりました」を 出さない（電話の ときは これまで どおり） */
   if(__wasOn&&!__wasLive&&(notify!==false||reason)){ try{ callEndShow(reason||'me'); }catch(e){} }
+  try{ if(!__wasLive) callLogEnd(reason||'me'); else callLogS=null; }catch(e){}
   if(notify!==false) try{ Net.send({t:'rtc-bye'}); }catch(e){}
 }
 $('#btn-call').addEventListener('click',async function(){
@@ -10510,7 +10530,7 @@ $('#btn-call').addEventListener('click',async function(){
   var self2=this, voiceTicket=callMediaTicket;
   /* v330: 電話の よびだしを 相手の スマホへ push しない（アプリを ひらいて いるときだけ 鳴らす）。
      とじている ときは 通知しない。ひらいて いれば これまで どおり この 端末の 合図で 鳴る。 */
-  rtcStart(true).then(function(){ if(voiceTicket!==callMediaTicket) return; self2.textContent='呼び出し中…'; toast(peerName()+' を呼び出しています…');
+  rtcStart(true).then(function(){ if(voiceTicket!==callMediaTicket) return; try{ callLogBegin('out'); }catch(e){} self2.textContent='呼び出し中…'; toast(peerName()+' を呼び出しています…');
       callPanel('ring','呼び出し中…','相手が出るとつながります。やめるときは、赤い「電話を切る」を押してください。');
       setTimeout(function(){ if(voiceTicket===callMediaTicket&&rtcOn&&!callVideo&&pc&&pc.connectionState!=='connected'){ stopCall(true,'noanswer'); } },50000); })
     .catch(function(e){ if(voiceTicket!==callMediaTicket) return; callDiagLog('rtcStart-voice',e); stopMic(); self2.textContent='電話 不可'; toast('電話を始められませんでした（'+(e&&e.name||'')+'）。'); });
@@ -10568,6 +10588,7 @@ function rtcStart(isCaller){
     if(pc&&pc.connectionState==='connected'){
       if(cb) cb.textContent='通話中';
       if(stt) stt.textContent='つながりました';
+      if(!callVideo){ try{ callLogConnected(); }catch(e){} }
       if(callVideo) callPanelHide();
       else callPanel('on','通話中','終わるときは、赤い「電話を切る」を押してください。');
       paintCallOut();
@@ -10678,8 +10699,10 @@ async function rtcHandleSdp(m,sdp){
         if(!privateIncoming(m)) return;
         if(ans0!=='yes'){
           try{ Net.send({t:'call-no',r:ans0==='timeout'?'busy':'no'}); }catch(e){}
+          try{ callLogAdd((ans0==='timeout'||Date.now()-(window.__callPeerBye||0)<3000)?'不在着信':'着信・拒否しました'); }catch(e){}
           return;
         }
+        try{ callLogBegin('in'); }catch(e){}
         try{ Aud.unlock(); }catch(e){}
         gm=await getCallMedia(false);
         if(!privateIncoming(m)) return;
@@ -10748,8 +10771,10 @@ async function rtcRecvSdp(m){
         if(!privateIncoming(m)) return;
         if(ans0!=='yes'){
           try{ Net.send({t:'call-no',r:ans0==='timeout'?'busy':'no'}); }catch(e){}
+          try{ callLogAdd((ans0==='timeout'||Date.now()-(window.__callPeerBye||0)<3000)?'不在着信':'着信・拒否しました'); }catch(e){}
           return;
         }
+        try{ callLogBegin('in'); }catch(e){}
         try{ Aud.unlock(); }catch(e){}
         gm=await getCallMedia(false);
         if(!privateIncoming(m)) return;
@@ -11767,6 +11792,7 @@ Net.onMsg=async function(m){
 
     case 'rtc-bye':
       if(m.from===S.me.id) break;
+      window.__callPeerBye=Date.now();   /* v491: 出る前に 相手が やめた →「不在着信」 */
       closeCallAsk();
       stopCall(false,'peer');  /* v312: かえしの rtc-bye を おくらない */
       break;
@@ -14116,6 +14142,9 @@ html body #mem-box{position:fixed!important;left:12px!important;right:12px!impor
 html body #pane-chat #chat-log .msg .meta{white-space:pre-line!important;text-align:right;line-height:1.35!important}
 html body #pane-chat #chat-log .msg.in .meta{text-align:left}
 html body #pane-chat #chat-log .msg .meta{flex:none!important;max-width:none!important;min-width:max-content}
+
+/* v491: 電話の 記録 */
+html body #pane-chat #chat-log .line-sys.zg-call{background:rgba(255,255,255,.88)!important;color:#3B2F6B!important;font-weight:700;border-radius:999px;padding:5px 14px!important}
 </style>
 </body>
 </html>
