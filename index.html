@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v473</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v474</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v473</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v474</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -12309,9 +12309,25 @@ var Caster={lines:[],i:0,t:null,typeT:null,sig:'',
   },
   wire:function(box){
     var self=this; this.wired=true;
-    box.querySelector('.zc-tk').addEventListener('click',function(e){ e.stopPropagation(); self.show(self.i+1); });   /* v467: 芸は なし */
+    box.querySelector('.zc-tk').addEventListener('click',function(e){ e.stopPropagation(); if(Date.now()-(self.swipedAt||0)<450) return; self.show(self.i+1); });   /* v467: 芸は なし */
     var bub=box.querySelector('.zc-bub');
-    var go=function(e){ e.stopPropagation(); var l=self.lines[self.i]; if(l&&l.url) window.open(l.url,'_blank','noopener,noreferrer'); else self.show(self.i+1); };
+    var go=function(e){ e.stopPropagation(); if(Date.now()-(self.swipedAt||0)<450) return; var l=self.lines[self.i]; if(l&&l.url) window.open(l.url,'_blank','noopener,noreferrer'); else self.show(self.i+1); };
+    /* v474: 左右に スワイプで 前後の ニュースへ（左=つぎ・右=まえ）。スワイプの あとの タップで 記事が ひらかない ように する */
+    var sx=0,sy=0,st=0,tracking=false;
+    var start=function(x,y){ sx=x; sy=y; st=Date.now(); tracking=true; };
+    var end=function(x,y){
+      if(!tracking) return; tracking=false;
+      var dx=x-sx, dy=y-sy;
+      if(Math.abs(dx)<40||Math.abs(dx)<Math.abs(dy)*1.3||Date.now()-st>900) return;
+      self.swipedAt=Date.now();
+      var b=box.querySelector('.zc-bub'); if(b){ b.classList.remove('sw-l','sw-r'); void b.offsetWidth; b.classList.add(dx<0?'sw-l':'sw-r'); }
+      self.show(self.i+(dx<0?1:-1));
+    };
+    box.addEventListener('touchstart',function(e){ var t=e.touches&&e.touches[0]; if(t) start(t.clientX,t.clientY); },{passive:true});
+    box.addEventListener('touchend',function(e){ var t=e.changedTouches&&e.changedTouches[0]; if(t) end(t.clientX,t.clientY); },{passive:true});
+    box.addEventListener('touchcancel',function(){ tracking=false; },{passive:true});
+    box.addEventListener('mousedown',function(e){ start(e.clientX,e.clientY); });
+    box.addEventListener('mouseup',function(e){ end(e.clientX,e.clientY); });
     bub.addEventListener('click',go); bub.addEventListener('keydown',function(e){ if(e.key==='Enter') go(e); });
     document.addEventListener('visibilitychange',function(){ if(document.hidden){ clearTimeout(self.t); } else self.show(self.i); });
   },
@@ -13893,6 +13909,13 @@ body > .v439-giant .v439-dismiss{border:0;background:rgba(255,255,255,.92);color
 #s-lobby #zg-caster .zc-txt{flex:0 1 auto;min-height:0!important;max-height:7.75em;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:5;line-clamp:5}
 #s-lobby #zg-caster .zc-more{flex:none;margin-top:auto!important}
 #s-lobby #zg-caster .zc-more[hidden]{display:block!important;visibility:hidden}
+
+/* ---- v474: キャスターを 左右に スワイプ ---- */
+#s-lobby #zg-caster{touch-action:pan-y;-webkit-user-select:none;user-select:none}
+#s-lobby #zg-caster .zc-bub.sw-l{animation:zc-swl .32s ease-out}
+#s-lobby #zg-caster .zc-bub.sw-r{animation:zc-swr .32s ease-out}
+@keyframes zc-swl{from{transform:translateX(26px);opacity:.4}to{transform:none;opacity:1}}
+@keyframes zc-swr{from{transform:translateX(-26px);opacity:.4}to{transform:none;opacity:1}}
 </style>
 </body>
 </html>
