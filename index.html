@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v478</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v479</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v478</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v479</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -3556,7 +3556,7 @@ function createAppNavigation(env){
 var appNav=createAppNavigation({
   history:history,
   read:function(){ return {phase:S.phase,tab:S.tab}; },
-  restore:function(r){ show(r.phase); setTab(r.tab); },
+  restore:function(r){ show(r.phase); setTab(r.phase==='play'?'chat':r.tab); },   /* v479: もどる で クイズ画面に しない */
   listen:function(fn){ window.addEventListener('popstate',fn); },
   scan:function(nav){
     function modal(id,visible,close){ var e=document.getElementById(id); if(e&&visible(e)) nav.open(id,close,function(){ var n=document.getElementById(id); return !!(n&&visible(n)); }); }
@@ -3593,6 +3593,9 @@ function show(which){
   $('#btn-quit').hidden = (which!=='play');
   updateTalkbackBadges(); updateTitleBadge();
   window.scrollTo(0,0);
+  /* v479: クイズは もう ない（v462）。トーク画面(play)は いつも トークの タブで 出す。
+     これまでは タブが 'game' の まま play に なる 道すじが あり、古い クイズ画面（あいてを まっています…）が 一瞬 見えて いた */
+  if(which==='play'&&S.tab!=='chat'){ try{ setTab('chat'); }catch(e){} }
   /* v245: トークを 開いた ときに 全画面スタンプを 出す しくみは やめた（新しい スタンプが とどいた ときだけ 出す） */
 }
 /* ペア成立後は 部屋を でても トークだけ つづく */
@@ -13962,6 +13965,9 @@ body > .v439-giant .v439-dismiss{border:0;background:rgba(255,255,255,.92);color
 
 /* v478: メニューの「設定」にも ほかと おなじ イラスト（歯車） */
 body .line-composer .tools button#btn-settings::before{content:'';display:block;width:28px;height:28px;flex:none;background:center/contain no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='%23e4dcfa' stroke='%235b4a94' stroke-width='1.8' stroke-linejoin='round'%3E%3Crect x='13.5' y='2.5' width='5' height='7' rx='1.4' transform='rotate%280 16 16%29'/%3E%3Crect x='13.5' y='2.5' width='5' height='7' rx='1.4' transform='rotate%2845 16 16%29'/%3E%3Crect x='13.5' y='2.5' width='5' height='7' rx='1.4' transform='rotate%2890 16 16%29'/%3E%3Crect x='13.5' y='2.5' width='5' height='7' rx='1.4' transform='rotate%28135 16 16%29'/%3E%3Crect x='13.5' y='2.5' width='5' height='7' rx='1.4' transform='rotate%28180 16 16%29'/%3E%3Crect x='13.5' y='2.5' width='5' height='7' rx='1.4' transform='rotate%28225 16 16%29'/%3E%3Crect x='13.5' y='2.5' width='5' height='7' rx='1.4' transform='rotate%28270 16 16%29'/%3E%3Crect x='13.5' y='2.5' width='5' height='7' rx='1.4' transform='rotate%28315 16 16%29'/%3E%3Ccircle cx='16' cy='16' r='9.5'/%3E%3C/g%3E%3Ccircle cx='16' cy='16' r='9.5' fill='%23e4dcfa'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%23fff' stroke='%235b4a94' stroke-width='1.8'/%3E%3C/svg%3E")}
+
+/* v479: 古い クイズ画面は 出さない */
+body #s-play #pane-game,body #s-play #pane-game.on{display:none!important}
 </style>
 </body>
 </html>
