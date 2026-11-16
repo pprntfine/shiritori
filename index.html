@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v472</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v473</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v472</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v473</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -2834,7 +2834,7 @@ var Net={
       var __ns=NO_STORE[env.t]===1;
       /* v287: 即時路で とどいた ものは 中継所の 水がめを つかわない。
          これまでは 水がめ(5秒に 1こ)で 止められ、かけら送りが 1こずつ 待たされて いた */
-      if(__ns&&fastOk) return true;
+      if(__ns&&fastOk){ if(relaySendBase()) this.postStore(body,scope); return true; }   /* v473: 相手が とじて いても 開いた ときに そろう ように 中継所にも 預ける */
       /* v282: かけらは 即時路(MQTT)だけを つかう。中継所の 制限中でも とおす */
       /* v336: 即時路が つながって いない とき、かけらを 中継所の 小さい POST で おくる。
          これが 無いと、MQTT が ふさがれた 回線では しゃしんが 絶対に とどかない */
@@ -12189,7 +12189,20 @@ var Relay={ws:null,topic:'',base:'',ts:0,seen:null,ids:[],retry:0,timer:null,pin
     return rx+'／'+tx;
   }
 };
-document.addEventListener('visibilitychange',function(){ if(!document.hidden){ try{ Relay.wake(); }catch(e){} } });
+document.addEventListener('visibilitychange',function(){ if(!document.hidden){ try{ Relay.wake(); }catch(e){} try{ if(psrvRaw()&&!psrvGet()) relayBoot(); }catch(e){} } });
+/* v473: 中継所の アドレスが ない スマホにも 自分の 中継所を 入れる。通知の 許可が なくても（iPhone の Safari など）使えるか たしかめて、中継所で 送受信する。
+   これまでは アドレスが 入って いて、しかも 通知を 許可した スマホ だけが 中継所を つかえた（相手の iPhone は ntfy.sh の 250通 制限の まま だった） */
+var DEFAULT_PSRV='https://zatsugaku-push.pprnt908.workers.dev';
+function relayBoot(){
+  try{ if(!psrvRaw()) psrvSet(DEFAULT_PSRV); }catch(e){}
+  return psrvCheck().then(function(ok){
+    try{ if(ok&&Net.topic&&relayHas()&&Relay.topic!==Net.topic) Relay.connect(Net.topic); }catch(e){}
+    try{ if(ok&&Net.topic) sendProf(); }catch(e){}
+    return ok;
+  },function(){ return false; });
+}
+setTimeout(function(){ try{ relayBoot(); }catch(e){} },1500);
+window.addEventListener('online',function(){ try{ if(!psrvGet()) relayBoot(); }catch(e){} });
 /* ===== v455: トップ画面の 最新ニュース（徳島・事件事故・株価）=====
    じぶんの サーバー（つうちサーバー）の /news から だけ とる。スマホは ニュースの サイトに 直接 つながらない。
    アプリを ひらく たび・もどる たびに あたらしく する（サーバー側で 5分 おぼえる）。 */
