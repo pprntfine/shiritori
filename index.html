@@ -23,7 +23,7 @@
 <meta http-equiv="Cache-Control" content="no-store">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>雑学王</title>
+<title>とー君ニュース</title>
 <style>
 :root{
   --board:#12312A;
@@ -1403,7 +1403,7 @@ body .bar::after{
   <div class="board">
 
     <header class="bar">
-      <div class="brand">雑学王</div>
+      <div class="brand">とー君ニュース</div>
       <div class="bar-right">
         <!-- v202: かぎマークは ひょうじしない（あんごうは つねに 有効・AES-GCM 256） -->
         <span id="net" class="net" aria-hidden="true"><i></i><span id="net-txt"></span></span>
@@ -1416,15 +1416,16 @@ body .bar::after{
     <section id="s-lobby" class="screen on">
       <div class="hero">
                 <div class="mascots lab" id="lab" aria-hidden="true"></div>
-        <h1 class="chalk" style="position:relative">雑学王<span id="hero-badge" hidden></span></h1>
+        <h1 class="chalk" style="position:relative">とー君ニュース<span id="hero-badge" hidden></span></h1>
+        <div id="zg-caster" aria-live="polite"><button type="button" class="zc-tk" aria-label="つぎの ニュース"><img alt="とー君" decoding="async"></button><div class="zc-bub" role="button" tabindex="0"><span class="zc-tag"></span><p class="zc-txt"></p><span class="zc-more">記事を読む ›</span></div><div class="zc-dots"></div></div>
       </div>
-      <button id="btn-solo" class="chalk-btn big" type="button" style="width:100%;margin-top:4px">クイズを はじめる</button>
       <p id="local-hint" class="note" hidden></p>
       <section id="zg-news" aria-label="最新ニュース" hidden>
         <div class="zn-head"><b>最新ニュース</b><span id="zn-at"></span><button type="button" id="zn-re" aria-label="ニュースを あたらしく する">↻</button></div>
         <div id="zn-mkt" class="zn-mkt"></div>
         <div id="zn-body"></div>
       </section>
+      <button id="btn-solo" class="chalk-btn big" type="button" style="width:100%;margin-top:4px">今日の 雑学クイズ</button>
       
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
@@ -12215,7 +12216,71 @@ var News={at:0,busy:false,
       });
     });
     if(!body.firstChild) this.msg('いまは ニュースが ありません。');
+    try{ Caster.set(j); }catch(e){}
     if(at){ var d=new Date(j.at||Date.now()); at.textContent=(d.getMonth()+1)+'/'+d.getDate()+' '+('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2)+' こうしん'+(j.stale?'（ふるい）':''); }
+  }
+};
+/* ===== とー君キャスター（v460）：ニュースの 中身を とー君が 読みあげる。名前入りの 吹き出し絵（㉘〜㊳）は つかわない ===== */
+var Caster={lines:[],i:0,t:null,typeT:null,sig:'',
+  MOOD:{hello:'🐶⑰',toku:'🐶⑬',jiken:'🐶⑭',up:'🐶㉓',down:'🐶⑫',keizai:'🐶⑲',bye:'🐶⑬'},
+  react:function(t,g){
+    var R=[[/火事|火災|全焼|焼け/,'火の元には 気をつけてね。'],[/事故|衝突|はねられ|横転|追突/,'車の 運転、気をつけてね。'],
+      [/詐欺|だまし/,'あやしい 電話には 気をつけようね。'],[/逮捕|容疑|事件|殺人|強盗|窃盗/,'こわいね…。気をつけて すごそうね。'],
+      [/地震|津波/,'もしもの そなえ、大事だね。'],[/台風|大雨|大雪|警報|注意報|豪雨|雷/,'おでかけ前に 天気を チェックしてね。'],
+      [/祭|阿波おどり|イベント|開幕|オープン|開催|フェス|花火/,'楽しそうだね！行ってみたいな。'],[/渦潮|鳴門|観光|紅葉|温泉/,'いいね〜、行ってみたくなるね。'],
+      [/学校|高校|中学|小学|子ども|児童/,'子どもたちの ニュースだね。'],[/病院|医療|感染|インフルエンザ|コロナ/,'体調には 気をつけてね。'],
+      [/株|日経|円安|円高|為替|物価|値上げ/,'お金の ニュースも 大事だね。'],[/選挙|知事|市長|議会/,'地元の 政治の ニュースだね。']];
+    for(var k=0;k<R.length;k++) if(R[k][0].test(t)) return R[k][1];
+    return g==='toku'?'地元の ニュースは 気になるね。':(g==='jiken'?'気をつけようね。':'チェックしておこうね。');
+  },
+  build:function(j){
+    var L=[{tag:'とー君ニュース',mood:'hello',text:'こんにちは！ とー君ニュースの 時間です。きょうの ニュースを お伝えします。'}], self=this;
+    var ok=function(it){ return it&&typeof it.t==='string'&&/^https:\/\//.test(String(it.u||'')); };
+    (j.tokushima||[]).filter(ok).slice(0,4).forEach(function(it){ L.push({tag:'徳島',mood:'toku',url:it.u,text:'徳島から ニュースです。「'+it.t+'」 '+self.react(it.t,'toku')}); });
+    (j.jiken||[]).filter(ok).slice(0,3).forEach(function(it){ L.push({tag:'事件・事故',mood:'jiken',url:it.u,text:'事件・事故の ニュースです。「'+it.t+'」 '+self.react(it.t,'jiken')}); });
+    var m=j.market||{}, n=m.nikkei;
+    if(n&&typeof n.v==='number'){
+      var up=!(typeof n.c==='number'&&n.c<0), fm=function(x){ return Math.round(x).toLocaleString('ja-JP'); };
+      L.push({tag:'株価',mood:up?'up':'down',text:'日経平均は '+fm(n.v)+'円'+(typeof n.c==='number'?('。前の日より '+fm(Math.abs(n.c))+'円 '+(up?'上がって います。いい 調子だね📈':'下がって います。ちょっと 心配だね📉')):'です。')});
+    }
+    if(m.usdjpy&&typeof m.usdjpy.v==='number') L.push({tag:'為替',mood:'keizai',text:'1ドルは '+m.usdjpy.v.toFixed(2)+'円です。'+(m.usdjpy.v>=150?'円安が つづいて いるね。':'')});
+    (j.keizai||[]).filter(ok).slice(0,2).forEach(function(it){ L.push({tag:'経済',mood:'keizai',url:it.u,text:'経済の ニュースです。「'+it.t+'」 '+self.react(it.t,'keizai')}); });
+    L.push({tag:'とー君ニュース',mood:'bye',text:'以上、とー君ニュースでした。また 見てね！'});
+    return L;
+  },
+  set:function(j){
+    var L=this.build(j), sig=L.map(function(x){ return x.text; }).join('|');
+    if(sig===this.sig) return; this.sig=sig; this.lines=L;
+    var box=document.getElementById('zg-caster'); if(!box) return;
+    box.classList.add('on');
+    if(!this.wired){ this.wire(box); }
+    var d=box.querySelector('.zc-dots'); d.textContent=''; for(var k=0;k<L.length;k++){ var s1=document.createElement('i'); d.appendChild(s1); }
+    this.show(0);
+  },
+  wire:function(box){
+    var self=this; this.wired=true;
+    box.querySelector('.zc-tk').addEventListener('click',function(e){ e.stopPropagation(); self.show(self.i+1); });
+    var bub=box.querySelector('.zc-bub');
+    var go=function(e){ e.stopPropagation(); var l=self.lines[self.i]; if(l&&l.url) window.open(l.url,'_blank','noopener,noreferrer'); else self.show(self.i+1); };
+    bub.addEventListener('click',go); bub.addEventListener('keydown',function(e){ if(e.key==='Enter') go(e); });
+    document.addEventListener('visibilitychange',function(){ if(document.hidden){ clearTimeout(self.t); } else self.show(self.i); });
+  },
+  show:function(i){
+    var box=document.getElementById('zg-caster'); if(!box||!this.lines.length) return;
+    clearTimeout(this.t); clearInterval(this.typeT);
+    i=((i%this.lines.length)+this.lines.length)%this.lines.length; this.i=i;
+    var l=this.lines[i], img=box.querySelector('.zc-tk img'), src=(window.DOG_STK||{})[this.MOOD[l.mood]]||'';
+    if(img&&src&&img.getAttribute('src')!==src) img.src=src;
+    box.setAttribute('data-mood',l.mood);
+    var tk=box.querySelector('.zc-tk'); tk.classList.remove('hop'); void tk.offsetWidth; tk.classList.add('hop');
+    box.querySelector('.zc-tag').textContent=l.tag;
+    box.querySelector('.zc-more').hidden=!l.url;
+    var dots=box.querySelectorAll('.zc-dots i'); for(var k=0;k<dots.length;k++) dots[k].className=(k===i?'on':'');
+    var p=box.querySelector('.zc-txt'), txt=l.text, n=0, self=this;
+    var reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if(reduce){ p.textContent=txt; } else { p.textContent=''; this.typeT=setInterval(function(){ n+=2; p.textContent=txt.slice(0,n); if(n>=txt.length) clearInterval(self.typeT); },45); }
+    if(!document.hidden&&News.lobbyOn()) this.t=setTimeout(function(){ self.show(self.i+1); },Math.max(5200,txt.length*45+3800));
+    else this.t=setTimeout(function(){ self.show(self.i); },3000);
   }
 };
 setTimeout(function(){ try{ News.load(true); }catch(e){} },800);
@@ -13630,6 +13695,31 @@ body > .v439-giant .v439-dismiss{border:0;background:rgba(255,255,255,.92);color
 #call-box .ig-tools button#call-spk.off{opacity:.55}
 #call-box .ig-comments{bottom:150px!important}
 #call-box #call-local{width:34%!important;max-width:146px!important}
+
+/* ---- v460: とー君ニュース（キャスター） ---- */
+#s-lobby #lab{display:none!important}
+#s-lobby .hero h1.chalk{font-size:clamp(1.9rem,9vw,2.6rem)!important;letter-spacing:.06em!important;margin:6px 0 10px!important}
+#s-lobby #zg-caster{display:none;position:relative;z-index:1;align-items:flex-end;gap:8px;margin:0 2px 2px;text-align:left}
+#s-lobby #zg-caster.on{display:flex}
+#s-lobby #zg-caster .zc-tk{flex:none;width:92px;height:92px;padding:0;border:0;background:none;cursor:pointer;filter:drop-shadow(0 8px 14px #0005)}
+#s-lobby #zg-caster .zc-tk img{width:100%;height:100%;object-fit:contain;display:block;animation:zc-bob 2.4s ease-in-out infinite}
+#s-lobby #zg-caster .zc-tk.hop img{animation:zc-hop .55s cubic-bezier(.2,.8,.3,1),zc-bob 2.4s ease-in-out .55s infinite}
+@keyframes zc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+@keyframes zc-hop{0%{transform:translateY(14px) scale(.85);opacity:.3}60%{transform:translateY(-8px) scale(1.05);opacity:1}100%{transform:none}}
+#s-lobby #zg-caster .zc-bub{position:relative;flex:1;min-height:132px;box-sizing:border-box;padding:10px 12px 9px;border-radius:18px 18px 18px 6px;background:#FFFDF6;color:#28354A;box-shadow:0 8px 20px #0004;cursor:pointer}
+#s-lobby #zg-caster .zc-bub::before{content:"";position:absolute;left:-7px;bottom:12px;border:8px solid transparent;border-right-color:#FFFDF6;border-left:0}
+#s-lobby #zg-caster .zc-tag{display:inline-block;font-size:.66rem;font-weight:900;letter-spacing:.06em;padding:2px 8px;border-radius:999px;background:#6D4DF2;color:#fff;margin-bottom:4px}
+#s-lobby #zg-caster[data-mood="toku"] .zc-tag{background:#1E9E6A}
+#s-lobby #zg-caster[data-mood="jiken"] .zc-tag{background:#E5484D}
+#s-lobby #zg-caster[data-mood="up"] .zc-tag,#s-lobby #zg-caster[data-mood="down"] .zc-tag,#s-lobby #zg-caster[data-mood="keizai"] .zc-tag{background:#C98A00}
+#s-lobby #zg-caster .zc-txt{margin:0;font-size:.9rem;font-weight:700;line-height:1.55;min-height:3.1em;color:#28354A!important;text-shadow:none!important}
+#s-lobby #zg-caster .zc-more{display:block;margin-top:3px;font-size:.7rem;font-weight:800;color:#6D4DF2;text-align:right}
+#s-lobby #zg-caster .zc-more[hidden]{display:none}
+#s-lobby #zg-caster .zc-dots{position:absolute;left:100px;right:0;bottom:-12px;display:flex;justify-content:center;gap:4px}
+#s-lobby #zg-caster .zc-dots i{width:5px;height:5px;border-radius:50%;background:#ffffff40}
+#s-lobby #zg-caster .zc-dots i.on{background:#fff;width:12px;border-radius:3px}
+#s-lobby .hero{padding-bottom:18px!important}
+#s-lobby #btn-solo{min-height:46px!important;font-size:.95rem!important;margin-top:6px!important}
 </style>
 </body>
 </html>
