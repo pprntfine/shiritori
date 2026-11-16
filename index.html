@@ -13408,6 +13408,9 @@ try{(function(){
  function setIntervalValue(v){interval=v;stop();loop();}
  var sv=parseInt(saved('mtp_tokun_iv')||'10000',10);if(sv===-1||sv>=0)interval=sv;
  window.__tokSet=setIntervalValue;
+ /* v460: とー君（かずよ〜♡の コメントつき）は チャット画面だけ。はなれたら すぐ けす（拡大は 画面全体に 出るため） */
+ setInterval(function(){ if(cur&&!active())stop(); },250);
+ document.addEventListener('visibilitychange',function(){ if(document.hidden&&cur)stop(); });
  function gentle(el){
   if(enhanced.has(el))return;enhanced.add(el);
   if(!active()||reduce.matches||animations.size>=2||!el.closest('#chat-log'))return;
