@@ -1,8 +1,8 @@
 'use strict';
 /* とー君ニュース（旧 雑学王）v460。本文は復号しない。鍵は受け取らず、暗号文だけを耐久保存する。
    zg-sw-inbox/pin {b:暗号文,t:時刻} は本体との互換契約。本文に時限削除を行わない。 */
-const SW_VERSION='v485';
-const SHELL_CACHE='zg-v485-shell';
+const SW_VERSION='v486';
+const SHELL_CACHE='zg-v486-shell';
 function unwrapPush(value){
   for(let i=0;i<8;i++){
     if(value&&typeof value==='object'){
@@ -46,20 +46,20 @@ async function getRole(){
 }
 async function handlePush(raw){
   const msg=unwrapPush(raw),body=sealedBody(msg);
-  let tag='mtp-chat',text='新しい メッセージが とどいています',data={},saved=false;
+  let tag='mtp-chat',text='新しいメッセージが届いています',data={},saved=false;
   if(body){
     data.zgm=body;
     try{await swInboxSave(body);saved=true;}catch(e){data.saveFailed=true;}
     // 保存できない場合も通知のdataに暗号文を残す。成功と偽らず再取込対象とする。
-    if(!saved)text='メッセージの 保存を もう一度 ためします。アプリを ひらいてください';
+    if(!saved)text='メッセージの保存をもう一度試します。アプリを開いてください';
     tag='zgs-'+body.slice(-32);
   }else if(/^zgcall:/.test(msg)){
-    tag='mtp-call';text='でんわが きています';data.call=true;
+    tag='mtp-call';text='電話がきています';data.call=true;
   }else if(/^zgo:\d+$/.test(msg)){
     // 相手の開封通知だけはホスト限定。役割不明も表示しない。
     if(await getRole()!=='h')return;
     const c=await caches.open('zg-count');await c.put('po',new Response(msg.slice(4)));
-    tag='mtp-peer';text='あいてが アプリを ひらきました';
+    tag='mtp-peer';text='相手がアプリを開きました';
   }else if(msg==='zg-test'){
     tag='mtp-test';text='テスト通知です';
   }else if(/^zgm:\d+:!/.test(msg)){
@@ -68,7 +68,7 @@ async function handlePush(raw){
     data.stub=true;
   }else if(msg.startsWith('⚠')){
     if(await getRole()!=='h')return;
-    tag='mtp-alert';text='入室の おしらせが あります';
+    tag='mtp-alert';text='入室のお知らせがあります';
   }else{return;}
   await self.registration.showNotification('とー君ニュース',{
     body:text,tag,renotify:true,data,silent:false,
@@ -86,7 +86,7 @@ self.addEventListener('notificationclick',event=>{
     const n=event.notification,body=n&&n.data&&n.data.zgm;
     if(body){try{await swInboxSave(body);}catch(e){
       // 唯一の暗号文を閉じる前に再保存。失敗時は新しい通知へ引き継ぐ。
-      await self.registration.showNotification('とー君ニュース',{body:'アプリを ひらいて メッセージを 受け取ってください',tag:n.tag,data:{zgm:body,saveFailed:true}});
+      await self.registration.showNotification('とー君ニュース',{body:'アプリを開いてメッセージを受け取ってください',tag:n.tag,data:{zgm:body,saveFailed:true}});
     }}
     const windows=await self.clients.matchAll({type:'window',includeUncontrolled:true});
     let client=windows.find(c=>c.url.startsWith(self.registration.scope));
