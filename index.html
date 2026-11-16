@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v480</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v481</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v480</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v481</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -13993,6 +13993,11 @@ body #s-play #pane-game,body #s-play #pane-game.on{display:none!important}
 
 /* v480: 作りなおしの とき、もう 出て いた メッセージは 出てくる 動きを しない（ちかっと 消えない） */
 body #chat-log .msg.zg-still,body #chat-log .msg.zg-still:not(.cont){animation:none!important;opacity:1!important}
+
+/* v481: メニュー・ライブ・電話・スタンプ・削除・TikTok を 1段に（TikTok は 上の段の 右はし） */
+html body #pane-chat .line-composer .chat-composer-actions{flex-wrap:nowrap!important;gap:clamp(3px,1vw,5px)!important}
+html body #pane-chat .line-composer .chat-composer-actions > .chat-tools-toggle{flex:1 1 auto!important;min-width:0!important;width:auto!important;padding:0 clamp(2px,1.1vw,7px)!important;font-size:clamp(9.5px,3vw,12px)!important;letter-spacing:0!important;justify-content:center;text-align:center;overflow:hidden!important;text-overflow:clip}
+html body #pane-chat .line-composer .chat-composer-actions > button#btn-live::before,html body #pane-chat .line-composer .chat-composer-actions > button#btn-call::before{margin-right:1px!important}
 </style>
 </body>
 </html>
