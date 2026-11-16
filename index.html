@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v484</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v485</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v484</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v485</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -2993,7 +2993,7 @@ var Net={
           try{
             var k2=String(env.id||'');
             var pm2=photoMimeOf(bytes);
-            if(k2&&pm2&&typeof photoChunkStart==='function'){
+            if(k2&&pm2&&bytes.length<=60000&&typeof photoChunkStart==='function'){   /* v485: きれいな 大きい 写真は かけらに しない（sendPhoto が 小さく して 送りなおす） */
               try{ toast('かけらに わけて おくりなおします…'); }catch(e){}
               photoChunkStart(k2,bytesDataURL(bytes,pm2));   /* v285: 窓口を とおす（2まい とどく のを ふせぐ） */
             }
@@ -8306,7 +8306,8 @@ function photoChunkStart(id,d,minGap){
 }   /* v267: おくった 写真を おぼえて おく（とどかなかった 分を おくりなおす） */
 /* v273: 写真は「1回で おくれる 大きさ」に おさめてから 送る。かけら送りは 保険で、1800文字ずつ・最大2000かけら・120万文字まで */
 var PHOTO_CHUNK_PIECE=1200, PHOTO_SOFT_MAX=12000, PHOTO_HARD_MAX=1200000, PHOTO_TGT_WEBP=12000;   /* v348: 20,000/35,000 → 12,000（かけら 10こ） */   /* v304: かけら 23→8こ */
-var PHOTO_HQ_WEBP=60000, PHOTO_HQ_SOFT=190000, PHOTO_HQ_MAXSIDE=1280, PHOTO_FULL_MAXSIDE=1280;   /* v306 */   /* v305: タップ用の (たか)画質 */
+var PHOTO_HQ_WEBP=60000, PHOTO_HQ_SOFT=190000, PHOTO_HQ_MAXSIDE=1280, PHOTO_FULL_MAXSIDE=1600;   /* v485: 1280→1600 */
+var PHOTO_BIG_WEBP=520000, PHOTO_BIG_JPEG=700000, PHOTO_BIG_MAXSIDE=1600;   /* v485: 中継所で 1まいで 送る ときの 大きさ（文字数。おおよそ 400〜500KB） */   /* v306 */   /* v305: タップ用の (たか)画質 */
 /* v288: WebP が つかえる 端末なら WebP で 作りなおす（同じ 見た目で 3〜4割 小さく → かけらが 減って 速い） */
 var WEBP_OK=null;
 function canWebP(){ if(WEBP_OK!==null) return WEBP_OK; try{ var c=document.createElement('canvas'); c.width=2; c.height=2; WEBP_OK=(String(c.toDataURL('image/webp',0.7)).indexOf('data:image/webp')===0); }catch(e){ WEBP_OK=false; } return WEBP_OK; }
@@ -8432,7 +8433,7 @@ $('#cam-shoot').addEventListener('click',function(){
       var ctx=c.getContext('2d');
       if(mir){ ctx.translate(c.width,0); ctx.scale(-1,1); }
       ctx.drawImage(v,sx,sy,sw,sh,0,0,c.width,c.height);
-      camShotURL=c.toDataURL(canWebP()?'image/webp':'image/jpeg',0.78);   /* v306: 0.72→0.78 */
+      camShotURL=c.toDataURL(canWebP()?'image/webp':'image/jpeg',0.9);   /* v306: 0.72→0.78。v485: 0.9（送る前に もう一度 大きさを 合わせる） */
       $('#cam-shot').src=camShotURL;
       camShotWait=0;
       camPreview(true);
@@ -9291,7 +9292,7 @@ function attachmentReady(){
 function attachmentRead(file){ return new Promise(function(resolve,reject){ var r=new FileReader(); r.onload=function(){ resolve(String(r.result)); }; r.onerror=function(){ reject(new Error('read')); }; r.readAsDataURL(file); }); }
 function attachmentPhoto(url){ return new Promise(function(resolve,reject){
   var im=new Image(); im.onerror=function(){ reject(new Error('image')); };
-  im.onload=function(){ try{ var scale=Math.min(1,1280/Math.max(im.naturalWidth,im.naturalHeight)); var c=document.createElement('canvas'); c.width=Math.max(1,Math.round(im.naturalWidth*scale)); c.height=Math.max(1,Math.round(im.naturalHeight*scale)); var ctx=c.getContext('2d'); ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,c.width,c.height); ctx.drawImage(im,0,0,c.width,c.height); resolve(c.toDataURL(canWebP()?'image/webp':'image/jpeg',0.82)); }catch(e){ reject(e); } }; im.src=url;
+  im.onload=function(){ try{ var scale=Math.min(1,1600/Math.max(im.naturalWidth,im.naturalHeight)); var c=document.createElement('canvas'); c.width=Math.max(1,Math.round(im.naturalWidth*scale)); c.height=Math.max(1,Math.round(im.naturalHeight*scale)); var ctx=c.getContext('2d'); ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,c.width,c.height); ctx.drawImage(im,0,0,c.width,c.height); resolve(c.toDataURL(canWebP()?'image/webp':'image/jpeg',0.9)); }catch(e){ reject(e); } }; im.src=url;
 }); }
 function attachmentButton(id,input){ $('#'+id).addEventListener('click',function(){ if(!attachmentReady()) return; var f=$('#'+input); f.value=''; f.click(); }); }
 attachmentButton('btn-attach-photo','chat-photo-file');
@@ -9303,7 +9304,7 @@ async function attachmentSelected(input,isPhoto){
   if(isPhoto&&mime.indexOf('image/')!==0&&mime.indexOf('video/')!==0){ toast('写真か動画を選んでください。'); return; }
   isPhoto=mime.indexOf('image/')===0;
   if(file.size>(isPhoto?20*1024*1024:ATTACH_MAX)){ toast(isPhoto?'写真は 20 MB 以下を 選んでください。':'動画・ファイルは 2 MB 以下を 選んでください。'); return; }
-  if(!confirm('「'+file.name+'」を あいてに 送りますか？'+(isPhoto?'\n写真は 送信用に 小さくします。':''))) return;
+  if(!confirm('「'+file.name+'」を あいてに 送りますか？')) return;
   var peer=S.opp&&S.opp.id,topic=Net.topic,key=Net.key,scope=privateScope();
   try{
     var data=await attachmentRead(file);
@@ -9541,19 +9542,21 @@ function photoFitURL(url,mode){
   return new Promise(function(res){
     try{
       if(!url||url.slice(0,11)!=='data:image/'){ res(url); return; }
-      var hq=(mode==='hq');
+      var hq=(mode==='hq'), big=(mode==='big');
       var web=canWebP(), TGT=web?(hq?PHOTO_HQ_WEBP:PHOTO_TGT_WEBP):(hq?PHOTO_HQ_SOFT:PHOTO_SOFT_MAX);
       var MAXS=hq?PHOTO_HQ_MAXSIDE:PHOTO_MAXSIDE;
+      if(big){ TGT=web?PHOTO_BIG_WEBP:PHOTO_BIG_JPEG; MAXS=PHOTO_BIG_MAXSIDE; }   /* v485: 中継所で 1まいで 送る ときは きれいに */
       if(!hq&&!web&&url.length<=PHOTO_SOFT_MAX){ res(url); return; }
       var im=new Image();
       im.onerror=function(){ res(url); };
       im.onload=function(){
         try{
           var qs=[0.62,0.55,0.48,0.42,0.36,0.31,0.27,0.23], ss=[1,0.9,0.8,0.7,0.62,0.55];   /* v348 */
+          if(big){ qs=[0.86,0.8,0.74,0.68,0.6,0.52]; ss=[1,0.85,0.72,0.6]; }
           var w0=im.naturalWidth||im.width, h0=im.naturalHeight||im.height, best=url;
           /* v344: まんなかを 4:3 で きり出す（まわりを すてる かわりに、おなじ おもさで はっきり） */
           var cw=w0, ch=h0, cx=0, cy=0;
-          if(!hq&&w0>0&&h0>0){
+          if(false&&!hq&&w0>0&&h0>0){   /* v485: まんなかだけ きり出すのを やめた（スクショの 上下が きれて いた）。写真は ぜんぶ 送る */
             var ta=4/3, sa=w0/h0;
             if(sa>ta+0.01){ cw=Math.round(h0*ta); cx=Math.round((w0-cw)/2); }
             else if(sa<ta-0.01){ ch=Math.round(w0/ta); cy=Math.round((h0-ch)/2); }
@@ -9610,6 +9613,15 @@ function sendPhoto(msg,tries){
   if(!msg.__src&&msg.data) msg.__src=msg.data;   /* v306: 原寸を のこす（高画質の もと） */
   schedulePhotoHQ(msg);
   /* v273: 大きい 写真は 先に 小さく してから 送る（1回で とどく ように） */
+  /* v485: あいても 自分の 中継所を つかえる ときは、きれいな まま 1まいで 送る（ntfy.sh の 小さい わくに あわせない） */
+  if(!msg.__fitted&&msg.data&&msg.__big!==0&&relaySendBase()){
+    msg.__fitted=1; msg.__big=1;
+    photoFitURL(msg.__src||msg.data,'big').then(function(u){
+      try{ if(u&&S.chat.indexOf(msg)>=0) msg.data=u; }catch(e){}
+      sendPhoto(msg,tries);
+    },function(){ sendPhoto(msg,tries); });
+    return;
+  }
   if(!msg.__fitted&&msg.data&&msg.data.length>PHOTO_SOFT_MAX){
     msg.__fitted=1;
     photoFitURL(msg.data).then(function(u){
@@ -9642,7 +9654,7 @@ function sendPhoto(msg,tries){
      即時路の かけらで 送る ほうが ずっと 速い */
   /* v347: かけら送りは 即時路(Fast)が つながって いなくても つかう。
      かけらは 文字と 同じ 通り道(HTTP)で 流れる ので、文字が とどく 相手なら とどく */
-  if((msg.data||'').length>8000&&typeof photoChunkBegin==='function'&&typeof sendPhotoChunks==='function'
+  if(!msg.__big&&(msg.data||'').length>8000&&typeof photoChunkBegin==='function'&&typeof sendPhotoChunks==='function'
      &&photoChunkBegin(msg.pid,msg.data)){
     msg.__chunked=true; msg.__chunkAt=Date.now();
     /* v343: ここで 見張り番を 消すと、かけら送りが 止まった とき 永久に「送信中」に なる。
@@ -9663,6 +9675,12 @@ function sendPhoto(msg,tries){
     if(ok){
       msg.sent=true; msg.failed=false; msg.sentAt=Date.now();
       if(msg.__w){ try{ clearTimeout(msg.__w); }catch(e){} msg.__w=0; }
+    }
+    else if(msg.__big===1&&tries>=1){
+      /* v485: 中継所で 1まいが 送れなかった → これまでの 小さい 写真に して 送りなおす */
+      try{ photoDiagPush('1回','きれいな 写真が だめ → 小さく して 送りなおし'); }catch(e){}
+      msg.__big=0; msg.__fitted=0; if(msg.__src) msg.data=msg.__src;
+      privateLater(function(){ sendPhoto(msg,0); },1500,msg.__privateScope);
     }
     else if(tries>=1&&!msg.__chunked&&typeof photoChunkStart==='function'){   /* v273: 3回→2回で 早く かけら送りへ。v285: 窓口を とおす */
       /* v267: 中継所への 1回おくりが だめなら、かくしんで おくる（こちらは 回数制限に つよい） */
