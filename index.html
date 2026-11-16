@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v471</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v472</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v471</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v472</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -2354,7 +2354,14 @@ async function keyMarkFrom(skb64){
   for(var i=0;i<4;i++) tag+=A.charAt(bb[i]%32);
   return tag;
 }
-function sasLabel(){ return S.sas?('あいず '+S.sas):(S.keyMark?('かぎの しるし '+S.keyMark):'あいず ----'); }
+/* v472: あいずは いつも「2人の 鍵」から つくる（入室直後と 開きなおし後で ちがう 文字に なっていた）。同じ 鍵なら 2台で かならず 同じ */
+function sasLabel(){ return 'あいず '+(S.keyMark||'----'); }
+function refreshKeyMark(){
+  try{
+    var k=S.sessKey; if(!k) return;
+    crypto.subtle.exportKey('raw',k).then(function(raw){ return keyMarkFrom(b64(raw)); }).then(function(m){ if(S.sessKey===k) S.keyMark=m; }).catch(function(){});
+  }catch(e){}
+}
 function privateType(t){ return typeof t==='string'&&!Object.prototype.hasOwnProperty.call(HANDSHAKE_TYPES,t); }
 function privateReady(){
   var p=S&&S.opp&&S.opp.id;
@@ -4091,7 +4098,7 @@ function approveJoin(){
       var hpub=await exportPub(hk);
       var ps=await pairSecret(hk,req.pub);
       if(epoch!==Net.epoch||!S.guest||S.guest.did!==req.did) return;
-      S.sessKey=ps.key; S.sas=ps.tag;
+      S.sessKey=ps.key; S.sas=ps.tag; S.keyMark=null; refreshKeyMark();
       var wel={t:'in2',host:myName(),to:req.did,hostPub:hpub,pr:S.price||'',ds:S.desc||''};
       S.approvedWelcome=wel; Net.sendLegacy(wel);
       setTimeout(function(){ if(epoch!==Net.epoch||!S.guest||S.guest.did!==req.did) return; try{ Net.sendLegacy(wel); }catch(e){} },600);
@@ -11351,7 +11358,7 @@ Net.onMsg=async function(m){
           S.myPub=await exportPub(S.myECDH);
           var ps=await pairSecret(S.myECDH,m.hostPub);
           if(in2Epoch!==Net.epoch||S.paired) return;
-          S.sessKey=ps.key; S.sas=ps.tag;
+          S.sessKey=ps.key; S.sas=ps.tag; S.keyMark=null; refreshKeyMark();
           stopAnnounce();
           S.opp={id:m.from,name:''};   /* v388: 借りの 名前を 入れない */
           if(m.pr) S.price=String(m.pr);
@@ -11385,7 +11392,7 @@ Net.onMsg=async function(m){
             note('あんごう あいずが あいません。だれかが 間に入った 可能性が あります。','#note2');
             return;
           }
-          S.sessKey=ps.key; S.sas=ps.tag;
+          S.sessKey=ps.key; S.sas=ps.tag; S.keyMark=null; refreshKeyMark();
           Net.switchTo(S.sessKey);
           if(!await savePairState()){S.chatLoaded=true;storageWarn('pair','ペアの鍵がまだ保存できていません。アプリを閉じないでください。');}
           note('2人だけの あんごうに きりかえました。','#note2');
@@ -11969,7 +11976,7 @@ function netTest(){
     box.innerHTML='<b>しらべた 結果</b>'
       +'<span>① つながり：<b>'+(open?'つながって います':'きれて います')+'</b></span>'
       +'<span>② あいてからの 受信：<b>'+(last===null?'まだ なし':(last+'秒前'))+'</b></span>'
-      +'<span>③ この あいず：<b>'+(S.sas||'----')+'</b></span>'
+      +'<span>③ この あいず：<b>'+(S.keyMark||'----')+'</b></span>'
       +'<span class="vd">'+verdict+'</span><span class="ad">'+advice+'</span>'
       +'<span class="sec">（'+Math.round((Date.now()-t0)/1000)+'秒で 判定）</span>';
     if(btn){ btn.disabled=false; btn.textContent='もういちど しらべる'; }
@@ -13037,11 +13044,11 @@ window.addEventListener('pagehide',function(){ closeCam(); stopCall(false); });
         var intr=(S.isHost&&S.intruderN)||0;
         strip.hidden=false;
         strip.className=intr?'warn':'';
-        strip.textContent=(intr?'⚠ 3人目の 入室を ことわりました（'+intr+'回）　':'')+'🔒 2人だけ・あんごう'+((S.sas||S.keyMark)?'　'+sasLabel():'');
+        strip.textContent=(intr?'⚠ 3人目の 入室を ことわりました（'+intr+'回）　':'')+'🔒 2人だけ・あんごう'+(S.keyMark?'　'+sasLabel():'');
       }catch(e){}
     }
     function explain(){
-      try{ toast('この 部屋は ホストが 承認した 2人だけです。3人目は 入れません。'+((S.sas||S.keyMark)?'「'+sasLabel()+'」が あいての 画面と 同じなら、まちがいなく あいてです。':'')); }catch(e){}
+      try{ toast('この 部屋は ホストが 承認した 2人だけです。3人目は 入れません。'+((S.keyMark)?'「'+sasLabel()+'」が あいての 画面と 同じなら、まちがいなく あいてです。':'')); }catch(e){}
     }
     /* v468: 帯を さわっても お知らせを 出さない（持ち主: 毎回 出て いらない） */
     try{ strip.removeAttribute('role'); strip.removeAttribute('tabindex'); }catch(e){}
