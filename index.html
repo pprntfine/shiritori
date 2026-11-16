@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとしてインストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">新しい版に更新する</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンでアプリとして入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v486</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v487</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">相手を待っています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v486</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v487</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">名前</b> さんが入室を求めています</p>
         <p class="jr-fp">合図 <b id="jr-fp">----</b> ／ 相手の画面と同じかくににて確認</p>
@@ -10862,7 +10862,23 @@ $('#in-chat').addEventListener('input',chatGrow);
   inp.addEventListener('compositionstart',function(){ chatComposing=true; });
   inp.addEventListener('compositionend',function(){ chatComposing=false; setTimeout(flush,30); });
   inp.addEventListener('blur',function(){ setTimeout(flush,120); });
+  /* v487: 入力欄を さわった ときに 一番下（最新）を 見て いたら、キーボードが 出た あとも 最新が 見える ように 下へ 合わせる。
+     ResizeObserver（v477）だけでは 実機で 効かない ことが あった（キーボードの 出かたが 端末ごとに ちがう） */
+  var kbStick=false,kbStickT=[];
+  function logNearBottom(){ var l=$('#chat-log'); if(!l) return false; return (l.scrollHeight-l.scrollTop-l.clientHeight)<260; }
+  function kbToBottom(){ if(!kbStick) return; var l=$('#chat-log'); if(!l) return; try{ l.scrollTop=l.scrollHeight; }catch(e){} }
+  function kbArm(){
+    kbStick=logNearBottom();
+    kbStickT.forEach(clearTimeout); kbStickT=[];
+    if(!kbStick) return;
+    [0,80,200,350,600,900,1300].forEach(function(t){ kbStickT.push(setTimeout(kbToBottom,t)); });
+  }
+  inp.addEventListener('touchstart',function(){ kbStick=logNearBottom(); },{passive:true});
+  inp.addEventListener('pointerdown',function(){ kbStick=logNearBottom(); });
+  try{ var __lg=$('#chat-log'); if(__lg) __lg.addEventListener('touchmove',function(){ kbStick=false; kbStickT.forEach(clearTimeout); kbStickT=[]; },{passive:true}); }catch(e){}
+  inp.addEventListener('blur',function(){ setTimeout(function(){ if(document.activeElement!==inp) kbStick=false; },400); });
   inp.addEventListener('focus',function(){
+    var was=kbStick; kbArm(); if(was&&!kbStick){ kbStick=true; kbArm(); }
     document.body.classList.add('kb-open');
     setTimeout(function(){ try{ inp.scrollIntoView({block:'nearest'}); }catch(e){} },320);
   });
@@ -10877,6 +10893,7 @@ $('#in-chat').addEventListener('input',chatGrow);
     var main=document.querySelector('main');
     if(main){ main.style.paddingBottom = (open&&!document.body.classList.contains('in-play')) ? Math.min(kb,260)+'px' : ''; }
     if(document.body.classList.contains('in-play')){ try{ window.scrollTo(0,0); }catch(e){} }
+    if(document.activeElement===inp&&kbStick){ kbToBottom(); setTimeout(kbToBottom,60); setTimeout(kbToBottom,250); }   /* v487 */
     if(open && document.activeElement===inp){
       clearTimeout(window.__kbT);
       window.__kbT=setTimeout(function(){ try{ inp.scrollIntoView({block:'nearest'}); }catch(e){} },60);
