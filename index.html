@@ -1421,7 +1421,7 @@ body .bar::after{
       </div>
       <p id="local-hint" class="note" hidden></p>
       <section id="zg-news" aria-label="最新ニュース" hidden>
-        <div class="zn-head"><b>最新ニュース</b><span id="zn-at"></span><button type="button" id="zn-re" aria-label="ニュースを あたらしく する">↻</button></div>
+        <div class="zn-head"><b>最新ニュース</b><span id="zn-at"></span></div>
         <div id="zn-mkt" class="zn-mkt"></div>
         <div id="zn-body"></div>
       </section>
@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v483</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v484</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v483</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v484</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -12464,9 +12464,12 @@ var Caster={lines:[],i:0,t:null,typeT:null,sig:'',
     else this.t=setTimeout(function(){ self.show(self.i); },3000);
   }
 };
-setTimeout(function(){ try{ News.load(true); }catch(e){} },800);
+try{ News.load(true); }catch(e){}   /* v484: ひらいたら すぐ 最新を とる（まえは 0.8秒 まって いた） */
+window.addEventListener('pageshow',function(e){ try{ if(e&&e.persisted&&News.lobbyOn()) News.load(true); }catch(e2){} });
+window.addEventListener('online',function(){ try{ if(News.lobbyOn()) News.load(true); }catch(e){} });
+window.addEventListener('focus',function(){ try{ if(News.lobbyOn()&&Date.now()-News.at>30000) News.load(true); }catch(e){} });
 document.addEventListener('visibilitychange',function(){ if(!document.hidden&&News.lobbyOn()){ try{ News.load(true); }catch(e){} } });
-setInterval(function(){ try{ if(!document.hidden&&News.lobbyOn()) News.load(true); }catch(e){} },90*1000);   /* v456: 5分 → 90秒 */
+setInterval(function(){ try{ if(!document.hidden&&News.lobbyOn()) News.load(true); }catch(e){} },60*1000);   /* v456: 5分 → 90秒。v484: 60秒 */
 try{ var __znre=document.getElementById('zn-re'); if(__znre) __znre.addEventListener('click',function(e){ e.stopPropagation(); News.load(true); }); }catch(e){}
 try{ new MutationObserver(function(){ if(News.lobbyOn()&&Date.now()-News.at>20000) News.load(false); }).observe(document.getElementById('s-lobby'),{attributes:true,attributeFilter:['class']}); }catch(e){}
 window.addEventListener('online',function(){ try{ Relay.wake(); }catch(e){} });
