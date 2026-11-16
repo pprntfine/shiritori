@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとしてインストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">新しい版に更新する</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンでアプリとして入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v491</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v492</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">相手を待っています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v491</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v492</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">名前</b> さんが入室を求めています</p>
         <p class="jr-fp">合図 <b id="jr-fp">----</b> ／ 相手の画面と同じかくににて確認</p>
@@ -7368,7 +7368,7 @@ function peerOpenNotice(proof){
   var t=Date.now(); if(t-lastPeerOpenNotice<60000) return;   /* 60秒に 1回まで */
   lastPeerOpenNotice=t;
   var __msg=(proof==='touch'?'相手が手でアプリを開きました':(proof==='screen'?'相手の画面にアプリが出ました':'相手がアプリを開きました'));
-  try{ toast(__msg); }catch(e){}
+  /* v492: 画面の 黒い お知らせ（相手が手でアプリを開きました）は 出さない（持ち主）。記録・ランプは そのまま */
   /* v281: 音を ならさない ぶん、目で 分かる ように 「あいて」の 行を 8秒 光らせる */
   try{
     var __ml=document.getElementById('mem-line');
