@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとして インストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">あたらしい版に こうしんする</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンで アプリとして 入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v481</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v482</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">あいてを まっています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v481</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v482</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">なまえ</b> さんが 入室を もとめています</p>
         <p class="jr-fp">あいず <b id="jr-fp">----</b> ／ あいての画面と おなじか くににて かくにん</p>
@@ -12362,12 +12362,18 @@ var Caster={lines:[],i:0,t:null,typeT:null,sig:'',
   },
   set:function(j){
     var L=this.build(j), sig=L.map(function(x){ return x.text; }).join('|');
-    if(sig===this.sig) return; this.sig=sig; this.lines=L;
+    if(sig===this.sig) return;
+    /* v482: ニュースが 新しく なっても 最初の あいさつに もどらない（あいさつが 2回 つづいて いた）。いま 読んで いる ところから つづける */
+    var first=!this.sig, cur=this.lines[this.i], keepText=cur?cur.text:'';
+    this.sig=sig; this.lines=L;
     var box=document.getElementById('zg-caster'); if(!box) return;
     box.classList.add('on'); box.hidden=false;
     if(!this.wired){ this.wire(box); }
     var d=box.querySelector('.zc-dots'); d.textContent=''; for(var k=0;k<L.length;k++){ var s1=document.createElement('i'); d.appendChild(s1); }
-    this.show(0);
+    if(first||!cur){ this.show(0); return; }
+    var idx=-1; for(var q=0;q<L.length;q++){ if(L[q].text===keepText){ idx=q; break; } }
+    if(idx>=0){ this.i=idx; var dots=d.querySelectorAll('i'); for(var q2=0;q2<dots.length;q2++) dots[q2].className=(q2===idx?'on':''); return; }   /* 同じ 文が あれば そのまま（読みなおさない） */
+    this.show(Math.max(1,Math.min(this.i,L.length-1)));   /* 消えた ニュースなら、同じ 番目の 新しい ニュースへ（あいさつには もどらない） */
   },
   wire:function(box){
     var self=this; this.wired=true;
@@ -12391,7 +12397,7 @@ var Caster={lines:[],i:0,t:null,typeT:null,sig:'',
     box.addEventListener('mousedown',function(e){ start(e.clientX,e.clientY); });
     box.addEventListener('mouseup',function(e){ end(e.clientX,e.clientY); });
     bub.addEventListener('click',go); bub.addEventListener('keydown',function(e){ if(e.key==='Enter') go(e); });
-    document.addEventListener('visibilitychange',function(){ if(document.hidden){ clearTimeout(self.t); } else self.show(self.i); });
+    document.addEventListener('visibilitychange',function(){ if(document.hidden){ clearTimeout(self.t); } else { clearTimeout(self.t); var l=self.lines[self.i]; self.t=setTimeout(function(){ self.show(self.i+1); },Math.max(4000,((l&&l.text)||'').length*30)); } });   /* v482: もどった ときに 同じ 文を 読みなおさない */
   },
   /* v463: とー君の 演出（ニュースの 種類ごとの 小物・ときどきの 芸） */
   FX:{hello:['💜','✨','💜'],toku:['✨','⭐','✨'],jiken:['💦','💦','🚨'],up:['🎉','🎊','✨','🎉'],down:['🌧','💧','💧'],keizai:['💴','🪙','💴'],bye:['💜','👋','✨']},
