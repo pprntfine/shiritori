@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとしてインストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">新しい版に更新する</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンでアプリとして入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v504</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v505</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">相手を待っています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v504</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v505</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">名前</b> さんが入室を求めています</p>
         <p class="jr-fp">合図 <b id="jr-fp">----</b> ／ 相手の画面と同じかくににて確認</p>
@@ -2820,6 +2820,19 @@ var Net={
     /* v219: 削除の合図は通知を出すベルに載せない。本文だけ従来の通知経路を使う。 */
     /* v493: 受領待ちの送り直し（約20秒ごと）のたびに新しい暗号文で通知していた（2通で通知6件）。同じメッセージ(mid)の通知は1回だけ */
     if(env&&(env.t==='chats'||env.t==='chat')&&!env.__pushOk&&!pushMidsAllDone(env)&&!(function(){try{return (Date.now()-(+(window.__zgsPeerLive||0)||0))<70000;}catch(e){return false;}})()){ try{ pushP=pushToPeer(body).then(function(ok){ if(ok){ env.__pushOk=1; pushMidsMark(env); if(env.t==='chats') markPushAcked(env); } return ok; }); }catch(e){} }
+    /* v505: 相手が「いま開いている」と見えて通知を送らなかった時、8秒たっても受領（peerAck）が来なければ、閉じたと見なしてすぐ通知する。
+       以前はその後の送り直しまで通知が出ず、v504 で送り直しの間隔を延ばしたため最大約2分遅れることがあった */
+    if(!pushP&&env&&(env.t==='chats'||env.t==='chat')&&!env.__pushOk&&!env.__pushLater&&!pushMidsAllDone(env)){
+      env.__pushLater=1;
+      var __lb=body, __ls=scope;
+      setTimeout(function(){ try{
+        if(!outboundCurrent(__ls)||env.__pushOk||pushMidsAllDone(env)) return;
+        var ids=pushMidsOf(env); if(!ids.length) return;
+        var got=ids.every(function(id){ return S.chat.some(function(c){ return c&&!c.sys&&c.from===S.me.id&&c.mid===id&&(c.peerAck||c.acked||c.read); }); });
+        if(got) return;
+        pushToPeer(__lb).then(function(ok){ if(ok){ env.__pushOk=1; pushMidsMark(env); } });
+      }catch(e){} },8000);
+    }
     var viaPush=function(){ if(!pushP) return Promise.resolve(false); return Promise.race([pushP,new Promise(function(r){ setTimeout(function(){ r(false); },2500); })]); };
     /* v131: ntfy は 1日250回（同じ Wi-Fi の 2台で 合計）まで。既読・受領・ping などで つかいきると
        アプリを 切った ときの 通知（ベル）が とまる → 大事な ものだけ ntfy に のせる */

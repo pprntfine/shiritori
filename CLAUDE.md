@@ -1,4 +1,4 @@
-# とー君ニュース（旧 雑学王 / zatsugakuou）引き継ぎメモ  ― 現在 v504
+# とー君ニュース（旧 雑学王 / zatsugakuou）引き継ぎメモ  ― 現在 v505
 
 ## これは何か
 見た目は「とー君ニュース」（ニュースアプリ。v460 までは「雑学クイズ」アプリ）。中身は **2人専用の暗号化チャット**（メッセージ・写真・ライブ映像・電話）。
@@ -237,6 +237,8 @@
   原因と直し: (1) Worker `rows()` が `ORDER BY seq` で索引 m_t を使わず、5秒ごとの poll・WS接続のたびに12時間分を全件読み（SQLite の EXPLAIN で SCAN m を確認）→ `ORDER BY t, seq`（SEARCH USING INDEX）。(2) 写真を預ける時の `COUNT(*) WHERE an IS NOT NULL` も全件読み → 部分索引 `m_an`。(3) 1通ごとの日数カウンタ書き込み → メモリで数えて20通ごとに保存。(1)(2) は 2026-11-17 14:41 UTC、(3) は同日 15:0x UTC にAPIで書き込み済み（bindings RELAY・SUBS、Cron そのまま）。
   アプリ v504: (a) 相手が閉じている間、送信済み（中継所が受け取った）メッセージも20秒ごとに送り直して毎回中継所に保存していた → 送信済みの分は普通の間隔（15秒→…→最大10分）。(b) 25秒ごとの app-live と10秒ごとの ack 送り直しは `__noStore`（`postStore(...,noStore)` → `?cache=no`、中継所は保存せず接続中の相手へ流すだけ）。最初の受領証は従来どおり保存。
   試験 `tools/e2e/relay_load.js`（中継所への保存回数）: 2台開いて60秒 v503 保存9回 → v504 0回、相手が閉じて2通・120秒 15回 → 5回。※ 中継所の使い方を変える時は、この試験と GraphQL の rowsRead/rowsWritten を見ること。
+- v505 相手が閉じた直後に送ったメッセージの通知が遅い（持ち主の確認から）。`Net.post` は相手が70秒以内に生きていた（`__zgsPeerLive`）と通知（`pushToPeer`）を送らず、後の送り直しで送っていたため、v504 で送り直しを延ばすと最大約2分遅れた。通知を送らなかった時は8秒後に受領（peerAck/acked/read）を確かめ、来ていなければ通知する（`env.__pushLater`）。開いている相手には今までどおり通知しない。
+  試験 `tools/e2e/push_fast.js`: 相手が開いている時の通知0回（v504・v505とも）、閉じた直後に送って通知まで v504 61秒 → v505 8秒。push_once・send_status・relay_basic・relay_load も通過。
 
 ## 構造のメモ（行番号は目安。検索で探すこと）
 - メインのスクリプトは `<script>(function(){'use strict'; …})();</script>` の1つの大きな閉じ込み。外から内部は見えない（テスト用に `tools/make_test.py` で `window.__t` を出す）。

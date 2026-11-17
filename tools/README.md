@@ -32,6 +32,7 @@ node tools/shot_chat.js /tmp/zg                # トーク画面の画像（k_ch
 | e2e/tokun_sync.js | とー君の設定（現れる・間隔・拡大）が2台でそろう（v499） |
 | e2e/tokun_msg_sync.js | とー君と一緒に出るメッセージが2台でそろう（v500） |
 | e2e/relay_load.js | 中継所への保存回数を数える（Durable Objects の上限対策、v504） |
+| e2e/push_fast.js | 相手が開いている時は通知なし・閉じた直後に送っても数秒で通知（v505） |
 | e2e/save_warning.js | 保存の一時的な失敗では警告を出さない（v489） |
 
 ## 1台だけのテスト（中継所なし）
