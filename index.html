@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとしてインストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">新しい版に更新する</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンでアプリとして入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v497</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v498</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">相手を待っています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v497</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v498</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">名前</b> さんが入室を求めています</p>
         <p class="jr-fp">合図 <b id="jr-fp">----</b> ／ 相手の画面と同じかくににて確認</p>
@@ -2682,6 +2682,7 @@ var Net={
     }
     if(epoch!==this.epoch||key!==this.key||topic!==this.topic||!env||env.v!==V||typeof env.t!=='string') return;
     if(this.sessionOnly&&!privateType(env.t))return false;
+    if(env.from===S.me.id && env.t!=='nettest' && env.t!=='nettest-ok') return true;   /* v497: 戻ってきた自分の送信は片付け済み（受信箱 zg-inbox から消す）。下の「相手から」の確認より先に見る */
     if(privateType(env.t)){
       if(!privateCurrent(scope)||legacy||env.sec!==289||env.from!==scope.peer||env.to!==scope.me||!Number.isSafeInteger(env.n)) return;
       inboundScopes.set(env,scope);
@@ -7879,8 +7880,8 @@ function renderChatFull(forceBottom, __tailFrom){
     if(mine){ row.dataset.uid=m.uid||''; if(m.n) row.dataset.n=String(m.n);
       /* v386: 自分の メッセージは 改行で ほそく ならない ように、ひとつづきの 文として ひろく 見せる */
       if(!m.file&&!isSticker(m.text)&&!DOG_STK[m.text]){
-        bub.textContent=String(m.text||'').replace(/\r\n?/g,'\n').replace(/\s*\n\s*/g,' ').replace(/\s{2,}/g,' ').trim();
-        bub.style.whiteSpace='normal'; bub.style.wordBreak='normal'; bub.style.overflowWrap='break-word';
+        /* v498: 入力した形（改行・空行・行頭の空白）のまま見せる（持ち主）。v386 の「改行を空白にして1行につなぐ」はやめた */
+        bub.style.whiteSpace='pre-wrap'; bub.style.wordBreak='normal'; bub.style.overflowWrap='break-word';
       }
       row.appendChild(meta); row.appendChild(bub); }
     else{
@@ -14175,6 +14176,8 @@ html body #pane-chat #chat-log .msg .meta{flex:none!important;max-width:none!imp
 
 /* v491: 電話の 記録 */
 html body #pane-chat #chat-log .line-sys.zg-call{background:rgba(255,255,255,.88)!important;color:#3B2F6B!important;font-weight:700;border-radius:999px;padding:5px 14px!important}
+/* v498: 入力した形（改行・空行・行頭の空白）のまま吹き出しに出す。v389 の自分の吹き出しの規則（white-space:normal!important）で改行が1行につながって見えていた。スタンプの吹き出しは除く */
+html body #pane-chat #chat-log .msg .bubble:not(.sticker-animated):not(.dog-b){white-space:pre-wrap!important}
 </style>
 </body>
 </html>

@@ -27,6 +27,7 @@ node tools/shot_chat.js /tmp/zg                # トーク画面の画像（k_ch
 | e2e/vanish_unseen.js | 見ていないメッセージは消えない・見てから15分で消える（v494） |
 | e2e/inbox_clean.js | 戻ってきた自分の暗号文が受信箱にたまらない（v497） |
 | e2e/typing_prof.js | 測定用: 文字入力中の長い処理と、CPUを使った関数（THR・NPH で条件を変える） |
+| e2e/newline_keep.js | 改行・空行・行頭の空白が入力どおりに両方の画面に出る（v498） |
 | e2e/save_warning.js | 保存の一時的な失敗では警告を出さない（v489） |
 
 ## 1台だけのテスト（中継所なし）
