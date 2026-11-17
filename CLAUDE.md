@@ -234,7 +234,7 @@
   試験 `tools/e2e/photo_unconfirmed.js`（確認を消して送る）: v502 は縦長スクショ 203×440・約1.4万字／カメラ風 600×800、v503 は 924×2000／1500×2000。photo_2000・relay_basic も通過。
   ※ 確認が消えやすいこと自体（メッセージの送り先にも影響）は未対応。
 - v504＋中継所（Worker）の直し（2026-11-17）。Cloudflare から「Durable Objects の1日の読み出し上限（rows_read 500万）を超えた」メール。23:02 JST から翌 09:00 JST（00:00 UTC）まで中継所が止まった。GraphQL `durableObjectsPeriodicGroups{sum{rowsRead rowsWritten}}` で、11/16 読み出し約117万、11/17 約536万（夜は1時間130万）、書き込みも約10万（無料上限10万）だった。
-  原因と直し: (1) Worker `rows()` が `ORDER BY seq` で索引 m_t を使わず、5秒ごとの poll・WS接続のたびに12時間分を全件読み（SQLite の EXPLAIN で SCAN m を確認）→ `ORDER BY t, seq`（SEARCH USING INDEX）。(2) 写真を預ける時の `COUNT(*) WHERE an IS NOT NULL` も全件読み → 部分索引 `m_an`。(3) 1通ごとの日数カウンタ書き込み → メモリで数えて20通ごとに保存。(1)(2) は 2026-11-17 14:41 UTC にAPIで書き込み済み、(3) はこのあと書き込む。
+  原因と直し: (1) Worker `rows()` が `ORDER BY seq` で索引 m_t を使わず、5秒ごとの poll・WS接続のたびに12時間分を全件読み（SQLite の EXPLAIN で SCAN m を確認）→ `ORDER BY t, seq`（SEARCH USING INDEX）。(2) 写真を預ける時の `COUNT(*) WHERE an IS NOT NULL` も全件読み → 部分索引 `m_an`。(3) 1通ごとの日数カウンタ書き込み → メモリで数えて20通ごとに保存。(1)(2) は 2026-11-17 14:41 UTC、(3) は同日 15:0x UTC にAPIで書き込み済み（bindings RELAY・SUBS、Cron そのまま）。
   アプリ v504: (a) 相手が閉じている間、送信済み（中継所が受け取った）メッセージも20秒ごとに送り直して毎回中継所に保存していた → 送信済みの分は普通の間隔（15秒→…→最大10分）。(b) 25秒ごとの app-live と10秒ごとの ack 送り直しは `__noStore`（`postStore(...,noStore)` → `?cache=no`、中継所は保存せず接続中の相手へ流すだけ）。最初の受領証は従来どおり保存。
   試験 `tools/e2e/relay_load.js`（中継所への保存回数）: 2台開いて60秒 v503 保存9回 → v504 0回、相手が閉じて2通・120秒 15回 → 5回。※ 中継所の使い方を変える時は、この試験と GraphQL の rowsRead/rowsWritten を見ること。
 
