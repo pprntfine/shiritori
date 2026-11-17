@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとしてインストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">新しい版に更新する</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンでアプリとして入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v503</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v504</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">相手を待っています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v503</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v504</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">名前</b> さんが入室を求めています</p>
         <p class="jr-fp">合図 <b id="jr-fp">----</b> ／ 相手の画面と同じかくににて確認</p>
@@ -2858,7 +2858,7 @@ var Net={
       }
       if(!__rb&&this.coolUntil&&Date.now()<this.coolUntil) return __ns?fastOk:false;
       if(!__rb&&!(env.t==='chats'?this.allowChat():this.allow(typeof prio==='number'?prio:1))) return __ns?fastOk:false;
-      if(!__ns) this.postStore(body,scope); return true;
+      if(!__ns) this.postStore(body,scope,!!(env&&env.__noStore)); return true;   /* v504: 25秒ごとの app-live・10秒ごとの ack 送り直しは保存させない（Durable Objects の書き込み・読み出しの上限対策） */
     }
     /* ntfy は 保存用(相手が いない ときの 受けとり用)。制限中は 2本目だけで 成功あつかい */
     var __rb2=relayAnyBase();
@@ -2955,13 +2955,13 @@ var Net={
     if(rr) return rr;
     throw new Error('送れません');
   },
-  postStore:function(body,scope){
+  postStore:function(body,scope,noStore){
     var self=this;
     if(!outboundCurrent(scope)) return;
     if(!relayAnyBase()&&this.coolUntil&&Date.now()<this.coolUntil) return;
     try{
       var ac=typeof AbortController!=='undefined'?new AbortController():null; if(ac) privateAborts.add(ac);
-      this.storeFetch(scope.topic,{method:'POST',headers:{'Content-Type':'text/plain'},body:body,signal:ac?ac.signal:undefined})
+      this.storeFetch(scope.topic,{method:'POST',headers:{'Content-Type':'text/plain'},body:body,signal:ac?ac.signal:undefined},noStore?'?cache=no':undefined)   /* v504: noStore＝中継所に保存させず、いまつながっている相手へ流すだけ */
         .then(function(r){ if(outboundCurrent(scope)&&(r.status===429||r.status===503)) self.hit429(45000); }).catch(function(){})
         .finally(function(){ if(ac) privateAborts.delete(ac); });
     }catch(e){}
@@ -7569,7 +7569,7 @@ function sendLive(){   /* v183: あいてに「いきてる」しるしを は�
   if(S.isHost!==false) return;   /* v272: ホストの 在席も 相手に わたさない（開いて いる ことが 分かって しまう） */
   var t=Date.now(); if(t-lastLiveSent<25000) return;
   lastLiveSent=t;
-  try{ Net.send({t:'app-live',at:t}); }catch(e){}
+  try{ Net.send({t:'app-live',at:t,__noStore:1}); }catch(e){}
 }
 function peerPresenceTick(){   /* v183: 「つながり中」ランプを あいての そんざいも みて だす */
   try{
@@ -11100,7 +11100,11 @@ async function flushOutbox(){
   /* v476: 返事が もどらない まま 40秒 たった ものは「送り中」を といて 送りなおす */
   S.inflight=S.inflight.filter(function(it){ return Date.now()-(it.lastTry||0)<40000; });
   var __gapCap=relayAnyBase()?20000:600000;
-  var pool=S.outbox.filter(function(it){ return S.inflight.indexOf(it)<0&&Date.now()-(it.lastTry||0)>=Math.min(__gapCap,retryGap(it.tries||0)); });
+  /* v504: 中継所が受け取った（送信済み）メッセージは、中継所に12時間残り、相手が開けば届く。相手が閉じている間に20秒ごとに送り直すと、
+     そのたびに中継所へ保存され、Durable Objects の1日の上限（読み出し500万・書き込み10万）を超えて止まった（2026-11-17）。
+     送信済みの分は送り直しの間隔を普通どおり延ばす（15秒→30秒→…→最大10分）。まだ届けられていない分は従来どおり最大20秒 */
+  var __sentMid={}; try{ S.chat.forEach(function(c){ if(c&&c.mid&&c.from===S.me.id&&c.sent) __sentMid[c.mid]=1; }); }catch(e){}
+  var pool=S.outbox.filter(function(it){ var cap=((it.msg&&it.msg.sent)||__sentMid[it.mid])?600000:__gapCap; return S.inflight.indexOf(it)<0&&Date.now()-(it.lastTry||0)>=Math.min(cap,retryGap(it.tries||0)); });
   if(!pool.length) return;
   /* 1通の 封筒に 入る ぶんだけ まとめる（入りきらないと 送れなかった） */
   var items=[], bytes=0;
@@ -11186,7 +11190,7 @@ setInterval(function(){
     if(Date.now()-(S.__ackLoopAt||0)<10000) return;
     S.__ackLoopAt=Date.now();
     var ns=Array.from(new Set(S.chat.filter(function(c){return c&&!c.sys&&c.__durable&&c.from===S.opp.id&&c.n;}).map(function(c){return c.n;}))).slice(-60);
-    if(ns.length){ var ids=S.chat.filter(function(c){return c&&!c.sys&&c.from===S.opp.id&&ns.indexOf(c.n)>=0&&validDeletionId(c.mid);}).map(function(c){return c.mid;}); Net.send({t:'ack',ns:ns,ids:ids}); }
+    if(ns.length){ var ids=S.chat.filter(function(c){return c&&!c.sys&&c.from===S.opp.id&&ns.indexOf(c.n)>=0&&validDeletionId(c.mid);}).map(function(c){return c.mid;}); Net.send({t:'ack',ns:ns,ids:ids,__noStore:1}); }   /* v504: 10秒ごとの送り直しは保存させない（最初の受領証は保存する） */
   }catch(e){}
 },10000);
 document.addEventListener('visibilitychange',function(){ if(!document.hidden){ setTimeout(resendMineUnacked,2500); setTimeout(photoQueueTick,3000); } });

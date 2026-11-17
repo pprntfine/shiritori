@@ -395,6 +395,8 @@ export class ZgRelay {
     this.sql.exec('CREATE TABLE IF NOT EXISTS kv(k TEXT PRIMARY KEY, v TEXT)');
     this.sql.exec('CREATE TABLE IF NOT EXISTS m(seq INTEGER PRIMARY KEY AUTOINCREMENT, id TEXT UNIQUE, t INTEGER, msg TEXT, an TEXT, asz INTEGER)');
     this.sql.exec('CREATE INDEX IF NOT EXISTS m_t ON m(t)');
+    // 2026-11-17: 写真の数を数える時に全件を読まない（Durable Objects の1日の読み出し上限 rows_read 500万を超えて止まった）
+    this.sql.exec('CREATE INDEX IF NOT EXISTS m_an ON m(an) WHERE an IS NOT NULL');
     this.sql.exec('CREATE TABLE IF NOT EXISTS f(id TEXT, part INTEGER, b BLOB, PRIMARY KEY(id, part))');
   }
 
@@ -430,7 +432,9 @@ export class ZgRelay {
 
   rows(since) {
     const cut = Math.floor(Date.now() / 1000) - KEEP_SEC;
-    return this.sql.exec('SELECT id,t,msg,an,asz FROM m WHERE t>=? AND t>=? ORDER BY seq LIMIT ?', since, cut, POLL_ROWS).toArray();
+    // 2026-11-17: ORDER BY seq だと索引 m_t が使われず、5秒ごとの取りに来るたびに12時間分を全部読んでいた（rows_read 上限超え）。
+    // t の索引の順（t, seq）で読めば、since より新しい分だけを読む。
+    return this.sql.exec('SELECT id,t,msg,an,asz FROM m WHERE t>=? AND t>=? ORDER BY t, seq LIMIT ?', since, cut, POLL_ROWS).toArray();
   }
 
   event(row, topic, origin) {
@@ -442,7 +446,9 @@ export class ZgRelay {
   async publish(req, url, topic, origin) {
     const now = Math.floor(Date.now() / 1000);
     const day = 'cnt:' + new Date().toISOString().slice(0, 10);
-    const used = parseInt(this.kvGet(day) || '0', 10);
+    // 2026-11-17: 1通ごとに数を保存すると書き込み（rows_written、無料は1日10万）が増えるので、メモリで数えて20通ごとに保存する
+    if (!this.cnt || this.cnt.day !== day) { const n0 = parseInt(this.kvGet(day) || '0', 10); this.cnt = { day, n: n0, saved: n0 }; }
+    const used = this.cnt.n;
     if (used >= DAY_LIMIT) return Response.json({ error: 'daily limit' }, { status: 429, headers: { 'Retry-After': '600' } });
     const len = parseInt(req.headers.get('content-length') || '0', 10);
     const filename = url.searchParams.get('filename');
@@ -459,7 +465,8 @@ export class ZgRelay {
       msg = await req.text();
     }
     if (msg.length > MAX_TEXT) return Response.json({ error: 'too large' }, { status: 413 });
-    this.kvPut(day, String(used + 1));
+    this.cnt.n = used + 1;
+    if (this.cnt.n - this.cnt.saved >= 20) { this.kvPut(day, String(this.cnt.n)); this.cnt.saved = this.cnt.n; }
     const row = { id: randId(), t: now, msg, an: bytes ? String(filename).slice(0, 64) : null, asz: bytes ? bytes.length : 0 };
     const keep = (url.searchParams.get('cache') || '').toLowerCase() !== 'no' || bytes;
     if (keep) {
