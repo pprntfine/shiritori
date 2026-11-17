@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとしてインストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">新しい版に更新する</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンでアプリとして入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v499</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v500</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">相手を待っています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v499</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v500</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">名前</b> さんが入室を求めています</p>
         <p class="jr-fp">合図 <b id="jr-fp">----</b> ／ 相手の画面と同じかくににて確認</p>
@@ -11756,8 +11756,9 @@ Net.onMsg=async function(m){
       recvProf(m);
       if(typeof m.ps==='string'&&psrvOk(m.ps)&&m.ps.replace(/\/+$/,'')!==psrvGet()){ psrvSet(m.ps); setTimeout(function(){ try{ bgPushSetup(); }catch(e){} },300); }
       relayPeerMark(m);   /* v451: あいてが じぶんの 中継所を 見て いるか */
-      try{ tokunApply(m.tk,S.isHost===false); }catch(e){}   /* v499: とー君の設定をそろえる（相手がホストなら同じ版でも合わせる） */
-      if(!m.r) setTimeout(function(){ try{ Net.send({t:'prof',r:1,nm:meName(),emo:(PROF.me&&PROF.me.emo)||'🐷',img:(PROF.me&&PROF.me.img)||'',ps:psrvGet(),rl:relayHas()?1:0,tk:tokunState()}); }catch(e){} },400);
+      try{ tokunApply(m.tk,S.isHost===false); }catch(e){}
+      try{ tokunCmApply(m.tc,S.isHost===false); }catch(e){}   /* v500: とー君のメッセージもそろえる */   /* v499: とー君の設定をそろえる（相手がホストなら同じ版でも合わせる） */
+      if(!m.r) setTimeout(function(){ try{ Net.send({t:'prof',r:1,nm:meName(),emo:(PROF.me&&PROF.me.emo)||'🐷',img:(PROF.me&&PROF.me.img)||'',ps:psrvGet(),rl:relayHas()?1:0,tk:tokunState(),tc:tokunCmState()}); }catch(e){} },400);
       break;
     case 'rtc2':
       if(m.from===S.me.id) break;
@@ -12833,7 +12834,7 @@ function paintProf(){
   try{ $('#ig-name').textContent=peerName(); }catch(e){}
 }
 function sendProf(){
-  try{ if(!Net.topic||!Net.key||!(S.paired||S.linked)) return; Net.send({t:'prof',nm:meName(),emo:(PROF.me&&PROF.me.emo)||'🐷',img:(PROF.me&&PROF.me.img)||'',ps:psrvGet(),rl:relayHas()?1:0,tk:tokunState()}); }catch(e){}
+  try{ if(!Net.topic||!Net.key||!(S.paired||S.linked)) return; Net.send({t:'prof',nm:meName(),emo:(PROF.me&&PROF.me.emo)||'🐷',img:(PROF.me&&PROF.me.img)||'',ps:psrvGet(),rl:relayHas()?1:0,tk:tokunState(),tc:tokunCmState()}); }catch(e){}
 }
 /* v499: とー君の設定（現れる・間隔・拡大）を2台でそろえる。prof に載せて送り、版(v)が大きい方に合わせる。
    版が同じで中身が違う時（どちらも変えていない等）はホストの設定に合わせる。 */
@@ -12847,6 +12848,31 @@ function tokunState(){
 function tokunChanged(){   /* この端末で設定を変えた → 版を1つ上げて相手へ */
   try{ localStorage.setItem(TOK_V_KEY,String(tokunState().v+1)); }catch(e){}
   try{ sendProf(); }catch(e){}
+}
+/* v500: とー君と一緒に出るメッセージ（mtp_cm_🐶㉘ など10個）も2台でそろえる。決め方は設定と同じ（版 mtp_cm_v が大きい方、同じならホスト） */
+var TOK_CMK=['🐶㉘','🐶㉙','🐶㉚','🐶㉛','🐶㉜','🐶㉝','🐶㉞','🐶㉟','🐶㊲','🐶㊳'], TOKCM_V_KEY='mtp_cm_v';
+function tokunCmState(){
+  var m={},v=0;
+  try{ TOK_CMK.forEach(function(k){ var x=localStorage.getItem('mtp_cm_'+k); m[k]=(x===null)?null:String(x).slice(0,40); }); v=parseInt(localStorage.getItem(TOKCM_V_KEY)||'0',10)||0; }catch(e){}
+  return {v:v,m:m};
+}
+var tokunCmT=null;
+function tokunCmChanged(){   /* 入力が止まって1.5秒後に1回だけ版を上げて相手へ */
+  clearTimeout(tokunCmT);
+  tokunCmT=setTimeout(function(){ tokunCmT=null; try{ localStorage.setItem(TOKCM_V_KEY,String(tokunCmState().v+1)); }catch(e){} try{ sendProf(); }catch(e){} },1500);
+}
+function tokunCmApply(tc,fromHost){
+  if(!tc||typeof tc!=='object'||!tc.m||typeof tc.m!=='object') return false;
+  var v=parseInt(tc.v,10)||0; if(v<0||v>1e9) return false;
+  if(tokunCmT) return false;   /* この端末で入力中（まだ送っていない）なら上書きしない */
+  var cur=tokunCmState(), same=TOK_CMK.every(function(k){ var a=tc.m[k]; a=(typeof a==='string')?a.slice(0,40):null; return a===cur.m[k]; });
+  if(!(v>cur.v||(v===cur.v&&fromHost&&!same))) return false;
+  try{
+    TOK_CMK.forEach(function(k){ var a=tc.m[k]; if(typeof a==='string') localStorage.setItem('mtp_cm_'+k,a.slice(0,40)); else localStorage.removeItem('mtp_cm_'+k); });
+    localStorage.setItem(TOKCM_V_KEY,String(Math.max(v,cur.v)));
+  }catch(e){ return false; }
+  if(window.__cmPaint){ try{ window.__cmPaint(); }catch(e){} }
+  return !same;
 }
 function tokunApply(tk,fromHost){
   if(!tk||typeof tk!=='object') return false;
@@ -12962,7 +12988,8 @@ function recvProf(m){
   if($('#pf-tcm-🐶㉘')){ var CMK=['🐶㉘','🐶㉙','🐶㉚','🐶㉛','🐶㉜','🐶㉝','🐶㉞','🐶㉟','🐶㊲','🐶㊳'];
     CMK.forEach(function(k){ var inp=document.getElementById('pf-tcm-'+k); if(!inp)return; var key='mtp_cm_'+k;
       try{ var sv=localStorage.getItem(key); inp.value=(sv===null)?((window.TOKUN_CM&&window.TOKUN_CM[k])||''):sv; }catch(e){ inp.value=(window.TOKUN_CM&&window.TOKUN_CM[k])||''; }
-      inp.addEventListener('input',function(){ try{ localStorage.setItem(key,inp.value); }catch(e){} }); });
+      inp.addEventListener('input',function(){ try{ localStorage.setItem(key,inp.value); }catch(e){} tokunCmChanged(); }); });
+    window.__cmPaint=function(){ CMK.forEach(function(k){ var inp=document.getElementById('pf-tcm-'+k); if(!inp||document.activeElement===inp) return; var sv=null; try{ sv=localStorage.getItem('mtp_cm_'+k); }catch(e){} inp.value=(sv===null)?((window.TOKUN_CM&&window.TOKUN_CM[k])||''):sv; }); };   /* v500: 相手の変更を入力欄にも出す */
   }
   if($('#pf-snd')){ $('#pf-snd').addEventListener('click',function(){
     var on=!sndOn();

@@ -29,6 +29,7 @@ node tools/shot_chat.js /tmp/zg                # トーク画面の画像（k_ch
 | e2e/typing_prof.js | 測定用: 文字入力中の長い処理と、CPUを使った関数（THR・NPH で条件を変える） |
 | e2e/newline_keep.js | 改行・空行・行頭の空白が入力どおりに両方の画面に出る（v498） |
 | e2e/tokun_sync.js | とー君の設定（現れる・間隔・拡大）が2台でそろう（v499） |
+| e2e/tokun_msg_sync.js | とー君と一緒に出るメッセージが2台でそろう（v500） |
 | e2e/save_warning.js | 保存の一時的な失敗では警告を出さない（v489） |
 
 ## 1台だけのテスト（中継所なし）
