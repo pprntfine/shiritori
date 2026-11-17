@@ -42,6 +42,7 @@ node tools/shot_chat.js /tmp/zg                # トーク画面の画像（k_ch
 | e2e/access_log.js | 相手のアクセス履歴の画面（plog.png）（v483） |
 | e2e/photo_viewer.js | 受け取った写真をタップ→全画面で出て「高画質を読み込んでいます」が残らない（v495） |
 | e2e/camera_res.js | アプリ内カメラで大きく撮れる（偽カメラ、v501） |
+| e2e/photo_frame.js | 写真と吹き出しがぴったり・もう一度送るボタン・文字の吹き出しは崩れない（v502） |
 | e2e/news_fetch.js | 開いたらすぐニュースを1回取る（v484） |
 
 ## その他
