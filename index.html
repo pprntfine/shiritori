@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとしてインストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">新しい版に更新する</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンでアプリとして入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v493</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v494</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">相手を待っています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v493</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v494</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">名前</b> さんが入室を求めています</p>
         <p class="jr-fp">合図 <b id="jr-fp">----</b> ／ 相手の画面と同じかくににて確認</p>
@@ -8038,7 +8038,10 @@ function vanishSweep(){
   if(!vanishOn()) return false;
   var cut=Date.now()-VANISH_MS, gone=[], fresh=false;
   /* v251: 時計の ない 記事（設定オフの あいだに 既読に なった ぶん）には いまから 時計を 入れる */
-  S.chat.forEach(function(m){ if(m&&!m.sys&&(m.text||m.data)&&!m.rad&&(m.read||m.from!==S.me.id)){ m.rad=Date.now(); fresh=true; } });
+  /* v494: 受け取った分は、トーク画面に出ている時だけ時計を入れる。以前は届いた5秒後に（トップ画面・裏にいて見ていなくても）時計が始まり、
+     見ないまま15分で消えていた（通知は来たのにトークにない）。 */
+  var __seen=chatOnScreen();
+  S.chat.forEach(function(m){ if(m&&!m.sys&&(m.text||m.data)&&!m.rad&&(m.from===S.me.id?m.read:__seen)){ m.rad=Date.now(); fresh=true; } });
   if(fresh){ try{ persistChat(); }catch(e){} }
   S.chat.forEach(function(m){ if(m&&!m.sys&&m.rad&&m.rad<=cut) gone.push(m); });
   if(!gone.length) return false;

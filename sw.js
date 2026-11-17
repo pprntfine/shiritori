@@ -1,8 +1,8 @@
 'use strict';
 /* とー君ニュース（旧 雑学王）v460。本文は復号しない。鍵は受け取らず、暗号文だけを耐久保存する。
    zg-sw-inbox/pin {b:暗号文,t:時刻} は本体との互換契約。本文に時限削除を行わない。 */
-const SW_VERSION='v493';
-const SHELL_CACHE='zg-v493-shell';
+const SW_VERSION='v494';
+const SHELL_CACHE='zg-v494-shell';
 function unwrapPush(value){
   for(let i=0;i<8;i++){
     if(value&&typeof value==='object'){
