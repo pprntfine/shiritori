@@ -34,6 +34,7 @@ node tools/shot_chat.js /tmp/zg                # トーク画面の画像（k_ch
 | e2e/keyboard_bottom.js | キーボードが出ても最後のメッセージが見える（v487） |
 | e2e/send_bottom.js | 送ったら一番下を表示（v490） |
 | e2e/access_log.js | 相手のアクセス履歴の画面（plog.png）（v483） |
+| e2e/photo_viewer.js | 受け取った写真をタップ→全画面で出て「高画質を読み込んでいます」が残らない（v495） |
 | e2e/news_fetch.js | 開いたらすぐニュースを1回取る（v484） |
 
 ## その他

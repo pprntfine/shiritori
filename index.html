@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとしてインストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">新しい版に更新する</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンでアプリとして入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v494</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v495</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">相手を待っています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v494</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v495</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">名前</b> さんが入室を求めています</p>
         <p class="jr-fp">合図 <b id="jr-fp">----</b> ／ 相手の画面と同じかくににて確認</p>
@@ -8764,6 +8764,9 @@ function imgViewerAskHQ(pid){
   var hm=null; S.chat.forEach(function(c){ if(c&&c.photo&&String(c.pid||'')===String(pid)) hm=c; });
   if(!hm) return;
   if(hm.hq){ try{ imgViewerImg.src=hm.hq; imgViewerNote.hidden=true; }catch(e){} return; }
+  /* v495: 送る側は v348 から高画質の2枚目を作らない（photoSentHQ が空のまま）ので、頼んでも返事が来ず
+     「高画質を読み込んでいます…」が出たままだった。写真は v485 から長辺1600で届くので、頼まず案内も出さない。 */
+  return;
   if(hm.hqTried&&Date.now()-hm.hqTried<20000) return;
   hm.hqTried=Date.now();
   try{ imgViewerNote.textContent='高画質を読み込んでいます…'; imgViewerNote.hidden=false; }catch(e){}
