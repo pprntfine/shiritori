@@ -23,8 +23,19 @@ async function dev(b,me,peer,host,count){const ctx=await b.newContext({viewport:
  await send(A,'とじている間1'); await A.pg.waitForTimeout(800); await send(A,'とじている間2');
  await A.pg.waitForTimeout(120000);        // 送り直しが何回も起きる時間
  const st=await A.pg.evaluate(()=>({tries:(__t.S.outbox||[]).map(x=>x.tries||0),diag:window.__sendDiag||null}));
- const r={pushes:pushes.length,detail:pushes.map(p=>p.tail),outboxTries:st.tries,lastSend:st.diag};
- console.log(JSON.stringify(r));
- const ok=pushes.length>=1&&pushes.length<=2&&st.tries.some(t=>t>=2);
- console.log(ok?'OK: 送り直しは続くが、通知は1通につき1回まで':'NG');
+ const p1=pushes.length;
+ console.log(JSON.stringify({step:'送り直し120秒',pushes:p1,outboxTries:st.tries,lastSend:st.diag}));
+ // 送る側がアプリを開き直しても、同じメッセージの通知は出し直さない
+ await A.pg.reload(); await A.pg.waitForTimeout(8000);
+ await A.pg.evaluate(()=>{ const w=document.getElementById('storage-warning'); if(w) w.hidden=true; __t.show('play'); __t.setTab('chat'); });
+ await A.pg.waitForTimeout(60000);
+ const st2=await A.pg.evaluate(()=>({left:(__t.S.outbox||[]).length,tries:(__t.S.outbox||[]).map(x=>x.tries||0)}));
+ const p2=pushes.length;
+ console.log(JSON.stringify({step:'開き直して60秒',pushes:p2,outboxLeft:st2.left,outboxTries:st2.tries}));
+ // 新しいメッセージには、ちゃんと通知が1回出る
+ await send(A,'とじている間3'); await A.pg.waitForTimeout(50000);
+ const p3=pushes.length;
+ console.log(JSON.stringify({step:'3通目のあと50秒',pushes:p3}));
+ const ok=p1>=1&&p1<=2&&st.tries.some(t=>t>=2)&&p2===p1&&st2.left>=2&&p3===p2+1;
+ console.log(ok?'OK: 送り直し・開き直しでも通知は1通につき1回、新しいメッセージは通知あり':'NG');
  await b.close(); process.exit(ok?0:1);})();
