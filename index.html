@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとしてインストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">新しい版に更新する</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンでアプリとして入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v496</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v497</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">相手を待っています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v496</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v497</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">名前</b> さんが入室を求めています</p>
         <p class="jr-fp">合図 <b id="jr-fp">----</b> ／ 相手の画面と同じかくににて確認</p>
@@ -2707,7 +2707,7 @@ var Net={
       if(this.seenN.size>3000){ var it2=this.seenN.values(); for(var z=0;z<1500;z++) this.seenN.delete(it2.next().value); }
     }
     try{ this.lastRecv=Date.now(); }catch(e){}
-    if(env.from===S.me.id && env.t!=='nettest' && env.t!=='nettest-ok') return;   /* 自分の送信は無視（通信テストだけ 例外） */
+    if(env.from===S.me.id && env.t!=='nettest' && env.t!=='nettest-ok') return true;   /* 自分の送信は無視（通信テストだけ 例外）。v497: true＝片付け済み（以前は何も返さず、戻ってきた自分の暗号文が受信箱 zg-inbox に残り続け、1.2秒ごとの drainInbox で全部を復号し直して入力中に固まっていた） */
     var ok=this.onMsg?await this.onMsg(env):false;
     if(epoch!==this.epoch||key!==this.key||topic!==this.topic) return false;
     if(ok===false||(({chats:1,chat:1,photo:1,attachment:1,'photo-ref':1}[env.t])&&ok!==true)) return false;

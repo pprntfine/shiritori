@@ -25,6 +25,8 @@ node tools/shot_chat.js /tmp/zg                # トーク画面の画像（k_ch
 | e2e/call_no_stale_ring.js | 閉じていた間の電話が、あとで開いた時に鳴らない |
 | e2e/push_once.js | 相手が閉じている間、送り直しが続いても通知は1通につき1回（v493） |
 | e2e/vanish_unseen.js | 見ていないメッセージは消えない・見てから15分で消える（v494） |
+| e2e/inbox_clean.js | 戻ってきた自分の暗号文が受信箱にたまらない（v497） |
+| e2e/typing_prof.js | 測定用: 文字入力中の長い処理と、CPUを使った関数（THR・NPH で条件を変える） |
 | e2e/save_warning.js | 保存の一時的な失敗では警告を出さない（v489） |
 
 ## 1台だけのテスト（中継所なし）
