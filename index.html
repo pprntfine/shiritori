@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとしてインストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">新しい版に更新する</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンでアプリとして入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v498</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v499</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">相手を待っています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v498</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v499</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">名前</b> さんが入室を求めています</p>
         <p class="jr-fp">合図 <b id="jr-fp">----</b> ／ 相手の画面と同じかくににて確認</p>
@@ -11756,7 +11756,8 @@ Net.onMsg=async function(m){
       recvProf(m);
       if(typeof m.ps==='string'&&psrvOk(m.ps)&&m.ps.replace(/\/+$/,'')!==psrvGet()){ psrvSet(m.ps); setTimeout(function(){ try{ bgPushSetup(); }catch(e){} },300); }
       relayPeerMark(m);   /* v451: あいてが じぶんの 中継所を 見て いるか */
-      if(!m.r) setTimeout(function(){ try{ Net.send({t:'prof',r:1,nm:meName(),emo:(PROF.me&&PROF.me.emo)||'🐷',img:(PROF.me&&PROF.me.img)||'',ps:psrvGet(),rl:relayHas()?1:0}); }catch(e){} },400);
+      try{ tokunApply(m.tk,S.isHost===false); }catch(e){}   /* v499: とー君の設定をそろえる（相手がホストなら同じ版でも合わせる） */
+      if(!m.r) setTimeout(function(){ try{ Net.send({t:'prof',r:1,nm:meName(),emo:(PROF.me&&PROF.me.emo)||'🐷',img:(PROF.me&&PROF.me.img)||'',ps:psrvGet(),rl:relayHas()?1:0,tk:tokunState()}); }catch(e){} },400);
       break;
     case 'rtc2':
       if(m.from===S.me.id) break;
@@ -12832,7 +12833,36 @@ function paintProf(){
   try{ $('#ig-name').textContent=peerName(); }catch(e){}
 }
 function sendProf(){
-  try{ if(!Net.topic||!Net.key||!(S.paired||S.linked)) return; Net.send({t:'prof',nm:meName(),emo:(PROF.me&&PROF.me.emo)||'🐷',img:(PROF.me&&PROF.me.img)||'',ps:psrvGet(),rl:relayHas()?1:0}); }catch(e){}
+  try{ if(!Net.topic||!Net.key||!(S.paired||S.linked)) return; Net.send({t:'prof',nm:meName(),emo:(PROF.me&&PROF.me.emo)||'🐷',img:(PROF.me&&PROF.me.img)||'',ps:psrvGet(),rl:relayHas()?1:0,tk:tokunState()}); }catch(e){}
+}
+/* v499: とー君の設定（現れる・間隔・拡大）を2台でそろえる。prof に載せて送り、版(v)が大きい方に合わせる。
+   版が同じで中身が違う時（どちらも変えていない等）はホストの設定に合わせる。 */
+var TOK_V_KEY='mtp_tokun_v', TOK_IVS=[10000,15000,20000,25000,30000,35000,40000,45000,50000,55000,60000,0,-1];
+function tokunState(){
+  var off=false,iv=10000,big=false,v=0;
+  try{ off=!!localStorage.getItem('mtp_tokun_off'); var pv=parseInt(localStorage.getItem('mtp_tokun_iv')||'10000',10); iv=(pv===0||pv===-1)?pv:((pv>0)?pv:10000);
+       big=!!localStorage.getItem('mtp_tokun_big'); v=parseInt(localStorage.getItem(TOK_V_KEY)||'0',10)||0; }catch(e){}
+  return {off:off?1:0,iv:iv,big:big?1:0,v:v};
+}
+function tokunChanged(){   /* この端末で設定を変えた → 版を1つ上げて相手へ */
+  try{ localStorage.setItem(TOK_V_KEY,String(tokunState().v+1)); }catch(e){}
+  try{ sendProf(); }catch(e){}
+}
+function tokunApply(tk,fromHost){
+  if(!tk||typeof tk!=='object') return false;
+  var iv=parseInt(tk.iv,10), v=parseInt(tk.v,10)||0;
+  if(TOK_IVS.indexOf(iv)<0||v<0||v>1e9) return false;
+  var cur=tokunState(), same=(cur.off===(tk.off?1:0)&&cur.iv===iv&&cur.big===(tk.big?1:0));
+  if(!(v>cur.v||(v===cur.v&&fromHost&&!same))) return false;
+  try{
+    if(tk.off) localStorage.setItem('mtp_tokun_off','1'); else localStorage.removeItem('mtp_tokun_off');
+    localStorage.setItem('mtp_tokun_iv',String(iv));
+    if(tk.big) localStorage.setItem('mtp_tokun_big','1'); else localStorage.removeItem('mtp_tokun_big');
+    localStorage.setItem(TOK_V_KEY,String(Math.max(v,cur.v)));
+  }catch(e){ return false; }
+  if(cur.iv!==iv&&window.__tokSet){ try{ window.__tokSet(iv); }catch(e){} }
+  if(window.__tokPaint){ try{ window.__tokPaint(); }catch(e){} }
+  return !same;
 }
 function recvProf(m){
   var __pn0=String(m.nm||'').trim().slice(0,12); if(__pn0==='にゃん') __pn0='';   /* v388 */
@@ -12919,16 +12949,16 @@ function recvProf(m){
     $('#pf-tokun-big').textContent=big?'オン':'オフ'; };
     $('#pf-tokun').addEventListener('click',function(){ var off=false; try{off=!!localStorage.getItem('mtp_tokun_off');}catch(e){}
       try{ if(off) localStorage.removeItem('mtp_tokun_off'); else localStorage.setItem('mtp_tokun_off','1'); }catch(e){}
-      paintTokun(); toast(off?'とー君があらわれるようにしました。':'とー君を隠しました。'); });
+      paintTokun(); tokunChanged(); toast(off?'とー君があらわれるようにしました。':'とー君を隠しました。'); });
     $('#pf-tokun-iv').addEventListener('click',function(){ var iv=10000; try{var pv=parseInt(localStorage.getItem('mtp_tokun_iv')||'10000',10); iv=(pv===0||pv===-1)?pv:((pv>0)?pv:10000);}catch(e){}
       var seq=[10000,15000,20000,25000,30000,35000,40000,45000,50000,55000,60000,0,-1]; var i=seq.indexOf(iv); if(i<0)i=0; iv=seq[(i+1)%seq.length];
       try{ localStorage.setItem('mtp_tokun_iv',String(iv)); }catch(e){}
       if(window.__tokSet){ try{ window.__tokSet(iv); }catch(e){} }
-      paintTokun(); toast(iv===0?'とー君はあらわれなくなります。':(iv===-1?'とー君が連続で次つぎあらわれます。':'とー君は '+(iv<=60000?((iv/1000)+'秒ごと'):((iv/60000)+'分ごと'))+'にあらわれます。')); });
+      paintTokun(); tokunChanged(); toast(iv===0?'とー君はあらわれなくなります。':(iv===-1?'とー君が連続で次つぎあらわれます。':'とー君は '+(iv<=60000?((iv/1000)+'秒ごと'):((iv/60000)+'分ごと'))+'にあらわれます。')); });
     $('#pf-tokun-big').addEventListener('click',function(){ var big=false; try{big=!!localStorage.getItem('mtp_tokun_big');}catch(e){}
       try{ if(big) localStorage.removeItem('mtp_tokun_big'); else localStorage.setItem('mtp_tokun_big','1'); }catch(e){}
-      paintTokun(); toast(big?'ふつうのおおきさに戻しました。':'とー君が画面いっぱいに巨大であらわれます！'); });
-    paintTokun(); }
+      paintTokun(); tokunChanged(); toast(big?'ふつうのおおきさに戻しました。':'とー君が画面いっぱいに巨大であらわれます！'); });
+    window.__tokPaint=paintTokun; paintTokun(); }
   if($('#pf-tcm-🐶㉘')){ var CMK=['🐶㉘','🐶㉙','🐶㉚','🐶㉛','🐶㉜','🐶㉝','🐶㉞','🐶㉟','🐶㊲','🐶㊳'];
     CMK.forEach(function(k){ var inp=document.getElementById('pf-tcm-'+k); if(!inp)return; var key='mtp_cm_'+k;
       try{ var sv=localStorage.getItem(key); inp.value=(sv===null)?((window.TOKUN_CM&&window.TOKUN_CM[k])||''):sv; }catch(e){ inp.value=(window.TOKUN_CM&&window.TOKUN_CM[k])||''; }

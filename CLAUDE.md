@@ -1,4 +1,4 @@
-# とー君ニュース（旧 雑学王 / zatsugakuou）引き継ぎメモ  ― 現在 v498
+# とー君ニュース（旧 雑学王 / zatsugakuou）引き継ぎメモ  ― 現在 v499
 
 ## これは何か
 見た目は「とー君ニュース」（ニュースアプリ。v460 までは「雑学クイズ」アプリ）。中身は **2人専用の暗号化チャット**（メッセージ・写真・ライブ映像・電話）。
@@ -222,6 +222,8 @@
   試験 `tools/e2e/inbox_clean.js`（10往復で受信箱が数件以内）。測定 `tools/e2e/typing_prof.js`（CPUを遅くして入力中の長い処理・関数ごとのCPU時間）。※ `chatGrow`（入力のたびに高さを測り直す）も1文字あたり少し重いが、今回は触っていない。
 - v498 メッセージを入力した形（改行・空行・行頭の空白）のまま見せる（持ち主）。送受信では改行は保たれていたが、自分の吹き出しだけ v386 の処理（`renderChatFull` で改行を空白にして1行につなぐ）と v389 の CSS（`.msg.out .bubble{white-space:normal!important}`）で1行に見えていた。置き換えをやめ、v447-polish に `.msg .bubble:not(.sticker-animated):not(.dog-b){white-space:pre-wrap!important}`。末尾の空行は従来どおり送らない（`submitChat` の末尾空白の除去）。
   試験 `tools/e2e/newline_keep.js`: キーボードで改行・空行・行頭の空白を入れて送る → 送った側・受け取った側とも入力どおりの形。
+- v499 チャット画面のとー君の設定（現れる `mtp_tokun_off`・間隔 `mtp_tokun_iv`・拡大 `mtp_tokun_big`）を2台でそろえる（持ち主）。`prof`（つながった時・開き直した時にやり取りする暗号化メッセージ。中継所に預けられる）に `tk:tokunState()` を載せる。設定ボタンを押すと `tokunChanged()` で版 `mtp_tokun_v` を1上げて `sendProf()`。受け取り側 `tokunApply(tk,相手がホスト)` は版が大きければ合わせ、版が同じで中身が違う時（どちらも変えていない等）はホストに合わせる。反映時は `window.__tokSet(iv)` と設定画面の再描画 `window.__tokPaint`。
+  試験 `tools/e2e/tokun_sync.js`: 最初の食い違い→ホストに合わせる／ホストが拡大オン／相手が間隔変更／相手がオフ／相手が閉じている間の変更→開いたら反映、すべて2台一致。relay_basic も通過。
 
 ## 構造のメモ（行番号は目安。検索で探すこと）
 - メインのスクリプトは `<script>(function(){'use strict'; …})();</script>` の1つの大きな閉じ込み。外から内部は見えない（テスト用に `tools/make_test.py` で `window.__t` を出す）。
