@@ -22,6 +22,7 @@ node tools/shot_chat.js /tmp/zg                # トーク画面の画像（k_ch
 | e2e/no_flicker.js | 相手が閉じている間に画面の作り直しが起きない（v480） |
 | e2e/call_log.js | 電話の記録（通話時間・拒否・キャンセル・不在着信、開き直しても残る）（v491） |
 | e2e/call_no_stale_ring.js | 閉じていた間の電話が、あとで開いた時に鳴らない |
+| e2e/push_once.js | 相手が閉じている間、送り直しが続いても通知は1通につき1回（v493） |
 | e2e/save_warning.js | 保存の一時的な失敗では警告を出さない（v489） |
 
 ## 1台だけのテスト（中継所なし）

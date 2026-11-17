@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとしてインストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">新しい版に更新する</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンでアプリとして入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v492</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v493</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">相手を待っています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v492</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v493</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">名前</b> さんが入室を求めています</p>
         <p class="jr-fp">合図 <b id="jr-fp">----</b> ／ 相手の画面と同じかくににて確認</p>
@@ -2817,7 +2817,8 @@ var Net={
        v157: 同じ 番号の 送りなおしでも、まだ わたせて いなければ もう一度（相手は 番号で 重複を すてる） */
     var pushP=null;
     /* v219: 削除の合図は通知を出すベルに載せない。本文だけ従来の通知経路を使う。 */
-    if(env&&(env.t==='chats'||env.t==='chat')&&!env.__pushOk&&!(function(){try{return (Date.now()-(+(window.__zgsPeerLive||0)||0))<70000;}catch(e){return false;}})()){ try{ pushP=pushToPeer(body).then(function(ok){ if(ok){ env.__pushOk=1; if(env.t==='chats') markPushAcked(env); } return ok; }); }catch(e){} }
+    /* v493: 受領待ちの送り直し（約20秒ごと）のたびに新しい暗号文で通知していた（2通で通知6件）。同じメッセージ(mid)の通知は1回だけ */
+    if(env&&(env.t==='chats'||env.t==='chat')&&!env.__pushOk&&!pushMidsAllDone(env)&&!(function(){try{return (Date.now()-(+(window.__zgsPeerLive||0)||0))<70000;}catch(e){return false;}})()){ try{ pushP=pushToPeer(body).then(function(ok){ if(ok){ env.__pushOk=1; pushMidsMark(env); if(env.t==='chats') markPushAcked(env); } return ok; }); }catch(e){} }
     var viaPush=function(){ if(!pushP) return Promise.resolve(false); return Promise.race([pushP,new Promise(function(r){ setTimeout(function(){ r(false); },2500); })]); };
     /* v131: ntfy は 1日250回（同じ Wi-Fi の 2台で 合計）まで。既読・受領・ping などで つかいきると
        アプリを 切った ときの 通知（ベル）が とまる → 大事な ものだけ ntfy に のせる */
@@ -12686,6 +12687,29 @@ async function pushToPeer(body){
   }catch(e){ return false; }
 }
 var bellPushed=0;
+/* v493: 通知を送り終えたメッセージの mid（中身ではなく乱数の番号）を覚える。開き直しても同じ通知を出さない */
+var PUSHED_MIDS_KEY='zg_pushed_mids', pushedMids=null;
+function pushMidsLoad(){
+  if(pushedMids) return pushedMids;
+  pushedMids=[]; try{ var a=JSON.parse(localStorage.getItem(PUSHED_MIDS_KEY)||'[]'); if(Array.isArray(a)) pushedMids=a.filter(function(x){ return typeof x==='string'&&x.length<80; }).slice(-300); }catch(e){}
+  return pushedMids;
+}
+function pushMidsOf(env){
+  var out=[]; try{ (env&&Array.isArray(env.items)?env.items:[]).forEach(function(it){ if(it&&typeof it.mid==='string'&&it.mid) out.push(it.mid); }); if(env&&typeof env.mid==='string'&&env.mid) out.push(env.mid); }catch(e){}
+  return out;
+}
+function pushMidsAllDone(env){
+  var ids=pushMidsOf(env); if(!ids.length) return false;
+  var have=pushMidsLoad();
+  return ids.every(function(id){ return have.indexOf(id)>=0; });
+}
+function pushMidsMark(env){
+  var ids=pushMidsOf(env); if(!ids.length) return;
+  var have=pushMidsLoad();
+  ids.forEach(function(id){ if(have.indexOf(id)<0) have.push(id); });
+  if(have.length>300) pushedMids=have=have.slice(-300);
+  try{ localStorage.setItem(PUSHED_MIDS_KEY,JSON.stringify(have)); }catch(e){}
+}
 /* スマホが あずかって いた あんごう文を とりだして 読む */
 function idbOpen(){ return new Promise(function(res,rej){ try{ var r=indexedDB.open('zg-inbox',1); r.onupgradeneeded=function(){ r.result.createObjectStore('m',{autoIncrement:true}); }; r.onsuccess=function(){ res(r.result); }; r.onerror=function(){ rej(r.error); }; }catch(e){ rej(e); } }); }
 /* v297: よめるか ためしてから つかう。これまでは 先に しまい場所を からに していたため、
