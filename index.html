@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとしてインストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">新しい版に更新する</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンでアプリとして入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v495</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v496</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">相手を待っています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v495</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v496</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">名前</b> さんが入室を求めています</p>
         <p class="jr-fp">合図 <b id="jr-fp">----</b> ／ 相手の画面と同じかくににて確認</p>
@@ -8350,8 +8350,8 @@ function photoChunkStart(id,d,minGap){
 }   /* v267: おくった 写真を おぼえて おく（とどかなかった 分を おくりなおす） */
 /* v273: 写真は「1回で おくれる 大きさ」に おさめてから 送る。かけら送りは 保険で、1800文字ずつ・最大2000かけら・120万文字まで */
 var PHOTO_CHUNK_PIECE=1200, PHOTO_SOFT_MAX=12000, PHOTO_HARD_MAX=1200000, PHOTO_TGT_WEBP=12000;   /* v348: 20,000/35,000 → 12,000（かけら 10こ） */   /* v304: かけら 23→8こ */
-var PHOTO_HQ_WEBP=60000, PHOTO_HQ_SOFT=190000, PHOTO_HQ_MAXSIDE=1280, PHOTO_FULL_MAXSIDE=1600;   /* v485: 1280→1600 */
-var PHOTO_BIG_WEBP=520000, PHOTO_BIG_JPEG=700000, PHOTO_BIG_MAXSIDE=1600;   /* v485: 中継所で 1まいで 送る ときの 大きさ（文字数。おおよそ 400〜500KB） */   /* v306 */   /* v305: タップ用の (たか)画質 */
+var PHOTO_HQ_WEBP=60000, PHOTO_HQ_SOFT=190000, PHOTO_HQ_MAXSIDE=1280, PHOTO_FULL_MAXSIDE=2000;   /* v485: 1280→1600、v496: 1600→2000（持ち主） */
+var PHOTO_BIG_WEBP=820000, PHOTO_BIG_JPEG=1100000, PHOTO_BIG_MAXSIDE=2000;   /* v496: 長辺1600→2000（持ち主）。文字数も面積に合わせて約1.56倍（中継所の上限2MBの内側） */   /* v485: 中継所で 1まいで 送る ときの 大きさ（文字数。おおよそ 400〜500KB） */   /* v306 */   /* v305: タップ用の (たか)画質 */
 /* v288: WebP が つかえる 端末なら WebP で 作りなおす（同じ 見た目で 3〜4割 小さく → かけらが 減って 速い） */
 var WEBP_OK=null;
 function canWebP(){ if(WEBP_OK!==null) return WEBP_OK; try{ var c=document.createElement('canvas'); c.width=2; c.height=2; WEBP_OK=(String(c.toDataURL('image/webp',0.7)).indexOf('data:image/webp')===0); }catch(e){ WEBP_OK=false; } return WEBP_OK; }
@@ -9340,7 +9340,7 @@ function attachmentReady(){
 function attachmentRead(file){ return new Promise(function(resolve,reject){ var r=new FileReader(); r.onload=function(){ resolve(String(r.result)); }; r.onerror=function(){ reject(new Error('read')); }; r.readAsDataURL(file); }); }
 function attachmentPhoto(url){ return new Promise(function(resolve,reject){
   var im=new Image(); im.onerror=function(){ reject(new Error('image')); };
-  im.onload=function(){ try{ var scale=Math.min(1,1600/Math.max(im.naturalWidth,im.naturalHeight)); var c=document.createElement('canvas'); c.width=Math.max(1,Math.round(im.naturalWidth*scale)); c.height=Math.max(1,Math.round(im.naturalHeight*scale)); var ctx=c.getContext('2d'); ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,c.width,c.height); ctx.drawImage(im,0,0,c.width,c.height); resolve(c.toDataURL(canWebP()?'image/webp':'image/jpeg',0.9)); }catch(e){ reject(e); } }; im.src=url;
+  im.onload=function(){ try{ var scale=Math.min(1,2000/Math.max(im.naturalWidth,im.naturalHeight));   /* v496: 1600→2000 */ var c=document.createElement('canvas'); c.width=Math.max(1,Math.round(im.naturalWidth*scale)); c.height=Math.max(1,Math.round(im.naturalHeight*scale)); var ctx=c.getContext('2d'); ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,c.width,c.height); ctx.drawImage(im,0,0,c.width,c.height); resolve(c.toDataURL(canWebP()?'image/webp':'image/jpeg',0.9)); }catch(e){ reject(e); } }; im.src=url;
 }); }
 function attachmentButton(id,input){ $('#'+id).addEventListener('click',function(){ if(!attachmentReady()) return; var f=$('#'+input); f.value=''; f.click(); }); }
 attachmentButton('btn-attach-photo','chat-photo-file');
