@@ -23,8 +23,18 @@ async function dev(b,me,peer,host,tag){ const D=(tag==='B')?DIR_B:DIR;const ctx=
  await A.waitForTimeout(4000);
  for(const k in net) delete net[k]; for(const p of [A,B]) await p.evaluate(()=>{ window.__byT={}; });
  for(let i=0;i<5;i++){ await A.fill('#in-chat','A'+i); await A.click('#btn-chat-send'); await A.waitForTimeout(1500); await B.fill('#in-chat','B'+i); await B.click('#btn-chat-send'); await B.waitForTimeout(1500); }
+ const FLIP=+(process.env.FLIP_SEC||0);   // FLIP_SEC 秒ごとに B の画面を消す/つける（iPhone は消すと受け取り線が切れる）
+ if(FLIP){
+   console.log('会話10通のあと、'+MIN+'分のあいだ B の画面を '+FLIP+'秒ごとに消す・つける…');
+   const end=Date.now()+MIN*60000; let hidden=false;
+   while(Date.now()<end){ hidden=!hidden;
+     await B.evaluate(h=>{ Object.defineProperty(document,'hidden',{get:()=>h,configurable:true}); Object.defineProperty(document,'visibilityState',{get:()=>h?'hidden':'visible',configurable:true}); if(h){ try{ __t.Relay.ws&&__t.Relay.ws.close(); }catch(e){} } document.dispatchEvent(new Event('visibilitychange')); },hidden);
+     await B.waitForTimeout(FLIP*1000); }
+   await B.evaluate(()=>{ Object.defineProperty(document,'hidden',{get:()=>false,configurable:true}); Object.defineProperty(document,'visibilityState',{get:()=>'visible',configurable:true}); document.dispatchEvent(new Event('visibilitychange')); });
+ } else {
  console.log('会話10通のあと、'+MIN+'分そのまま置く…');
  await A.waitForTimeout(MIN*60000);
+ }
  const a=await A.evaluate(()=>window.__byT), bb=await B.evaluate(()=>window.__byT);
  console.log('A 種類ごと:',JSON.stringify(a)); console.log('B 種類ごと:',JSON.stringify(bb));
  console.log('中継所への通信:',JSON.stringify(net));
