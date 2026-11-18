@@ -317,23 +317,43 @@ async function newsGroup(key) {
   }
   return [];
 }
+/* 前日比の「前日」を、日ごとの終値の並びから決める（日付ごとに最後の終値だけを残し、いちばん新しい日の1つ前）。
+   2026-11-18 直し: 以前は meta.chartPreviousClose を使っていたが、range=5d ではこれは「5日分の範囲の1つ前の終値」（約5営業日前）で、前日比にならなかった */
+function prevCloseOf(j) {
+  const r = j.chart.result[0], ts = r.timestamp || [], cl = (r.indicators.quote[0] || {}).close || [];
+  const off = (r.meta && r.meta.gmtoffset) || 0;
+  const byDay = new Map();
+  for (let i = 0; i < ts.length; i++) {
+    if (typeof cl[i] !== 'number' || !isFinite(cl[i])) continue;
+    byDay.set(new Date((ts[i] + off) * 1000).toISOString().slice(0, 10), cl[i]);   // 同じ日は後のもので上書き
+  }
+  const days = [...byDay.keys()].sort();
+  return days.length >= 2 ? byDay.get(days[days.length - 2]) : null;
+}
 async function quote(sym) {
   try {
     const r = await fetch('https://query1.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(sym) + '?interval=1d&range=5d',
       { headers: { 'User-Agent': 'Mozilla/5.0 (zatsugaku-news)' }, signal: AbortSignal.timeout(4000) });
     const j = await r.json();
     const meta = j.chart.result[0].meta;
-    const v = meta.regularMarketPrice, p = meta.chartPreviousClose ?? meta.previousClose;
+    const v = meta.regularMarketPrice, p = prevCloseOf(j);
     if (typeof v !== 'number') throw 0;
     return { v, c: typeof p === 'number' ? v - p : null, p: typeof p === 'number' && p ? (v - p) / p * 100 : null, at: (meta.regularMarketTime || 0) * 1000 };
   } catch (e) {}
-  try {   // 予備（stooq）
+  try {   // 予備（stooq）: 現在値は l/、前日の終値は日足 d/l から（以前は「今日の始値」との差で、前日比ではなかった）
     const st = { '^N225': '^nkx', 'JPY=X': 'usdjpy' }[sym];
     const t = await getText('https://stooq.com/q/l/?s=' + encodeURIComponent(st) + '&f=sd2t2ohlc&h&e=csv');
     const row = t.trim().split('\n')[1].split(',');
-    const v = parseFloat(row[6]), o = parseFloat(row[3]);
+    const v = parseFloat(row[6]);
     if (!isFinite(v)) throw 0;
-    return { v, c: isFinite(o) ? v - o : null, p: isFinite(o) && o ? (v - o) / o * 100 : null, at: Date.parse(row[1] + 'T' + row[2] + 'Z') || 0, open: 1 };
+    let pc = NaN;
+    try {
+      const d1 = new Date(Date.now() - 12 * 86400 * 1000).toISOString().slice(0, 10).replace(/-/g, '');
+      const h = (await getText('https://stooq.com/q/d/l/?s=' + encodeURIComponent(st) + '&i=d&d1=' + d1)).trim().split('\n').slice(1).map(l => l.split(','));
+      const older = h.filter(x => x[0] < row[1] && isFinite(parseFloat(x[4])));   // 現在値の日より前の、いちばん新しい終値
+      if (older.length) pc = parseFloat(older[older.length - 1][4]);
+    } catch (e) {}
+    return { v, c: isFinite(pc) ? v - pc : null, p: isFinite(pc) && pc ? (v - pc) / pc * 100 : null, at: Date.parse(row[1] + 'T' + row[2] + 'Z') || 0, open: 1 };
   } catch (e) {}
   return null;
 }

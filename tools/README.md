@@ -51,6 +51,9 @@ node tools/shot_chat.js /tmp/zg                # トーク画面の画像（k_ch
 | e2e/photo_frame.js | 写真と吹き出しがぴったり・もう一度送るボタン・文字の吹き出しは崩れない（v502） |
 | e2e/news_fetch.js | 開いたらすぐニュースを1回取る（v484） |
 
+## Worker の試験（ネットなし）
+`node tools/worker_quote_test.mjs` … 日経平均・ドル円の前日比（Yahoo・stooq は作り物の応答）。
+
 ## その他
 - `kanji_convert.py` … v486 で画面の文言を漢字かな交じりにした変換（クイズの範囲は除く）。新しい文言は最初から普通の文章で書けばよいので、ふだんは使わない。
 - テストのしくみ: `chromium --host-resolver-rules=MAP zatsugaku-push.pprnt908.workers.dev 127.0.0.1`、
