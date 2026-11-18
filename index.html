@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとしてインストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">新しい版に更新する</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンでアプリとして入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v506</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v507</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">相手を待っています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v506</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v507</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">名前</b> さんが入室を求めています</p>
         <p class="jr-fp">合図 <b id="jr-fp">----</b> ／ 相手の画面と同じかくににて確認</p>
@@ -2936,15 +2936,15 @@ var Net={
            中継所の 返事が おそい ときは 待ちつづけず ntfy.sh へ */
   relayTry:async function(base,topic,init,query){
     var outer=init&&init.signal, ac=(typeof AbortController!=='undefined')?new AbortController():null;
-    var lim=(init&&init.method==='PUT')?30000:4000, tmo=setTimeout(function(){ try{ if(ac) ac.abort(); }catch(e){} },lim);
+    var lim=(init&&init.method==='PUT')?30000:10000, tmo=setTimeout(function(){ try{ if(ac) ac.abort(); }catch(e){} },lim);
     var onOuter=function(){ try{ if(ac) ac.abort(); }catch(e){} };
     if(outer){ if(outer.aborted) onOuter(); else outer.addEventListener('abort',onOuter); }
     try{
       var rr=await fetch(base+topic+(query||''),kaInit(Object.assign({},init,{signal:ac?ac.signal:(outer||undefined)})));
       if(rr.ok){ this.lastVia='relay'; Relay.badUntil=0; return rr; }
-      if(rr.status!==413) Relay.badUntil=Date.now()+60000;
+      if(rr.status!==413) Relay.badUntil=Date.now()+10000;   /* v507: 60秒 → 10秒 */
       return rr;
-    }catch(e){ if(outer&&outer.aborted) throw e; Relay.badUntil=Date.now()+60000; return null; }
+    }catch(e){ if(outer&&outer.aborted) throw e; Relay.badUntil=Date.now()+10000; return null; }   /* v507: 60秒 → 10秒。POST の打ち切りも 4→10秒（モバイル回線では4秒で切れて失敗扱いになっていた） */
     finally{ clearTimeout(tmo); if(outer) outer.removeEventListener('abort',onOuter); }
   },
   storeFetch:async function(topic,init,query){
@@ -11113,12 +11113,14 @@ async function flushOutbox(){
   S.inflight=S.inflight||[];
   /* v476: 返事が もどらない まま 40秒 たった ものは「送り中」を といて 送りなおす */
   S.inflight=S.inflight.filter(function(it){ return Date.now()-(it.lastTry||0)<40000; });
-  var __gapCap=relayAnyBase()?20000:600000;
+  /* v507: まだ送れていない分は、中継所が一度失敗した直後でも最大10秒ごとに送り直す（以前は中継所を使えない間 15秒→30秒→1分と延びて、
+     弱い電波で一度返事が遅れただけで2分以上「送信中」のままだった）。最初の送り直しは3秒後 */
+  var __gapCap=10000;
   /* v504: 中継所が受け取った（送信済み）メッセージは、中継所に12時間残り、相手が開けば届く。相手が閉じている間に20秒ごとに送り直すと、
      そのたびに中継所へ保存され、Durable Objects の1日の上限（読み出し500万・書き込み10万）を超えて止まった（2026-11-17）。
      送信済みの分は送り直しの間隔を普通どおり延ばす（15秒→30秒→…→最大10分）。まだ届けられていない分は従来どおり最大20秒 */
   var __sentMid={}; try{ S.chat.forEach(function(c){ if(c&&c.mid&&c.from===S.me.id&&c.sent) __sentMid[c.mid]=1; }); }catch(e){}
-  var pool=S.outbox.filter(function(it){ var cap=((it.msg&&it.msg.sent)||__sentMid[it.mid])?600000:__gapCap; return S.inflight.indexOf(it)<0&&Date.now()-(it.lastTry||0)>=Math.min(cap,retryGap(it.tries||0)); });
+  var pool=S.outbox.filter(function(it){ var cap=((it.msg&&it.msg.sent)||__sentMid[it.mid])?600000:__gapCap; return S.inflight.indexOf(it)<0&&Date.now()-(it.lastTry||0)>=Math.min(cap,(cap===__gapCap&&(it.tries||0)<=1)?3000:retryGap(it.tries||0)); });
   if(!pool.length) return;
   /* 1通の 封筒に 入る ぶんだけ まとめる（入りきらないと 送れなかった） */
   var items=[], bytes=0;

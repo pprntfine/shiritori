@@ -1,4 +1,4 @@
-# とー君ニュース（旧 雑学王 / zatsugakuou）引き継ぎメモ  ― 現在 v506
+# とー君ニュース（旧 雑学王 / zatsugakuou）引き継ぎメモ  ― 現在 v507
 
 ## これは何か
 見た目は「とー君ニュース」（ニュースアプリ。v460 までは「雑学クイズ」アプリ）。中身は **2人専用の暗号化チャット**（メッセージ・写真・ライブ映像・電話）。
@@ -245,6 +245,12 @@
   (2) どの通信にも `keepalive` が無く、送信中の POST が途中で切れ得た → `kaInit()`（本文が文字で60KB未満なら keepalive:true）を `relayTry`・`storeFetch` の ntfy・`psrvPush`・`pushToPeer` に。写真の大きいファイル（PUT）は対象外。
   試験 `tools/e2e/push_hide.js`（CDP の Page.setWebLifecycleState で凍結）: v505 通知0 → v506 1秒後に1件。push_fast: 閉じた直後の通知 8→3秒・開いている時は0。push_once（1通1回）・relay_basic・send_status・relay_load（中継所の保存回数は v504 と同じ）も通過。
   ※ Worker は `Urgency: high`・TTL 86400 で送信済み（Android の省電力で遅れる心配はコード側にはない）。それでも来ない時は、相手の端末の通知設定・電池の最適化・通知の登録（設定の「届け設定」）を疑う。
+- v507 「メッセージが送信中のままの人がいる」（持ち主）。再現: 中継所への送信（POST）の返事が一度6秒かかる（弱い電波）→ **2分以上「送信中」のまま**。原因が重なっていた:
+  (1) `relayTry` の POST は4秒で打ち切り、失敗すると `Relay.badUntil` を60秒立てて中継所を使わない（MQTT・ntfy が使えない回線では送り先が無くなる）。
+  (2) `flushOutbox` は中継所が使えない間（`relayAnyBase()` が空）、まだ送れていない分の再送間隔の上限が10分で、15秒→30秒→1分と延びた。
+  → POST の打ち切り 4→10秒、`badUntil` 60→10秒、まだ送れていない分の再送は最初3秒後・最大10秒ごと（送信済みの分は v504 どおり延ばす＝中継所の保存回数は増やさない）。
+  試験 `tools/e2e/slow_relay.js`（最初の10秒だけ中継所の POST を6秒遅らせる）: v506 は120秒以上 → v507 は6秒で送信済み。relay_load（保存回数は v504 と同じ）・push_once・push_hide・relay_basic・send_status も通過。
+  ※ 相手の中継所対応の確認（`zg_peer_relay`）が消えやすいこと（v503 の※）は今回も未対応。
 
 ## 構造のメモ（行番号は目安。検索で探すこと）
 - メインのスクリプトは `<script>(function(){'use strict'; …})();</script>` の1つの大きな閉じ込み。外から内部は見えない（テスト用に `tools/make_test.py` で `window.__t` を出す）。
