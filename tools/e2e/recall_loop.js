@@ -1,8 +1,9 @@
 // 消えたメッセージの記録（recall）を、届いた後も画面を開くたびに全件送り直していないか（2026-11-18 の書き込み上限の原因）。
+// FLAP=1 で ntfy の SSE がつながっては切れる回線も試す。
 // 2台に消えた記録を N 件（HIST）入れ、一度届けてから、画面を消す→つけるを2分ごとに繰り返し、保存を数える。
 // 2台を開いて会話 → 読む → そのまま数分置く。ntfy・MQTT はふさぐ（MQTT が使えない回線と同じ）。
 const {chromium}=require('playwright');
-const DIR=process.argv[2], DIR_B=process.env.DIR_B||process.argv[2];   // DIR_B: 相手(B)だけ別の版で試す
+const DIR=process.env.DIR_A||process.argv[2], DIR_B=process.env.DIR_B||DIR;   // DIR_B: 相手(B)だけ別の版で試す
 const SK=Buffer.alloc(32,9).toString('base64'),TOPIC='gskr3s-'+Date.now().toString(16).padEnd(24,'w');const PS='https://zatsugaku-push.pprnt908.workers.dev';
 const MIN=+(process.env.IDLE_MIN||4);
 const net={};   // url種別ごとの数
@@ -11,6 +12,8 @@ async function dev(b,me,peer,host,tag){ const D=(tag==='B')?DIR_B:DIR;const ctx=
  await ctx.route('**/*',async r=>{const u=r.request().url(),m=r.request().method();
   if(u.startsWith('https://zg.test/'))return r.fulfill({path:D+'/'+(u.split('/').pop().split('?')[0]||'index.html')});
   if(u.startsWith(PS)){ const k=tag+' '+m+' '+(u.includes('/r/')?(u.includes('/json')?'poll':(u.includes('cache=no')?'r(流すだけ)':'r(保存)')):u.replace(PS,'').split('?')[0]); net[k]=(net[k]||0)+1; return r.continue(); }
+  // FLAP=1: ntfy.sh の SSE が、つながってはすぐ切れる（つながるたびに onState('open') が出る）
+  if(process.env.FLAP&&u.startsWith('https://ntfy.sh/')&&u.includes('/sse')) return r.fulfill({status:200,headers:{'content-type':'text/event-stream','access-control-allow-origin':'*'},body:': hi\n\n'});
   return r.abort();});
  await ctx.routeWebSocket(u=>!String(u).includes('zatsugaku-push'),ws=>ws.close());
  const pg=await ctx.newPage(); await pg.goto('https://zg.test/index.html'); await pg.waitForTimeout(6000);

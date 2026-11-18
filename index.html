@@ -9011,7 +9011,8 @@ async function syncReactions(){
     Net.send({t:'reaction',entries:part});
   }catch(e){}
 }
-function reactionReconnect(){ reactionAcked.clear(); reactionCursor=0; syncReactions(); }
+/* v508: つながるたび・開くたびに受領済みを空にして、全部の反応を送り直していた（中継所の書き込みが増える）。受領済みは覚えたまま、まだの分だけ送る */
+function reactionReconnect(){ reactionCursor=0; syncReactions(); }
 function closeReactionPalette(){
   if(!reactionPalette) return; reactionPalette.remove(); reactionPalette=null; appNav.dismiss('reaction-palette');
   var focus=reactionFocus; reactionFocus=null; if(focus&&focus.isConnected) focus.focus({preventScroll:true});
