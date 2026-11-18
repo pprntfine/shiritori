@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとしてインストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">新しい版に更新する</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンでアプリとして入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v505</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v506</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">相手を待っています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v505</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v506</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">名前</b> さんが入室を求めています</p>
         <p class="jr-fp">合図 <b id="jr-fp">----</b> ／ 相手の画面と同じかくににて確認</p>
@@ -2355,6 +2355,11 @@ async function keyMarkFrom(skb64){
   return tag;
 }
 /* v472: あいずは いつも「2人の 鍵」から つくる（入室直後と 開きなおし後で ちがう 文字に なっていた）。同じ 鍵なら 2台で かならず 同じ */
+/* v506: 送った直後に画面を消す／アプリを閉じると、iPhone などは通信を途中で止める。小さい本文は keepalive で最後まで送りきる */
+function kaInit(init){
+  try{ var b=init&&init.body; if(typeof b==='string'&&b.length<60000) return Object.assign({},init,{keepalive:true}); }catch(e){}
+  return init;
+}
 function sasLabel(){ return '合図 '+(S.keyMark||'----'); }
 function refreshKeyMark(){
   try{
@@ -2820,18 +2825,14 @@ var Net={
     /* v219: 削除の合図は通知を出すベルに載せない。本文だけ従来の通知経路を使う。 */
     /* v493: 受領待ちの送り直し（約20秒ごと）のたびに新しい暗号文で通知していた（2通で通知6件）。同じメッセージ(mid)の通知は1回だけ */
     if(env&&(env.t==='chats'||env.t==='chat')&&!env.__pushOk&&!pushMidsAllDone(env)&&!(function(){try{return (Date.now()-(+(window.__zgsPeerLive||0)||0))<70000;}catch(e){return false;}})()){ try{ pushP=pushToPeer(body).then(function(ok){ if(ok){ env.__pushOk=1; pushMidsMark(env); if(env.t==='chats') markPushAcked(env); } return ok; }); }catch(e){} }
-    /* v505: 相手が「いま開いている」と見えて通知を送らなかった時、8秒たっても受領（peerAck）が来なければ、閉じたと見なしてすぐ通知する。
-       以前はその後の送り直しまで通知が出ず、v504 で送り直しの間隔を延ばしたため最大約2分遅れることがあった */
+    /* v505: 相手が「いま開いている」と見えて通知を送らなかった時、受領（peerAck）が来なければ、閉じたと見なしてすぐ通知する。
+       v506: 8秒 → 3秒。さらに、待っている間に自分が画面を消す／アプリを閉じると、止まったタイマーは動かず通知が出なかった。
+       待ち一覧(pushWaitList)に入れておき、画面を消す瞬間（pushWaitFlush）に まだ受領が無いものを先に通知する */
     if(!pushP&&env&&(env.t==='chats'||env.t==='chat')&&!env.__pushOk&&!env.__pushLater&&!pushMidsAllDone(env)){
       env.__pushLater=1;
-      var __lb=body, __ls=scope;
-      setTimeout(function(){ try{
-        if(!outboundCurrent(__ls)||env.__pushOk||pushMidsAllDone(env)) return;
-        var ids=pushMidsOf(env); if(!ids.length) return;
-        var got=ids.every(function(id){ return S.chat.some(function(c){ return c&&!c.sys&&c.from===S.me.id&&c.mid===id&&(c.peerAck||c.acked||c.read); }); });
-        if(got) return;
-        pushToPeer(__lb).then(function(ok){ if(ok){ env.__pushOk=1; pushMidsMark(env); } });
-      }catch(e){} },8000);
+      var __ent={env:env,body:body,scope:scope,done:false};
+      pushWaitList.push(__ent); if(pushWaitList.length>20) pushWaitList.shift();
+      setTimeout(function(){ try{ pushWaitOne(__ent); }catch(e){} },3000);
     }
     var viaPush=function(){ if(!pushP) return Promise.resolve(false); return Promise.race([pushP,new Promise(function(r){ setTimeout(function(){ r(false); },2500); })]); };
     /* v131: ntfy は 1日250回（同じ Wi-Fi の 2台で 合計）まで。既読・受領・ping などで つかいきると
@@ -2939,7 +2940,7 @@ var Net={
     var onOuter=function(){ try{ if(ac) ac.abort(); }catch(e){} };
     if(outer){ if(outer.aborted) onOuter(); else outer.addEventListener('abort',onOuter); }
     try{
-      var rr=await fetch(base+topic+(query||''),Object.assign({},init,{signal:ac?ac.signal:(outer||undefined)}));
+      var rr=await fetch(base+topic+(query||''),kaInit(Object.assign({},init,{signal:ac?ac.signal:(outer||undefined)})));
       if(rr.ok){ this.lastVia='relay'; Relay.badUntil=0; return rr; }
       if(rr.status!==413) Relay.badUntil=Date.now()+60000;
       return rr;
@@ -2955,7 +2956,7 @@ var Net={
     var cooling=this.coolUntil&&Date.now()<this.coolUntil, nr=null;
     if(!cooling||!any){
       try{
-        nr=await fetch('https://ntfy.sh/'+topic+(query||''),init);
+        nr=await fetch('https://ntfy.sh/'+topic+(query||''),kaInit(init));
         if(nr.ok){ this.lastVia='ntfy'; return nr; }
         if(nr.status===429||nr.status===503){ var ra=0; try{ ra=parseInt(nr.headers.get('retry-after')||'0',10); }catch(e){} this.hit429(ra>0?ra*1000:45000); }
       }catch(e){ if(init&&init.signal&&init.signal.aborted) throw e; if(!any||conf) throw e; }
@@ -12600,7 +12601,7 @@ try{ new MutationObserver(function(){ if(News.lobbyOn()&&Date.now()-News.at>2000
 window.addEventListener('online',function(){ try{ Relay.wake(); }catch(e){} });
 async function psrvPush(topic,payload){
   var u=psrvGet(); if(!u) return false;
-  try{ var r=await fetch(u+'/push',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topic:topic,msg:payload})}); return await r.json(); }catch(e){ return null; }
+  try{ var r=await fetch(u+'/push',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topic:topic,msg:payload}),keepalive:true}); return await r.json(); }catch(e){ return null; }   /* v506: keepalive */
 }
 var bgPushDone=false, bgPushFail=0;
 /* v243: 「とどけ せってい」が できた かどうかを おぼえて 画面に だす（とじた ときの 通知の てがかり） */
@@ -12694,7 +12695,7 @@ async function pushToPeer(body){
     var tryPush=function(k){
       var done=function(ok){ if(k===0) first(!!ok); if(!ok&&k<3) setTimeout(function(){ tryPush(k+1); },[20000,60000,180000][k]); };
       var viaNtfy=function(){
-        fetch('https://ntfy.sh/'+t,{method:'POST',headers:{'Content-Type':'text/plain','Priority':'high'},body:payload})
+        fetch('https://ntfy.sh/'+t,{method:'POST',headers:{'Content-Type':'text/plain','Priority':'high'},body:payload,keepalive:true})
           .then(function(r){ done(r.ok); }).catch(function(){ done(false); });
       };
       if(psrvGet()){
@@ -12706,7 +12707,7 @@ async function pushToPeer(body){
         });
         return;
       }
-      fetch('https://ntfy.sh/'+t,{method:'POST',headers:{'Content-Type':'text/plain','Priority':'high'},body:payload})
+      fetch('https://ntfy.sh/'+t,{method:'POST',headers:{'Content-Type':'text/plain','Priority':'high'},body:payload,keepalive:true})
         .then(function(r){ done(r.ok); }).catch(function(){ done(false); });
     };
     tryPush(0);
@@ -12722,6 +12723,19 @@ function pushMidsLoad(){
   pushedMids=[]; try{ var a=JSON.parse(localStorage.getItem(PUSHED_MIDS_KEY)||'[]'); if(Array.isArray(a)) pushedMids=a.filter(function(x){ return typeof x==='string'&&x.length<80; }).slice(-300); }catch(e){}
   return pushedMids;
 }
+var pushWaitList=[];
+function pushWaitOne(ent){
+  if(!ent||ent.done) return; ent.done=true;
+  var env=ent.env;
+  if(!outboundCurrent(ent.scope)||env.__pushOk||pushMidsAllDone(env)) return;
+  var ids=pushMidsOf(env); if(!ids.length) return;
+  var got=ids.every(function(id){ return S.chat.some(function(c){ return c&&!c.sys&&c.from===S.me.id&&c.mid===id&&(c.peerAck||c.acked||c.read); }); });
+  if(got) return;
+  pushToPeer(ent.body).then(function(ok){ if(ok){ env.__pushOk=1; pushMidsMark(env); } });
+}
+function pushWaitFlush(){ try{ pushWaitList.slice().forEach(pushWaitOne); pushWaitList=pushWaitList.filter(function(e){ return !e.done; }); }catch(e){} }
+document.addEventListener('visibilitychange',function(){ if(document.hidden) pushWaitFlush(); });
+window.addEventListener('pagehide',pushWaitFlush);
 function pushMidsOf(env){
   var out=[]; try{ (env&&Array.isArray(env.items)?env.items:[]).forEach(function(it){ if(it&&typeof it.mid==='string'&&it.mid) out.push(it.mid); }); if(env&&typeof env.mid==='string'&&env.mid) out.push(env.mid); }catch(e){}
   return out;

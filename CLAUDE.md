@@ -1,4 +1,4 @@
-# とー君ニュース（旧 雑学王 / zatsugakuou）引き継ぎメモ  ― 現在 v505
+# とー君ニュース（旧 雑学王 / zatsugakuou）引き継ぎメモ  ― 現在 v506
 
 ## これは何か
 見た目は「とー君ニュース」（ニュースアプリ。v460 までは「雑学クイズ」アプリ）。中身は **2人専用の暗号化チャット**（メッセージ・写真・ライブ映像・電話）。
@@ -239,6 +239,12 @@
   試験 `tools/e2e/relay_load.js`（中継所への保存回数）: 2台開いて60秒 v503 保存9回 → v504 0回、相手が閉じて2通・120秒 15回 → 5回。※ 中継所の使い方を変える時は、この試験と GraphQL の rowsRead/rowsWritten を見ること。
 - v505 相手が閉じた直後に送ったメッセージの通知が遅い（持ち主の確認から）。`Net.post` は相手が70秒以内に生きていた（`__zgsPeerLive`）と通知（`pushToPeer`）を送らず、後の送り直しで送っていたため、v504 で送り直しを延ばすと最大約2分遅れた。通知を送らなかった時は8秒後に受領（peerAck/acked/read）を確かめ、来ていなければ通知する（`env.__pushLater`）。開いている相手には今までどおり通知しない。
   試験 `tools/e2e/push_fast.js`: 相手が開いている時の通知0回（v504・v505とも）、閉じた直後に送って通知まで v504 61秒 → v505 8秒。push_once・send_status・relay_basic・relay_load も通過。
+- v506 「通知が来ない時がある。送ったが相手にまだ転送されない。送った瞬間に切れるところは？」（持ち主）。**送った直後に送る側が画面を消す／アプリを閉じる**と、iPhone などは JS を止める。
+  (1) 通知は「相手が70秒以内に生きていた」と見えると送らず、3秒後（v505 は8秒）に受領を確かめて送る作りだが、**その待ちタイマーが止まって通知が一度も出なかった**（再現: 相手が閉じた直後に送り0.5秒後に自分が画面を消す → v505 は通知0件）。
+  → 待ち一覧 `pushWaitList` に入れ、`visibilitychange`(hidden)／`pagehide` で `pushWaitFlush()`（受領がまだのものを先に `pushToPeer`）。待ちは 8→3 秒。
+  (2) どの通信にも `keepalive` が無く、送信中の POST が途中で切れ得た → `kaInit()`（本文が文字で60KB未満なら keepalive:true）を `relayTry`・`storeFetch` の ntfy・`psrvPush`・`pushToPeer` に。写真の大きいファイル（PUT）は対象外。
+  試験 `tools/e2e/push_hide.js`（CDP の Page.setWebLifecycleState で凍結）: v505 通知0 → v506 1秒後に1件。push_fast: 閉じた直後の通知 8→3秒・開いている時は0。push_once（1通1回）・relay_basic・send_status・relay_load（中継所の保存回数は v504 と同じ）も通過。
+  ※ Worker は `Urgency: high`・TTL 86400 で送信済み（Android の省電力で遅れる心配はコード側にはない）。それでも来ない時は、相手の端末の通知設定・電池の最適化・通知の登録（設定の「届け設定」）を疑う。
 
 ## 構造のメモ（行番号は目安。検索で探すこと）
 - メインのスクリプトは `<script>(function(){'use strict'; …})();</script>` の1つの大きな閉じ込み。外から内部は見えない（テスト用に `tools/make_test.py` で `window.__t` を出す）。
