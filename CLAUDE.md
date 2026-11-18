@@ -36,7 +36,7 @@
    保存後は、リクエストに `Authorization: Bearer proxy-injected` と書けば、プロキシが本物に差し替える。確認は `GET /accounts/{id}/tokens/verify`。アカウント ID は `GET /accounts` で分かる。
 2. 書き込みは `PUT /accounts/{id}/workers/scripts/zatsugaku-push`（multipart）。`metadata` に `main_module`、`compatibility_date`、
    bindings = `RELAY`（`durable_object_namespace`、class `ZgRelay`）と `SUBS`（`kv_namespace`、`GET /accounts/{id}/storage/kv/namespaces` で名前 SUBS の id）。**migrations は付けない**（作成済み）。
-3. 1分ごとの Cron は `PUT /accounts/{id}/workers/scripts/zatsugaku-push/schedules`（`[{"cron":"* * * * *"}]`）。
+3. 1分ごとの Cron は **2026-11-18 に持ち主が削除した（今は無し）**。ニュースの先取りだけの用途で、無くても `/news` は呼ばれた時に取る。戻す時だけ `PUT /accounts/{id}/workers/scripts/zatsugaku-push/schedules`（`[{"cron":"* * * * *"}]`）。
 4. 状況の確認は GraphQL（`workersInvocationsAdaptive`、`durableObjectsInvocationsAdaptiveGroups`）で、エラー数・呼び出し数が見られる。この環境から workers.dev へは届かない。
 5. 終わったら**持ち主にトークの削除をお願いする**。
 
@@ -254,6 +254,7 @@
 - 2026-11-18 JST 09:32 に同じ Cloudflare の警告メール（rows_read 500万超過）がまた届いた（持ち主）。GraphQL で確認: 11/17(UTC) の読み出し 5,355,115・書き込み 105,033（無料の上限は読み出し500万・書き込み10万）。14:00 UTC 台から全件エラー（毎時60件前後）で、11/18 00:00 UTC の後も約30分エラーが残り、メールはその頃（00:32 UTC）。つまり **11/17 の超過（v504 の前）の通知で、新しい超過ではない**。
   v504 以降（11/18 00:00〜06:30 UTC）は読み出し約9.7万・書き込み約3.8万で正常（毎時の読み出しは数千〜6万、前は70万〜130万）。11/18 03〜06 UTC の書き込み（毎時5千〜2万）は、11/17 夜に預かった分の12時間後の掃除（削除も書き込みに数える）が中心とみられる。
   次に同じメールが来たら新しい超過。まず `durableObjectsPeriodicGroups`（`datetimeHour` ごとの rowsRead・rowsWritten）を見る。恒久策は Workers 有料プラン（月5ドル。持ち主が決める）。1通あたりの書き込みは約6（保存3＋期限切れの削除3）なので、書き込み10万 ≒ 1日1.5万通が目安。
+- 2026-11-18 Cloudflare の Cron トリガー（毎分）を持ち主が削除。用途は `refreshNews` の先取りだけ（`scheduled`）。メッセージ・通知・中継所（期限切れの掃除は DO のアラーム）には関係しない。ニュースは、アプリが開いた時・60秒ごとの `?fresh=1` が来た時に取る（古い順の返し方は `handleNews`）。毎分の書き込み（DO 'news' の保存）が1日約3千行減る。`wrangler.toml` の `[triggers]` も外した（`wrangler deploy` で戻らないように）。
 
 ## 構造のメモ（行番号は目安。検索で探すこと）
 - メインのスクリプトは `<script>(function(){'use strict'; …})();</script>` の1つの大きな閉じ込み。外から内部は見えない（テスト用に `tools/make_test.py` で `window.__t` を出す）。

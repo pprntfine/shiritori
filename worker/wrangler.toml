@@ -12,5 +12,7 @@ class_name = "ZgRelay"
 tag = "v1"
 new_sqlite_classes = ["ZgRelay"]
 
-[triggers]
-crons = ["* * * * *"]
+# Cron は 2026-11-18 に持ち主が削除（ニュースの先取りだけの用途。なくても /news は呼ばれた時に取る）。
+# 戻す時は次の2行を足して デプロイ:
+# [triggers]
+# crons = ["* * * * *"]
