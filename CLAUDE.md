@@ -1,4 +1,4 @@
-# とー君ニュース（旧 雑学王 / zatsugakuou）引き継ぎメモ  ― 現在 v508
+# とー君ニュース（旧 雑学王 / zatsugakuou）引き継ぎメモ  ― 現在 v509
 
 ## これは何か
 見た目は「とー君ニュース」（ニュースアプリ。v460 までは「雑学クイズ」アプリ）。中身は **2人専用の暗号化チャット**（メッセージ・写真・ライブ映像・電話）。
@@ -290,6 +290,13 @@
   **第三者の確認（2026-11-18）**: GraphQL で部屋の DO への通信を時間ごとに見ると、11/17 00〜05時・11/18 08〜11時・11/18 23時〜は0件（持ち主が使っていない時間と一致）。外から書き込まれていれば夜も続くはず → 2人のアプリ自身の送信。部屋の DO は 11/15〜16 に部屋を作り直した分の3つだけ。
   中継所は topic を知っていれば誰でも POST できる（読む・偽る・入室はできない：暗号化と鍵・from/to の確認・ホスト承認）。topic は公開 MQTT・ntfy.sh にも流れるので、心配なら将来 Worker 側で1時間あたりの保存に上限を付ける（未着手、持ち主の判断）。
   ※ 定期の送り直し（setInterval）を足すときは、`tools/e2e/recall_loop.js`・`relay_load.js` で中継所への保存回数を見ること。GraphQL は `durableObjectsPeriodicGroups`（rowsWritten）と `durableObjectsInvocationsAdaptiveGroups`（http の数）を時間ごとに。
+- v509 相手が閉じている間の送り直しで、毎回中継所に保存していた（2026-11-19 持ち主「まだまだ調査して」）。保存は12時間残り、相手が開けば届くので2回目以降の保存はむだ。
+  `storedMark(env)`: 中継所（または ntfy）に保存できた封筒に `__storedAt`、`__onStored` で送信待ち（outbox）とメッセージに `storedAt`。11時間以内に保存済みなら、`flushOutbox`・`resendUnacked` の送り直しは `__noStore`（流すだけ）。
+  `Net.post` の保存の道（`postStore` の4か所・`storeFetch` の本道）で `__noStore` を守るようにした（以前は chats など NTFY_KEEP の型では無視していた）。storedAt は保存しないので、開き直した後は1回だけまた保存する。
+  試験 `tools/e2e/long_use.js`（約35分。会話・写真・相手がアプリを閉じている間に3通・相手が開く・放置・消える・夜に2台とも閉じて朝開く。にせ ntfy・MQTT）:
+  v508 合計46回（相手が閉じている8分で14回）→ v509 合計35回（同じ場面で3回、3通とも届く）。夜は0回、朝に開いた時の prof など数回。relay_load（相手が閉じて2通・120秒の保存 5→2）・relay_basic・push_once・send_status・delivery_stress・recall_loop・real_use も通過。
+  ※ 2人とも v508 になった 2026-11-19 の Cloudflare: 10時台 書き込み660行（v508 直後の1回だけの全件送り）、11時台 4行。メッセージを送らない時はほぼ0。
+- Worker に「1日に保存する数のブレーキ」`SOFT_STORE`（既定8000件/日、`env.SOFT_STORE` で変えられる）を作成済み・**未公開（持ち主の許可待ち）**。超えた分は保存せず流すだけ（中継所ごと止まるより良い）。数は kv `cnt:日付` に「総数|保存数」。手元の wrangler で上限3 → 6通中3通だけ保存を確認。
 
 ## 構造のメモ（行番号は目安。検索で探すこと）
 - メインのスクリプトは `<script>(function(){'use strict'; …})();</script>` の1つの大きな閉じ込み。外から内部は見えない（テスト用に `tools/make_test.py` で `window.__t` を出す）。
