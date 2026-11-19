@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとしてインストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">新しい版に更新する</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンでアプリとして入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v513</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v514</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">相手を待っています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v513</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v514</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">名前</b> さんが入室を求めています</p>
         <p class="jr-fp">合図 <b id="jr-fp">----</b> ／ 相手の画面と同じかくににて確認</p>
@@ -13539,22 +13539,32 @@ window.addEventListener('pagehide',function(){ closeCam(); stopCall(false); });
     try{
       var right=document.querySelector('header.bar .bar-right'), quit=$('#btn-quit');
       var peerBox=document.querySelector('header.bar .brand .zb-peer');
-      var dot=$('#lh-dot'); if(dot&&peerBox) peerBox.insertBefore(dot,peerBox.firstChild);
+      /* v514: ランプは1つ（緑＝相手が今アプリを開いている）。以前は「自分の接続」#lh-dot と「相手」#net の2つが並んでいた */
+      var zd=document.createElement('i'); zd.id='zb-dot'; zd.setAttribute('aria-hidden','true'); if(peerBox) peerBox.insertBefore(zd,peerBox.firstChild);
+      var netEl=$('#net'), lhd=$('#lh-dot');
+      var syncDot=function(){ try{ zd.classList.toggle('on',!!(netEl&&netEl.classList.contains('on'))); zd.classList.toggle('ping',!!(lhd&&lhd.classList.contains('ping'))); }catch(e){} };
+      if(netEl) new MutationObserver(syncDot).observe(netEl,{attributes:true,attributeFilter:['class']});
+      if(lhd) new MutationObserver(syncDot).observe(lhd,{attributes:true,attributeFilter:['class']});
+      syncDot();
       var ICO_CAM='<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.4"/></svg>';
       var ICO_LIVE='<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="6" width="13" height="12" rx="2.5"/><path d="M15.5 10.2l6-3.2v10l-6-3.2z"/></svg>';
       var tools=document.createElement('div'); tools.id='zg-hd-tools';
-      tools.innerHTML='<button type="button" id="zg-hd-cam" aria-label="カメラ" title="カメラ">'+ICO_CAM+'</button><button type="button" id="zg-hd-live" aria-label="ライブ" title="ライブ">'+ICO_LIVE+'</button>';
+      var ICO_CALL='<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3.5h3.2l1.6 4.2-2.1 1.4a11 11 0 0 0 5.2 5.2l1.4-2.1 4.2 1.6V17a2 2 0 0 1-2.2 2A15.5 15.5 0 0 1 3 5.7 2 2 0 0 1 5 3.5z"/></svg>';
+      tools.innerHTML='<button type="button" id="zg-hd-live" aria-label="ライブ" title="ライブ">'+ICO_LIVE+'</button><button type="button" id="zg-hd-cam" aria-label="カメラ" title="カメラ">'+ICO_CAM+'</button><button type="button" id="zg-hd-call" aria-label="電話" title="電話">'+ICO_CALL+'</button>';
       var prof=$('#btn-prof'); if(prof) tools.appendChild(prof);
       if(right&&quit) right.insertBefore(tools,quit);
       $('#zg-hd-cam').addEventListener('click',function(){ var b=$('#btn-photo'); if(b) b.click(); });
-      $('#zg-hd-live').addEventListener('click',function(){ var b=$('#btn-live'); if(b) b.click(); });
+      $('#zg-hd-live').addEventListener('click',function(){ var b=$('#btn-live'); if(!b) return;
+        /* v514: 始める前に確かめる（使用中に押した時＝終わる時はそのまま） */
+        if(b.getAttribute('data-active')!=='1'){ window.__zgVoiceOn=true; var ok=window.confirm('ライブ配信を開始しますか？'); window.__zgVoiceOn=false; if(!ok) return; }
+        b.click(); });
+      $('#zg-hd-call').addEventListener('click',function(){ var b=$('#btn-call'); if(b) b.click(); });
       var bl=$('#btn-live');
-      if(bl){ var syncLive=function(){ try{ var a=bl.getAttribute('data-active'), h=$('#zg-hd-live'); if(a) h.setAttribute('data-active',a); else h.removeAttribute('data-active'); }catch(e){} };
-        new MutationObserver(syncLive).observe(bl,{attributes:true,attributeFilter:['data-active']}); syncLive(); }
+      [['#btn-live','#zg-hd-live'],['#btn-call','#zg-hd-call']].forEach(function(pr){ var src=$(pr[0]); if(!src) return;
+        var sync=function(){ try{ var a=src.getAttribute('data-active'), h=$(pr[1]); if(a) h.setAttribute('data-active',a); else h.removeAttribute('data-active'); }catch(e){} };
+        new MutationObserver(sync).observe(src,{attributes:true,attributeFilter:['data-active']}); sync(); });
       /* 「選択」は上から外し、メニューの中へ（選んで消す機能は残す） */
-      var menu=$('#chat-tools');
-      if(menu){ var sb=document.createElement('button'); sb.type='button'; sb.id='zg-menu-sel'; sb.className='notify-btn'; sb.textContent='選んで消す';
-        sb.addEventListener('click',function(){ var b=document.getElementById('btn-sel'); if(b) b.click(); }); menu.appendChild(sb); }
+      /* v514: 「選んで消す」はメニューにも出さない（持ち主: いらない） */
     }catch(e){}
     function paint(){
       try{
@@ -14614,11 +14624,18 @@ html body #zg-hd-tools button{position:relative;height:34px!important;min-height
 html body #zg-hd-tools #btn-prof{padding:0 11px!important}
 html body #zg-hd-tools button::after{content:"";position:absolute;inset:-6px -3px}
 html body #zg-hd-tools button:active{background:rgba(255,255,255,.28)!important}
-html body #zg-hd-tools #zg-hd-live[data-active="1"]{background:#E53935!important;border-color:#FF8A80!important;animation:zgLiveBlink 1.2s ease-in-out infinite}
+html body #zg-hd-tools #zg-hd-call[data-active="1"],html body #zg-hd-tools #zg-hd-live[data-active="1"]{background:#E53935!important;border-color:#FF8A80!important;animation:zgLiveBlink 1.2s ease-in-out infinite}
 @keyframes zgLiveBlink{50%{opacity:.6}}
 @media (max-width:370px){ html body #zg-hd-tools button{min-width:32px!important;height:32px!important;min-height:32px!important} html body #zg-hd-tools #btn-prof{padding:0 8px!important} html body.in-play .bar button.ghost{padding:0 9px!important} }
 /* 2段目（アイコン・名前・トップ・選択）と「2人だけ」の帯はしまう（3人目を断った時の帯だけ出す） */
 html body #pane-chat .lhead{display:none!important}
+/* v514: 上のやめる・2つ目のランプ（#net）・自分の接続ランプはしまう。下の段のライブ・電話もしまう（上に移した） */
+html body.in-play header.bar #btn-quit,html body.in-play header.bar #net,html body header.bar .brand #lh-dot{display:none!important}
+html body #pane-chat .chat-composer-actions #btn-live,html body #pane-chat .chat-composer-actions #btn-call{display:none!important}
+html body header.bar .brand .zb-peer{padding-left:3px!important}
+html body header.bar .brand #zb-dot{display:block;flex:none;width:9px;height:9px;border-radius:50%;background:#B7AEE6;box-shadow:0 0 0 2px rgba(255,255,255,.28)}
+html body header.bar .brand #zb-dot.on,html body header.bar .brand #zb-dot.ping{background:#3BE07A}
+html body header.bar .brand #zb-dot.ping{animation:lhping 1.15s ease-out 7}
 /* 選んで消す の上の帯が左右にはみ出していた（以前から）→ 画面の中に収める */
 html body #sel-top{margin:0 0 6px!important;padding:8px 12px!important}
 html body #sel-top .cnt{min-width:0!important}

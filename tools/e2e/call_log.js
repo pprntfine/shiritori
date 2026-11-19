@@ -11,7 +11,7 @@ async function dev(b,me,peer,host){const ctx=await b.newContext({viewport:{width
  for(const d of [A,B]) await d.pg.evaluate(()=>{ const w=document.getElementById('storage-warning'); if(w) w.hidden=true; __t.show('play'); __t.setTab('chat'); });
  const logs=d=>d.pg.evaluate(()=>__t.S.chat.filter(m=>m.callLog).map(m=>m.text));
  // 1) A calls, B answers, 4s, A hangs up
- await A.pg.click('#btn-call'); let ok=false; for(let i=0;i<40&&!ok;i++){ await B.pg.waitForTimeout(300); ok=await B.pg.evaluate(()=>!!document.getElementById('ca-yes')); }
+ await A.pg.click('#zg-hd-call'); let ok=false; for(let i=0;i<40&&!ok;i++){ await B.pg.waitForTimeout(300); ok=await B.pg.evaluate(()=>!!document.getElementById('ca-yes')); }
  console.log('B rings:',ok); await B.pg.click('#ca-yes');
  let con=false; for(let i=0;i<40&&!con;i++){ await A.pg.waitForTimeout(300); con=await A.pg.evaluate(()=>/通話中/.test(document.getElementById('btn-call').textContent)); }
  console.log('connected:',con); await A.pg.waitForTimeout(4000);
@@ -19,11 +19,11 @@ async function dev(b,me,peer,host){const ctx=await b.newContext({viewport:{width
  await A.pg.waitForTimeout(3000);
  console.log('1 A:',await logs(A),'B:',await logs(B));
  // 2) A calls, B declines
- await A.pg.waitForTimeout(3000); await A.pg.click('#btn-call'); ok=false; for(let i=0;i<40&&!ok;i++){ await B.pg.waitForTimeout(300); ok=await B.pg.evaluate(()=>!!document.getElementById('ca-no')); }
+ await A.pg.waitForTimeout(3000); await A.pg.click('#zg-hd-call'); ok=false; for(let i=0;i<40&&!ok;i++){ await B.pg.waitForTimeout(300); ok=await B.pg.evaluate(()=>!!document.getElementById('ca-no')); }
  await B.pg.click('#ca-no'); await A.pg.waitForTimeout(4000);
  console.log('2 A:',(await logs(A)).slice(1),'B:',(await logs(B)).slice(1));
  // 3) A calls, then cancels before answer
- await A.pg.waitForTimeout(3000); await A.pg.click('#btn-call'); ok=false; for(let i=0;i<40&&!ok;i++){ await B.pg.waitForTimeout(300); ok=await B.pg.evaluate(()=>!!document.getElementById('ca-no')); }
+ await A.pg.waitForTimeout(3000); await A.pg.click('#zg-hd-call'); ok=false; for(let i=0;i<40&&!ok;i++){ await B.pg.waitForTimeout(300); ok=await B.pg.evaluate(()=>!!document.getElementById('ca-no')); }
  await A.pg.evaluate(()=>{ const b=[...document.querySelectorAll('#call-box button, #call-center button')].find(x=>/電話を切る/.test(x.textContent)); b?b.click():document.getElementById('btn-call').click(); });
  await A.pg.waitForTimeout(5000);
  console.log('3 A:',(await logs(A)).slice(2),'B:',(await logs(B)).slice(2));

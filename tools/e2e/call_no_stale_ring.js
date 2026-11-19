@@ -11,7 +11,7 @@ async function dev(b,me,peer,host){const ctx=await b.newContext({viewport:{width
  for(const d of [A,B]) await d.pg.evaluate(()=>{ const w=document.getElementById('storage-warning'); if(w) w.hidden=true; __t.show('play'); __t.setTab('chat'); });
  const logs=d=>d.pg.evaluate(()=>__t.S.chat.filter(m=>m.callLog).map(m=>m.text));
  await B.pg.close();
- await A.pg.click('#btn-call'); await A.pg.waitForTimeout(8000);
+ await A.pg.click('#zg-hd-call'); await A.pg.waitForTimeout(8000);
  await A.pg.evaluate(()=>{ const b=[...document.querySelectorAll('#call-box button, #call-center button')].find(x=>/電話を切る/.test(x.textContent)); b?b.click():document.getElementById('btn-call').click(); });
  await A.pg.waitForTimeout(20000);
  const p2=await B.ctx.newPage(); await p2.goto('https://zg.test/index.html'); let rang=false; for(let i=0;i<40&&!rang;i++){ await p2.waitForTimeout(300); rang=await p2.evaluate(()=>!!document.getElementById('ca-yes')); }
