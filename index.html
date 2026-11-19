@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとしてインストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">新しい版に更新する</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンでアプリとして入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v512</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v513</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">相手を待っています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v512</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v513</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">名前</b> さんが入室を求めています</p>
         <p class="jr-fp">合図 <b id="jr-fp">----</b> ／ 相手の画面と同じかくににて確認</p>
@@ -1736,6 +1736,8 @@ body .bar::after{
     <h4 class="zs-h">トーク</h4>
       <div class="zs-row"><span class="zs-lab">既読から15分で消える</span><button type="button" class="ph zs-tg" id="pf-vanish">オフ</button></div>
       <p class="zs-desc">相手が読んでから15分たつと、自分と相手の両方のスマホから消えます。元に戻すことはできません。対象は、オンにしたあとで既読になったメッセージだけです。相手がつながっていないあいだに読んだ場合は、つながった時点から15分を数えます。スクリーンショットは防げません。</p>
+        <div class="zs-row"><span class="zs-lab">音声入力に絵文字を付ける</span><button type="button" class="ph zs-tg" id="pf-voice-emo">オン</button></div>
+      <p class="zs-desc">入力欄の右のマイクで話すと、言葉に合う絵文字（おはよう→☀️、ありがとう→🙏 など）を文の終わりに付けます。送る前に消すこともできます。</p>
   </section>
 
   <section class="zs-card">
@@ -12998,7 +13000,7 @@ function paintProf(){
 /* v512: 吹き出しの1行の文字数を、入力欄の1行の文字数と同じにする（持ち主: 打った時と同じ改行で見せたい・送った側も受け取った側も同じ）。
    入力欄と吹き出しの文字の大きさ・字体は同じ（16px）なので、中身の幅を「列数×文字の大きさ＋ゆとり8px」にそろえる。
    2台で同じになるよう、自分が出せる列数を prof の cw で送り、小さい方に合わせる。 */
-var ZG_COL_SLACK=8, zgMyCols=0, zgColsSent=-1, zgColsT=0, zgPeerCols=0;
+var ZG_COL_SLACK=6, zgMyCols=0, zgColsSent=-1, zgColsT=0, zgPeerCols=0;
 try{ zgPeerCols=parseInt(localStorage.getItem('zg_peer_cols')||'0',10)||0; }catch(e){}
 /* トーク画面が出ていない間（アプリはトップから始まる）は測れないので、前に測った列数を送る */
 try{ zgMyCols=parseInt(localStorage.getItem('zg_my_cols')||'0',10)||0; }catch(e){}
@@ -13008,7 +13010,8 @@ function zgColsCalc(){
     var tw=ta.getBoundingClientRect().width, lw0=log.clientWidth; if(!tw||!lw0) return;
     var cs=getComputedStyle(ta), fs=parseFloat(cs.fontSize)||16;
     var padL=parseFloat(cs.paddingLeft)||0, bdr=(parseFloat(cs.borderLeftWidth)||0)+(parseFloat(cs.borderRightWidth)||0);
-    var inner=tw-bdr-padL-padL;   /* 右の余白を左と同じにした時の中身の幅 */
+    var micEl=document.getElementById('btn-mic'), RES=(micEl&&micEl.offsetWidth)?(micEl.offsetWidth+7):padL;   /* v513: 右端のマイクの分をあける */
+    var inner=tw-bdr-padL-RES;
     var lcs=getComputedStyle(log), lw=lw0-(parseFloat(lcs.paddingLeft)||0)-(parseFloat(lcs.paddingRight)||0);
     var cIn=Math.floor((inner-ZG_COL_SLACK)/fs);
     var cRow=Math.floor((lw-42-30-ZG_COL_SLACK)/fs);   /* 受け取った吹き出し: アイコン36＋すきま6、吹き出しの左右の余白15×2 */
@@ -13016,7 +13019,7 @@ function zgColsCalc(){
     if(mine!==zgMyCols){ zgMyCols=mine; try{ localStorage.setItem('zg_my_cols',String(mine)); }catch(e){} }
     var n=mine; if(zgPeerCols>=6) n=Math.min(n,zgPeerCols);
     var colw=n*fs+ZG_COL_SLACK;
-    ta.style.setProperty('padding-right',(padL+Math.max(0,inner-colw))+'px','important');
+    ta.style.setProperty('padding-right',(RES+Math.max(0,inner-colw))+'px','important');
     var root=document.documentElement;
     root.style.setProperty('--zg-colw',colw+'px'); root.style.setProperty('--zg-fs',fs+'px'); root.style.setProperty('--zg-ff',cs.fontFamily);
     root.setAttribute('data-zg-cols',String(n));
@@ -13593,20 +13596,49 @@ window.addEventListener('pagehide',function(){ closeCam(); stopCall(false); });
     sh.addEventListener('pointerdown',function(){ toTop(); uncover(); });
   })();
 
-  /* (3) 音声入力: 入力が空のときは送信ボタンがマイクになる。押すと話した言葉が入力欄に入る（声は送らない）。
-         Android は Chrome の音声認識（Google）、iPhone は Safari の音声認識（Apple）を使う。使えない端末はキーボードのマイクを案内。 */
+  /* (3) 音声入力（v513: 送信ボタンの横＝入力欄の右端に、いつでも押せるマイク。送信ボタンはいつも送信）。
+         押すと話した言葉が入力欄に入る（声は送らない）。続けて押せば続きを足せる。
+         声の文は文字だけで冷たく見えるので、内容に合う絵文字を文の終わりに足す（決まった言葉の表。設定で切れる）。
+         Android は Chrome の音声認識（Google）、iPhone は Safari の音声認識（Apple）。使えない端末はキーボードのマイクを案内。 */
+  var VOICE_EMO=[
+    [/お疲れ|おつかれ/,'🍵'],[/おはよ/,'☀️'],[/おやすみ/,'🌙'],[/こんにちは|こんばんは/,'😊'],
+    [/ありがと|感謝|サンキュー/,'🙏'],[/ごめん|すまん|すみません|申し訳/,'🙇'],
+    [/おめでと/,'🎉'],[/誕生日/,'🎂'],
+    [/大好き|好き|すき|愛して/,'❤️'],[/会いたい|あいたい/,'🥺'],[/寂し|さみし|さびし/,'🥺'],
+    [/笑|ウケる|うける|面白|おもしろ/,'😂'],[/楽しみ|たのしみ/,'🤩'],[/楽し|たのし/,'😆'],
+    [/嬉し|うれし|よかった|良かった/,'😊'],[/かわい|可愛/,'🥰'],
+    [/眠|ねむ|寝る|寝て|寝た/,'😴'],[/疲れ|つかれ|しんど/,'😩'],[/悲し|かなし|泣/,'😢'],
+    [/怒|むかつ|腹立/,'😤'],[/びっくり|驚/,'😲'],[/心配|しんぱい/,'😟'],[/痛/,'🤕'],
+    [/お腹すい|おなかすい|お腹空|腹減|はらへ/,'🤤'],[/ラーメン/,'🍜'],[/ビール|飲み|飲も/,'🍺'],[/ご飯|ごはん|ランチ|夕飯|晩ご飯|食べ|たべ/,'🍚'],
+    [/仕事|しごと|会社|バイト/,'💼'],[/頑張|がんば|ファイト/,'💪'],
+    [/大丈夫|だいじょうぶ/,'👌'],[/了解|りょうかい|わかった|分かった|オッケー|\bok\b/i,'👍'],
+    [/雨/,'☔'],[/雪/,'⛄'],[/晴れ/,'☀️'],[/暑|あつい/,'🥵'],[/寒|さむい/,'🥶'],
+    [/帰/,'🏠'],[/着いた/,'📍'],[/電車/,'🚃'],[/車/,'🚗'],
+    [/風呂|ふろ/,'🛁'],[/買い物|かいもの/,'🛍️'],[/写真/,'📷'],[/電話/,'📞'],[/待って|まって/,'⏳']
+  ];
+  function voiceEmoOn(){ try{ return localStorage.getItem('zg_voice_emo')!=='0'; }catch(e){ return true; } }
+  function voiceEmoji(t){
+    try{
+      var s=String(t||''); if(!s.trim()||!voiceEmoOn()) return s;
+      if(/\p{Extended_Pictographic}/u.test(s)) return s;   /* もう絵文字がある時は足さない */
+      var out=[], w=s;
+      for(var i=0;i<VOICE_EMO.length&&out.length<2;i++){
+        var re=VOICE_EMO[i][0]; if(!re.test(w)) continue;
+        if(out.indexOf(VOICE_EMO[i][1])<0) out.push(VOICE_EMO[i][1]);
+        w=w.replace(new RegExp(re.source,re.flags.indexOf('g')<0?re.flags+'g':re.flags),'　');   /* 当たった言葉は次の判定に使わない（お疲れさま→🍵だけ。疲れ→😩を重ねない） */
+      }
+      return out.length?(s.replace(/\s+$/,'')+out.join('')):s;
+    }catch(e){ return t; }
+  }
+  window.__zgVoiceEmoji=voiceEmoji;
   (function(){
-    var btn=$('#btn-chat-send'), ta=$('#in-chat'), form=$('#form-chat'); if(!btn||!ta||!form) return;
-    btn.insertAdjacentHTML('beforeend','<span class="zg-mic-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11.5" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0"/><path d="M12 17.5V21"/></svg></span><span class="zg-mic-lb">音声</span>');
+    var ta=$('#in-chat'), form=$('#form-chat'), send=$('#btn-chat-send'); if(!ta||!form) return;
+    var mic=document.createElement('button'); mic.type='button'; mic.id='btn-mic'; mic.setAttribute('aria-label','音声で入力する'); mic.title='音声入力';
+    mic.innerHTML='<svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11.5" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0"/><path d="M12 17.5V21"/></svg>';
+    if(send) form.insertBefore(mic,send); else form.appendChild(mic);
     var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
     var rec=null, on=false, base='', err='';
-    function empty(){ return !String(ta.value||'').trim(); }
-    function paint(){
-      var mic=on||empty();
-      btn.classList.toggle('zg-mic',mic); btn.classList.toggle('zg-rec',on);
-      var lb=btn.querySelector('.zg-mic-lb'); if(lb) lb.textContent=on?'停止':'音声';
-      btn.setAttribute('aria-label',on?'音声入力を止める':(mic?'音声で入力する':'メッセージを送信'));
-    }
+    function paint(){ mic.classList.toggle('zg-rec',on); mic.setAttribute('aria-label',on?'音声入力を止める':'音声で入力する'); }
     function hint(){ try{ ta.focus(); }catch(e){} toast('キーボードのマイクボタンで音声入力できます。'); }
     function stop(){ try{ if(rec) rec.stop(); }catch(e){} }
     function abort(){ try{ if(rec){ rec.onresult=null; rec.abort(); } }catch(e){} on=false; window.__zgVoiceOn=false; rec=null; paint(); }
@@ -13622,13 +13654,12 @@ window.addEventListener('pagehide',function(){ closeCam(); stopCall(false); });
         try{ localStorage.setItem('zg_voice_ok','1'); }catch(e){}
       }
       base=String(ta.value||''); err='';
-      try{
-        rec=new SR(); rec.lang='ja-JP'; rec.interimResults=true; rec.continuous=false; rec.maxAlternatives=1;
-      }catch(e){ rec=null; hint(); return; }
+      try{ rec=new SR(); rec.lang='ja-JP'; rec.interimResults=true; rec.continuous=false; rec.maxAlternatives=1; }
+      catch(e){ rec=null; hint(); return; }
       rec.onresult=function(ev){
         try{
           var fin='',mid='';
-          for(var i=0;i<ev.results.length;i++){ var r=ev.results[i]; if(r&&r[0]){ if(r.isFinal) fin+=r[0].transcript; else mid+=r[0].transcript; } }
+          for(var i=0;i<ev.results.length;i++){ var r=ev.results[i]; if(r&&r[0]){ if(r.isFinal) fin+=voiceEmoji(r[0].transcript); else mid+=r[0].transcript; } }
           var max=+(ta.getAttribute('maxlength')||300)||300;
           ta.value=(base+fin+mid).slice(0,max);
           ta.dispatchEvent(new Event('input',{bubbles:true}));
@@ -13646,16 +13677,14 @@ window.addEventListener('pagehide',function(){ closeCam(); stopCall(false); });
       on=true; window.__zgVoiceOn=true; paint();
       try{ rec.start(); }catch(e){ on=false; window.__zgVoiceOn=false; rec=null; paint(); hint(); }
     }
-    /* 送信ボタンより先に受け取る（空のときは送信の代わりに音声入力） */
-    form.addEventListener('click',function(e){
-      var t=e.target&&e.target.closest&&e.target.closest('#btn-chat-send'); if(!t) return;
-      if(on){ e.preventDefault(); e.stopImmediatePropagation(); stop(); return; }
-      if(empty()){ e.preventDefault(); e.stopImmediatePropagation(); start(); }
-    },true);
-    ta.addEventListener('input',paint);
-    form.addEventListener('submit',function(){ setTimeout(paint,30); setTimeout(paint,300); });
-    setInterval(function(){ if(!document.hidden) paint(); },700);
+    mic.addEventListener('click',function(e){ e.preventDefault(); if(on) stop(); else start(); });
+    /* 聞き取り中に送信を押したら、今の文を送って聞き取りを止める */
+    form.addEventListener('submit',function(){ if(on) abort(); });
     paint();
+    /* 設定: 音声入力に絵文字を付ける */
+    var eb=$('#pf-voice-emo');
+    if(eb){ var ep=function(){ eb.textContent=voiceEmoOn()?'オン':'オフ'; }; ep();
+      eb.addEventListener('click',function(){ try{ localStorage.setItem('zg_voice_emo',voiceEmoOn()?'0':'1'); }catch(e){} ep(); }); }
   })();
 })();
 </script>
@@ -14598,7 +14627,7 @@ html body #sel-top .cnt{min-width:0!important}
 #zg-shield.on{display:flex!important}
 #zg-shield b{font-size:1.5rem;font-weight:800;letter-spacing:.12em}
 /* 吹き出しの1行の文字数を入力欄と同じに */
-html body #pane-chat #in-chat{box-sizing:border-box!important;padding-left:12px!important;letter-spacing:0!important;font-weight:400!important;font-size:var(--zg-fs,16px)!important;white-space:pre-wrap!important;word-break:normal!important;overflow-wrap:break-word!important;line-break:auto!important}
+html body #pane-chat #in-chat{box-sizing:border-box!important;padding-left:10px!important;letter-spacing:0!important;font-weight:400!important;font-size:var(--zg-fs,16px)!important;white-space:pre-wrap!important;word-break:normal!important;overflow-wrap:break-word!important;line-break:auto!important}
 html body #pane-chat #chat-log .msg .bubble.zg-tx{box-sizing:border-box!important;max-width:calc(var(--zg-colw,240px) + 30px)!important;padding-left:15px!important;padding-right:15px!important;font-family:var(--zg-ff),sans-serif!important;font-size:var(--zg-fs,16px)!important;font-weight:400!important;letter-spacing:0!important;white-space:pre-wrap!important;word-break:normal!important;overflow-wrap:break-word!important;line-break:auto!important}
 html body #pane-chat #chat-log .msg .message-content{max-width:100%!important}
 html body #pane-chat #chat-log .msg.in .incol{max-width:calc(100% - 42px)!important;min-width:0!important}
@@ -14607,13 +14636,13 @@ html body #pane-chat #chat-log .msg.in .zg-bm>.meta{margin:0 0 2px!important}
 html body #pane-chat #chat-log .msg .meta:empty{display:none!important}
 html body #pane-chat #chat-log .msg.out{flex-wrap:wrap-reverse!important;align-items:flex-start!important;row-gap:2px!important}
 html body #pane-chat #chat-log .msg.out>*{align-self:flex-start!important}
-/* 音声入力（入力が空のとき送信ボタンがマイクになる） */
-html body #btn-chat-send .zg-mic-ico,html body #btn-chat-send .zg-mic-lb{display:none}
-html body #btn-chat-send.zg-mic .cs-ico,html body #btn-chat-send.zg-mic .v439-send-label{display:none!important}
-html body #btn-chat-send.zg-mic .zg-mic-ico{display:grid;place-items:center;color:#fff;line-height:0}
-html body #btn-chat-send.zg-mic .zg-mic-lb{display:block;color:#fff;font-size:.66rem;font-weight:700;letter-spacing:.06em;line-height:1}
-html body #pane-chat .line-composer #btn-chat-send.zg-rec{background:linear-gradient(150deg,#FF6B6B,#D32F2F)!important;animation:zgRec 1.1s ease-in-out infinite}
-@keyframes zgRec{50%{box-shadow:0 0 0 7px rgba(229,57,53,.22),0 4px 12px rgba(211,47,47,.35)}}
+/* 音声入力（v513: 入力欄の右端・送信ボタンの横に、いつでも押せるマイク） */
+html body #pane-chat #form-chat #btn-mic{grid-area:input!important;justify-self:end!important;align-self:end!important;position:relative!important;z-index:2!important;width:34px!important;height:34px!important;min-width:34px!important;min-height:34px!important;margin:0 6px 7px 0!important;padding:0!important;border:0!important;border-radius:50%!important;display:grid!important;place-items:center!important;background:#EFEAFE!important;color:#5B3FE0!important;box-shadow:none!important;-webkit-tap-highlight-color:transparent}
+html body #pane-chat #form-chat #btn-mic:active{background:#DCD2FD!important}
+html body #pane-chat #form-chat #btn-mic.zg-rec{background:#E53935!important;color:#fff!important;animation:zgRec 1.1s ease-in-out infinite}
+@keyframes zgRec{50%{box-shadow:0 0 0 7px rgba(229,57,53,.22)}}
+html body #pane-chat #form-chat{grid-template-columns:minmax(0,1fr) 52px!important}
+html body #pane-chat .line-composer #btn-chat-send{width:52px!important;min-width:52px!important}
 </style>
 </body>
 </html>
