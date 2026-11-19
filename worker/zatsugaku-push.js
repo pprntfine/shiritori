@@ -29,6 +29,9 @@ const MAX_TEXT = 64 * 1024;    // 中継所の 本文 1通の 上限
 const MAX_FILE = 2 * 1024 * 1024 + 64;   // ファイル 1こ の 上限（アプリは 2MB+28）
 const KEEP_SEC = 12 * 3600;    // 中継所に のこす 時間
 const DAY_LIMIT = 20000;       // 1とおりみち 1日の 上限（いたずら よけ）
+// 2026-11-19: 1日に「保存」する数の上限（ブレーキ）。Durable Objects の書き込みは無料で1日10万行、保存1件で約5行（入れる4＋12時間後の削除1）。
+// これを超えた分は保存せず、いまつながっている相手へ流すだけにする（中継所ごと止まるより良い。送った側はアプリが受領まで送り直す）。ふだんは1日数百件。
+const SOFT_STORE = 8000;
 const FILE_LIMIT = 300;        // 1とおりみちに 同時に おける ファイル数
 const POLL_ROWS = 500;
 
@@ -467,7 +470,7 @@ export class ZgRelay {
     const now = Math.floor(Date.now() / 1000);
     const day = 'cnt:' + new Date().toISOString().slice(0, 10);
     // 2026-11-17: 1通ごとに数を保存すると書き込み（rows_written、無料は1日10万）が増えるので、メモリで数えて20通ごとに保存する
-    if (!this.cnt || this.cnt.day !== day) { const n0 = parseInt(this.kvGet(day) || '0', 10); this.cnt = { day, n: n0, saved: n0 }; }
+    if (!this.cnt || this.cnt.day !== day) { const v0 = String(this.kvGet(day) || '0').split('|'); const n0 = parseInt(v0[0], 10) || 0; this.cnt = { day, n: n0, s: parseInt(v0[1] || '0', 10) || 0, saved: n0 }; }
     const used = this.cnt.n;
     if (used >= DAY_LIMIT) return Response.json({ error: 'daily limit' }, { status: 429, headers: { 'Retry-After': '600' } });
     const len = parseInt(req.headers.get('content-length') || '0', 10);
@@ -486,10 +489,12 @@ export class ZgRelay {
     }
     if (msg.length > MAX_TEXT) return Response.json({ error: 'too large' }, { status: 413 });
     this.cnt.n = used + 1;
-    if (this.cnt.n - this.cnt.saved >= 20) { this.kvPut(day, String(this.cnt.n)); this.cnt.saved = this.cnt.n; }
+    if (this.cnt.n - this.cnt.saved >= 20) { this.kvPut(day, this.cnt.n + '|' + this.cnt.s); this.cnt.saved = this.cnt.n; }
     const row = { id: randId(), t: now, msg, an: bytes ? String(filename).slice(0, 64) : null, asz: bytes ? bytes.length : 0 };
-    const keep = (url.searchParams.get('cache') || '').toLowerCase() !== 'no' || bytes;
+    const soft = parseInt((this.env && this.env.SOFT_STORE) || '', 10) || SOFT_STORE;
+    const keep = bytes || ((url.searchParams.get('cache') || '').toLowerCase() !== 'no' && this.cnt.s < soft);
     if (keep) {
+      this.cnt.s++;
       this.sql.exec('INSERT INTO m(id,t,msg,an,asz) VALUES(?,?,?,?,?)', row.id, row.t, row.msg, row.an, row.asz);
       if (bytes) {
         const CH = 1024 * 1024;   // 1行 2MBまで なので 1MBずつ
