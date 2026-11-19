@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとしてインストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">新しい版に更新する</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンでアプリとして入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v508</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v509</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">相手を待っています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v508</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v509</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">名前</b> さんが入室を求めています</p>
         <p class="jr-fp">合図 <b id="jr-fp">----</b> ／ 相手の画面と同じかくににて確認</p>
@@ -2872,7 +2872,7 @@ var Net={
       }
       if(!__rb&&this.coolUntil&&Date.now()<this.coolUntil) return __ns?fastOk:false;
       if(!__rb&&!(env.t==='chats'?this.allowChat():this.allow(typeof prio==='number'?prio:1))) return __ns?fastOk:false;
-      if(!__ns) this.postStore(body,scope,!!(env&&env.__noStore)); return true;   /* v504: 25秒ごとの app-live・10秒ごとの ack 送り直しは保存させない（Durable Objects の書き込み・読み出しの上限対策） */
+      if(!__ns) this.postStore(body,scope,!!(env&&env.__noStore),env); return true;   /* v504: 25秒ごとの app-live・10秒ごとの ack 送り直しは保存させない（Durable Objects の書き込み・読み出しの上限対策） */
     }
     /* ntfy は 保存用(相手が いない ときの 受けとり用)。制限中は 2本目だけで 成功あつかい */
     var __rb2=relayAnyBase();
@@ -2883,7 +2883,7 @@ var Net={
       /* v267: 相手が いま つながって いるなら 保存は いらない（1日に 250通の わくを 節約） */
       var __live=0; try{ __live=+(window.__zgsPeerLive||0)||0; }catch(e){}
       var __need=(env&&env.__forceStore)||!(env&&env.t==='chats'&&__live&&Date.now()-__live<70000);
-      if(__need) this.postStore(body,scope);
+      if(__need) this.postStore(body,scope,!!(env&&env.__noStore),env);
       else if(env&&env.n){
         /* v320: あいてが 「いきてる」と 見えても、ほんとうに とどいた かは わからない。
            12秒 たっても 受領証が 来なければ 中継所に のこす（のこさないと 二度と 届かない） */
@@ -2893,7 +2893,7 @@ var Net={
           var got=false;
           for(var gi=0;gi<S.chat.length;gi++){ var gm=S.chat[gi];
             if(gm&&!gm.sys&&gm.from===S.me.id&&gm.n===__n&&(gm.peerAck||gm.read)){ got=true; break; } }
-          if(!got) __self.postStore(body,scope);
+          if(!got) __self.postStore(body,scope,!!(env&&env.__noStore),env);
         }catch(e){} },12000);
       }
       return true;
@@ -2904,11 +2904,11 @@ var Net={
     if(pushP&&psrvGet()&&(env.t==='chats'||env.t==='recall')){
       var pOk=await Promise.race([pushP.catch(function(){ return false; }),new Promise(function(r){ setTimeout(function(){ r(false); },1500); })]);
       if(!outboundCurrent(scope)) return false;
-      if(pOk){ this.postStore(body,scope); return true; }
+      if(pOk){ this.postStore(body,scope,!!(env&&env.__noStore),env); return true; }
     }
     try{
       /* トーク・既読・受領証は中継サーバーに保存させない（接続中の相手へ直接届くのみ） */
-      var noCache='';   /* v105: 中継所に のこす（暗号文のみ・最長12時間）。ポーリングで 取りもどせる ようにする */   /* 中継サーバーに 一切 保存させない(記録を のこさない) */  /* メッセージ・写真・ライブは中継に保存させない */
+      var noCache=(env&&env.__noStore)?'?cache=no':'';   /* v509: 中継所に保存済みの送り直しは流すだけ */   /* v105: 中継所に のこす（暗号文のみ・最長12時間）。ポーリングで 取りもどせる ようにする */   /* 中継サーバーに 一切 保存させない(記録を のこさない) */  /* メッセージ・写真・ライブは中継に保存させない */
       var ac=(typeof AbortController!=='undefined')?new AbortController():null;
       var tmo=setTimeout(function(){ try{ if(ac) ac.abort(); }catch(e){} },7000);
       var r;
@@ -2928,6 +2928,7 @@ var Net={
         if(r.status===413){ try{ note('メッセージが大きすぎます。みじかくしてください。','#note2'); }catch(e){} }
         return fastOk||await viaPush();
       }
+      if(!noCache) storedMark(env);
       return true;
     }catch(e){ return fastOk||await viaPush(); }
   },
@@ -2969,14 +2970,14 @@ var Net={
     if(rr) return rr;
     throw new Error('送れません');
   },
-  postStore:function(body,scope,noStore){
+  postStore:function(body,scope,noStore,env){
     var self=this;
     if(!outboundCurrent(scope)) return;
     if(!relayAnyBase()&&this.coolUntil&&Date.now()<this.coolUntil) return;
     try{
       var ac=typeof AbortController!=='undefined'?new AbortController():null; if(ac) privateAborts.add(ac);
       this.storeFetch(scope.topic,{method:'POST',headers:{'Content-Type':'text/plain'},body:body,signal:ac?ac.signal:undefined},noStore?'?cache=no':undefined)   /* v504: noStore＝中継所に保存させず、いまつながっている相手へ流すだけ */
-        .then(function(r){ if(outboundCurrent(scope)&&(r.status===429||r.status===503)) self.hit429(45000); }).catch(function(){})
+        .then(function(r){ if(outboundCurrent(scope)&&(r.status===429||r.status===503)) self.hit429(45000); if(r&&r.ok&&!noStore) storedMark(env); }).catch(function(){})
         .finally(function(){ if(ac) privateAborts.delete(ac); });
     }catch(e){}
   },
@@ -11093,6 +11094,11 @@ function queueChat(txt,at){
 }
 /* v181: 通知pushを 中継が 受けとった なら「未読」まで 進める（相手の スマホが 受けとる じゅんびが できた から） */
 function markPushAcked(env){ /* 通知中継の受理は相手の保存完了ではない。 */ }
+/* v509: 中継所（または ntfy）に保存できた封筒に印を付ける。保存は12時間残り、相手が開けば届くので、
+   相手が閉じている間の送り直し（15秒→…→最大10分）は保存せず流すだけにする（以前は送り直しのたびに保存し、書き込みが増えていた）。 */
+var STORED_KEEP=11*3600*1000;
+function storedMark(env){ if(!env) return; env.__storedAt=Date.now(); if(env.__onStored){ try{ env.__onStored(); }catch(e){} } }
+function storedFresh(t){ return !!t&&Date.now()-t<STORED_KEEP; }
 function retryGap(tries){ return tries===0?0:Math.min(600000,15000*Math.pow(2,Math.min(tries-1,6))); }
 var receiptQueue=Promise.resolve();
 function exactReceipt(ns,read,ids){
@@ -11155,6 +11161,8 @@ async function flushOutbox(){
   }
   var payload=items.map(function(x){ return {text:x.text,at:x.at,mid:x.mid}; });
   var msgs=items.map(function(x){ return x.msg; }).filter(Boolean);
+  var __allStored=items.every(function(x){ return storedFresh(x.storedAt||(x.msg&&x.msg.storedAt)); });   /* v509 */
+  var __onSt=function(){ var t=Date.now(); items.forEach(function(x){ x.storedAt=t; if(x.msg) x.msg.storedAt=t; }); };
   items.forEach(function(it){ it.lastTry=Date.now(); it.tries=(it.tries||0)+1; });
   S.flushing=true;
   S.inflight=S.inflight.concat(items);
@@ -11176,7 +11184,9 @@ async function flushOutbox(){
     if(ok) S.flushEnv=null;
     if(S.tab==='chat') renderChat(true);
   };
-  var envSent=same?Net.sendEnv(S.flushEnv.env,onDoneF):Net.send({t:'chats',items:payload},onDoneF);
+  if(same){ S.flushEnv.env.__noStore=__allStored?1:0; S.flushEnv.env.__onStored=__onSt; }
+  var envSent=same?Net.sendEnv(S.flushEnv.env,onDoneF):Net.send(__allStored?{t:'chats',items:payload,__noStore:1}:{t:'chats',items:payload},onDoneF);
+  if(envSent&&!same) envSent.__onStored=__onSt;
   if(envSent&&envSent.n){ if(!same) S.flushEnv={items:items.slice(),env:envSent}; msgs.forEach(function(m){ m.n=envSent.n; m.env=envSent; }); }
   /* v480: 送りなおしで 番号(n)が かわっても 画面を 作りなおさない（行の 目印だけ かえる）。作りなおしで 自分の メッセージが ちかっと 消えて いた */
   try{ if(envSent&&envSent.n) msgs.forEach(function(m){ if(!m||!m.uid) return; var r=document.querySelector('#chat-log .msg[data-uid="'+String(m.uid).replace(/[^\w-]/g,'')+'"]'); if(r) r.dataset.n=String(m.n); }); }catch(e){}
@@ -11214,7 +11224,10 @@ function resendUnacked(all){
       if(!Number.isSafeInteger(env.n)||!bindOutbound(env,false)) return;
       m.env=env;
     }
-    m.tries=(m.tries||0)+1;m.lastTry=now;env.__forceStore=1;
+    m.tries=(m.tries||0)+1;m.lastTry=now;
+    /* v509: 中継所に保存済み（11時間以内）なら流すだけ。まだなら保存させる */
+    if(storedFresh(m.storedAt||env.__storedAt)){ env.__noStore=1; env.__forceStore=0; }
+    else { env.__noStore=0; env.__forceStore=1; env.__onStored=(function(mm){ return function(){ mm.storedAt=Date.now(); }; })(m); }
     Net.resendEnv(env);resent.add(m.n);count++;
   });
 }
