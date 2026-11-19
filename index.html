@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとしてインストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">新しい版に更新する</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンでアプリとして入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v510</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v511</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">相手を待っています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v510</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v511</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">名前</b> さんが入室を求めています</p>
         <p class="jr-fp">合図 <b id="jr-fp">----</b> ／ 相手の画面と同じかくににて確認</p>
@@ -8366,8 +8366,8 @@ function photoChunkStart(id,d,minGap){
 }   /* v267: おくった 写真を おぼえて おく（とどかなかった 分を おくりなおす） */
 /* v273: 写真は「1回で おくれる 大きさ」に おさめてから 送る。かけら送りは 保険で、1800文字ずつ・最大2000かけら・120万文字まで */
 var PHOTO_CHUNK_PIECE=1200, PHOTO_SOFT_MAX=12000, PHOTO_HARD_MAX=1200000, PHOTO_TGT_WEBP=12000;   /* v348: 20,000/35,000 → 12,000（かけら 10こ） */   /* v304: かけら 23→8こ */
-var PHOTO_HQ_WEBP=60000, PHOTO_HQ_SOFT=190000, PHOTO_HQ_MAXSIDE=1280, PHOTO_FULL_MAXSIDE=3000;   /* v510: 2000→3000（持ち主） */   /* v485: 1280→1600、v496: 1600→2000（持ち主） */
-var PHOTO_BIG_WEBP=1500000, PHOTO_BIG_JPEG=1700000, PHOTO_BIG_MAXSIDE=3000;   /* v510: 長辺2000→3000・文字数も約1.8倍（中継所の上限2MBの内側） */   /* v496: 長辺1600→2000（持ち主）。文字数も面積に合わせて約1.56倍（中継所の上限2MBの内側） */   /* v485: 中継所で 1まいで 送る ときの 大きさ（文字数。おおよそ 400〜500KB） */   /* v306 */   /* v305: タップ用の (たか)画質 */
+var PHOTO_HQ_WEBP=60000, PHOTO_HQ_SOFT=190000, PHOTO_HQ_MAXSIDE=1280, PHOTO_FULL_MAXSIDE=4000;   /* v510: 2000→3000、v511: 4000（持ち主） */   /* v485: 1280→1600、v496: 1600→2000（持ち主） */
+var PHOTO_BIG_WEBP=2650000, PHOTO_BIG_JPEG=2650000, PHOTO_BIG_MAXSIDE=4000;   /* v511: 長辺4000・約265万字（送るのはバイナリで約1.99MB。中継所の上限 2MB+28 の内側） */   /* v510: 長辺2000→3000・文字数も約1.8倍（中継所の上限2MBの内側） */   /* v496: 長辺1600→2000（持ち主）。文字数も面積に合わせて約1.56倍（中継所の上限2MBの内側） */   /* v485: 中継所で 1まいで 送る ときの 大きさ（文字数。おおよそ 400〜500KB） */   /* v306 */   /* v305: タップ用の (たか)画質 */
 /* v288: WebP が つかえる 端末なら WebP で 作りなおす（同じ 見た目で 3〜4割 小さく → かけらが 減って 速い） */
 var WEBP_OK=null;
 function canWebP(){ if(WEBP_OK!==null) return WEBP_OK; try{ var c=document.createElement('canvas'); c.width=2; c.height=2; WEBP_OK=(String(c.toDataURL('image/webp',0.7)).indexOf('data:image/webp')===0); }catch(e){ WEBP_OK=false; } return WEBP_OK; }
@@ -8487,6 +8487,28 @@ $('#cam-shoot').addEventListener('click',function(){
          おなじ ところだけを きりとれば 見た ままに なる。 */
       /* v307: わくを カメラの 比率に したので、映像の ぜんたいが そのまま 見えている わく。
          きりとらず ぜんぶ つかう＝見えている 範囲と おくる 写真が かんぜんに いっちする */
+      /* v511: 外カメラは ImageCapture.takePhoto()（カメラ本来の画素数。Android の Chrome など）で撮る。
+         向きが映像と違う・映像より細かくない・4秒で返らない・失敗した時は、今までどおり映像の1コマ。見えている範囲（映像の比率）に合わせて真ん中を切り出す */
+      var tr0=null; try{ tr0=camStream&&camStream.getVideoTracks&&camStream.getVideoTracks()[0]; }catch(e){}
+      if(!mir&&n>=0&&typeof window.ImageCapture==='function'&&tr0&&tr0.readyState==='live'){
+        var fin=false;
+        var fallback=function(){ if(fin) return; fin=true; if(shotTicket!==camRequest){ camShotWait=0; return; } grab(-1); };
+        var tmo=setTimeout(fallback,4000);
+        try{
+          new window.ImageCapture(tr0).takePhoto().then(function(blob){
+            if(fin) return;
+            camPhotoFromBlob(blob,w,h).then(function(u){
+              if(fin) return; clearTimeout(tmo);
+              if(shotTicket!==camRequest){ fin=true; camShotWait=0; return; }
+              if(!u){ fallback(); return; }
+              fin=true; camShotURL=u; window.__camShotVia='takePhoto';
+              $('#cam-shot').src=camShotURL; camShotWait=0; camPreview(true);
+            });
+          },function(){ clearTimeout(tmo); fallback(); });
+        }catch(e){ clearTimeout(tmo); fallback(); }
+        return;
+      }
+      window.__camShotVia='frame';
       var sw=w,sh=h,sx=0,sy=0;
       var sc=Math.min(1,PHOTO_FULL_MAXSIDE/Math.max(sw,sh));
       var c=document.createElement('canvas');
@@ -8502,6 +8524,37 @@ $('#cam-shoot').addEventListener('click',function(){
   }
   grab(0);
 });
+/* v511: takePhoto の画像を、映像と同じ向き・比率（真ん中）にして data URL にする。合わなければ '' */
+function camPhotoFromBlob(blob,vw,vh){
+  return new Promise(function(res){
+    try{
+      if(!blob||!blob.size){ res(''); return; }
+      var im=new Image(), fr=new FileReader();   /* CSP の img-src は data: だけなので blob: は使わない */
+      var done=function(v){ res(v); };
+      im.onerror=function(){ done(''); };
+      im.onload=function(){
+        try{
+          var iw=im.naturalWidth, ih=im.naturalHeight;
+          if(!iw||!ih||!vw||!vh){ done(''); return; }
+          if((iw>ih)!==(vw>vh)&&Math.abs(iw-ih)>8){ done(''); return; }   /* 向きが違う（回転の向きが分からないので使わない） */
+          if(Math.max(iw,ih)<Math.max(vw,vh)*1.15){ done(''); return; }   /* 映像より細かくない */
+          var va=vw/vh, ia=iw/ih, cw=iw, ch=ih, cx=0, cy=0;
+          if(ia>va+0.01){ cw=Math.round(ih*va); cx=Math.round((iw-cw)/2); }
+          else if(ia<va-0.01){ ch=Math.round(iw/va); cy=Math.round((ih-ch)/2); }
+          var sc=Math.min(1,PHOTO_FULL_MAXSIDE/Math.max(cw,ch));
+          var c=document.createElement('canvas');
+          c.width=Math.max(1,Math.round(cw*sc)); c.height=Math.max(1,Math.round(ch*sc));
+          var ctx=c.getContext('2d'); if(!ctx){ done(''); return; }
+          ctx.drawImage(im,cx,cy,cw,ch,0,0,c.width,c.height);
+          done(c.toDataURL(canWebP()?'image/webp':'image/jpeg',0.92));
+        }catch(e){ done(''); }
+      };
+      fr.onerror=function(){ done(''); };
+      fr.onload=function(){ var u=String(fr.result||''); if(u.slice(0,11)!=='data:image/'){ done(''); return; } im.src=u; };
+      fr.readAsDataURL(blob);
+    }catch(e){ res(''); }
+  });
+}
 var UID=0;
 /* v219: 本文は残さず、再表示を防ぐ識別子だけを別の暗号化領域に保存する。
    期限で捨てると古い保存内容が復活するため自動失効させない。各送信者4096件で
@@ -9380,7 +9433,7 @@ function attachmentReady(){
 function attachmentRead(file){ return new Promise(function(resolve,reject){ var r=new FileReader(); r.onload=function(){ resolve(String(r.result)); }; r.onerror=function(){ reject(new Error('read')); }; r.readAsDataURL(file); }); }
 function attachmentPhoto(url){ return new Promise(function(resolve,reject){
   var im=new Image(); im.onerror=function(){ reject(new Error('image')); };
-  im.onload=function(){ try{ var scale=Math.min(1,3000/Math.max(im.naturalWidth,im.naturalHeight));   /* v496: 1600→2000、v510: 3000 */ var c=document.createElement('canvas'); c.width=Math.max(1,Math.round(im.naturalWidth*scale)); c.height=Math.max(1,Math.round(im.naturalHeight*scale)); var ctx=c.getContext('2d'); ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,c.width,c.height); ctx.drawImage(im,0,0,c.width,c.height); resolve(c.toDataURL(canWebP()?'image/webp':'image/jpeg',0.9)); }catch(e){ reject(e); } }; im.src=url;
+  im.onload=function(){ try{ var scale=Math.min(1,4000/Math.max(im.naturalWidth,im.naturalHeight));   /* v496: 1600→2000、v510: 3000、v511: 4000 */ var c=document.createElement('canvas'); c.width=Math.max(1,Math.round(im.naturalWidth*scale)); c.height=Math.max(1,Math.round(im.naturalHeight*scale)); var ctx=c.getContext('2d'); ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,c.width,c.height); ctx.drawImage(im,0,0,c.width,c.height); resolve(c.toDataURL(canWebP()?'image/webp':'image/jpeg',0.9)); }catch(e){ reject(e); } }; im.src=url;
 }); }
 function attachmentButton(id,input){ $('#'+id).addEventListener('click',function(){ if(!attachmentReady()) return; var f=$('#'+input); f.value=''; f.click(); }); }
 attachmentButton('btn-attach-photo','chat-photo-file');
@@ -9642,6 +9695,22 @@ function photoFitURL(url,mode){
           var qs=[0.62,0.55,0.48,0.42,0.36,0.31,0.27,0.23], ss=[1,0.9,0.8,0.7,0.62,0.55];   /* v348 */
           if(big){ qs=[0.86,0.8,0.74,0.68,0.6,0.52]; ss=[1,0.85,0.72,0.6]; }
           var w0=im.naturalWidth||im.width, h0=im.naturalHeight||im.height, best=url;
+          if(big&&w0>0&&h0>0){   /* v511: 大きい写真は作り直しの回数を減らす（4000px を何十回も作るとスマホで遅い）。画質0.86→0.8、だめなら大きさを文字数から見積もって縮める（最大6回） */
+            var bs=Math.min(1,MAXS/Math.max(w0,h0)), bq=[0.86,0.8], bt=0;
+            while(bt<6){
+              var bc=document.createElement('canvas');
+              bc.width=Math.max(1,Math.round(w0*bs)); bc.height=Math.max(1,Math.round(h0*bs));
+              var bx=bc.getContext('2d'); if(!bx){ res(best); return; }
+              bx.fillStyle='#ffffff'; bx.fillRect(0,0,bc.width,bc.height);
+              bx.drawImage(im,0,0,w0,h0,0,0,bc.width,bc.height);
+              var bo=bc.toDataURL(web?'image/webp':'image/jpeg',bq[Math.min(bt,1)]);
+              bt++;
+              if(bo.length<best.length) best=bo;
+              if(bo.length<=TGT){ res(bo); return; }
+              if(bt>=2) bs=Math.max(0.05,bs*Math.min(0.92,Math.sqrt(TGT/bo.length)*0.95));
+            }
+            res(best); return;
+          }
           /* v344: まんなかを 4:3 で きり出す（まわりを すてる かわりに、おなじ おもさで はっきり） */
           var cw=w0, ch=h0, cx=0, cy=0;
           if(false&&!hq&&w0>0&&h0>0){   /* v485: まんなかだけ きり出すのを やめた（スクショの 上下が きれて いた）。写真は ぜんぶ 送る */

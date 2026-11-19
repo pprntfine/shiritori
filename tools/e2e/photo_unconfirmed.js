@@ -27,7 +27,7 @@ async function dev(b,me,peer,host){const ctx=await b.newContext({viewport:{width
   let sentMs=null; for(let i=0;i<120&&sentMs===null;i++){ await A.pg.waitForTimeout(250); sentMs=await A.pg.evaluate(()=>window.__pm.sent?Math.round(performance.now()-window.__t0):null); }
   let r=null; for(let i=0;i<80&&!r;i++){ await B.pg.waitForTimeout(500); r=await B.pg.evaluate((pid)=>{ const m=__t.S.chat.find(m=>m.photo&&m.from!==__t.S.me.id&&m.pid===pid); if(!m||!m.data) return null; return new Promise(res=>{ const im=new Image(); im.onload=()=>{ const c=document.createElement('canvas'); c.width=im.width;c.height=im.height; const x=c.getContext('2d'); x.drawImage(im,0,0); const top=x.getImageData(5,5,1,1).data, bot=x.getImageData(5,im.height-5,1,1).data; res({w:im.width,h:im.height,chars:m.data.length,mime:m.data.slice(5,15),top:[...top].slice(0,3),bottom:[...bot].slice(0,3)}); }; im.src=m.data; }); },pid); }
   const via=await A.pg.evaluate(()=>[__t.Net.lastVia,__t.Net.lastFileStatus]);
-  const ok=!!r&&Math.max(r.w,r.h)>=2500&&r.chars<=1700000&&r.top[0]>200&&r.bottom[2]>200&&via[1]===200;
+  const ok=!!r&&Math.max(r.w,r.h)>=2500&&r.chars<=2650000&&r.top[0]>200&&r.bottom[2]>200&&via[1]===200;
   allOk=allOk&&ok;
   console.log(name,'送信('+W+'×'+H+'):', 'Bに届いた',JSON.stringify(r),'送り終わり',sentMs,'ms','経路',via.join(' '),ok?'OK':'NG');
  }
