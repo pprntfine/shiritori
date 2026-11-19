@@ -1,8 +1,8 @@
 'use strict';
 /* とー君ニュース（旧 雑学王）v460。本文は復号しない。鍵は受け取らず、暗号文だけを耐久保存する。
    zg-sw-inbox/pin {b:暗号文,t:時刻} は本体との互換契約。本文に時限削除を行わない。 */
-const SW_VERSION='v511';
-const SHELL_CACHE='zg-v511-shell';
+const SW_VERSION='v512';
+const SHELL_CACHE='zg-v512-shell';
 function unwrapPush(value){
   for(let i=0;i<8;i++){
     if(value&&typeof value==='object'){
@@ -46,7 +46,7 @@ async function getRole(){
 }
 async function handlePush(raw){
   const msg=unwrapPush(raw),body=sealedBody(msg);
-  let tag='mtp-chat',text='新しいニュースが更新されました',data={},saved=false;
+  let tag='mtp-chat',text='新しいニュースが更新されました',data={},saved=false,badge='./badge-news.png',stamp=0;
   if(body){
     data.zgm=body;
     try{await swInboxSave(body);saved=true;}catch(e){data.saveFailed=true;}
@@ -54,12 +54,15 @@ async function handlePush(raw){
     if(!saved)text='新しいニュースがあります。アプリを開いてください';
     tag='zgs-'+body.slice(-32);
   }else if(/^zgcall:/.test(msg)){
-    tag='mtp-call';text='電話がきています';data.call=true;
+    tag='mtp-call';text='電話がきています';data.call=true;badge='';
   }else if(/^zgo:\d+$/.test(msg)){
     // 相手の開封通知だけはホスト限定。役割不明も表示しない。
     if(await getRole()!=='h')return;
-    const c=await caches.open('zg-count');await c.put('po',new Response(msg.slice(4)));
-    tag='mtp-peer';text='相手がアプリを開きました';
+    // v512: 閉じている間の「開いた」を全部残す（以前は最後の1回だけ）。時刻は相手が開いた時刻。
+    const c=await caches.open('zg-count');let prev='';try{const o=await c.match('po');prev=o?await o.text():'';}catch(e){}
+    const list=(prev?prev.split(','):[]).filter(x=>/^\d+$/.test(x));list.push(msg.slice(4));
+    await c.put('po',new Response(list.slice(-20).join(',')));
+    tag='mtp-peer';text='相手がアプリを開きました';badge='./badge-open.png';stamp=+msg.slice(4)||0;
   }else if(msg==='zg-test'){
     tag='mtp-test';text='テスト通知です';
   }else if(/^zgm:\d+:!/.test(msg)){
@@ -68,12 +71,13 @@ async function handlePush(raw){
     data.stub=true;
   }else if(msg.startsWith('⚠')){
     if(await getRole()!=='h')return;
-    tag='mtp-alert';text='入室のお知らせがあります';
+    tag='mtp-alert';text='入室のお知らせがあります';badge='';
   }else{return;}
-  await self.registration.showNotification('とー君ニュース',{
-    body:text,tag,renotify:true,data,silent:false,
-    vibrate:data.call?[600,250,600,250,600]:[110,70,110]
-  });
+  // v512: ステータスバーの小さいアイコンを種類で分ける（Android）。ニュース＝新聞、相手が開いた＝目
+  const opt={body:text,tag,renotify:true,data,silent:false,vibrate:data.call?[600,250,600,250,600]:[110,70,110]};
+  if(badge)opt.badge=badge;
+  if(stamp&&stamp<=Date.now()+120000&&Date.now()-stamp<12*3600*1000)opt.timestamp=stamp;
+  await self.registration.showNotification('とー君ニュース',opt);
   if(body)await broadcast({zgm:body,saved,swver:SW_VERSION});
   await broadcast(data.call?'zg-call':'zg-new');
 }

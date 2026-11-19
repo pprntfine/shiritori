@@ -9,6 +9,7 @@ node tools/check_syntax.js index.html          # 全 script の構文チェッ�
 node --check sw.js && wc -c sw.js              # sw.js が空でないか
 python3 tools/make_test.py index.html /tmp/zg  # テスト用の index.html（内部を window.__t に出す）を作る
 node tools/shot_chat.js /tmp/zg                # トーク画面の画像（k_chat.png など）を作る（1台・通信なし）
+node tools/sw_badge_test.mjs                   # sw.js の通知の小さいアイコン（ニュース＝新聞・相手が開いた＝目）（v512）
 ```
 
 ## 2台の送受信テスト（中継所つき）
@@ -57,6 +58,12 @@ node tools/shot_chat.js /tmp/zg                # トーク画面の画像（k_ch
 | e2e/camera_res.js | アプリ内カメラで大きく撮れる（偽カメラ、v501） |
 | e2e/photo_frame.js | 写真と吹き出しがぴったり・もう一度送るボタン・文字の吹き出しは崩れない（v502） |
 | e2e/news_fetch.js | 開いたらすぐニュースを1回取る（v484） |
+| e2e/camera_takephoto.js | 外カメラは偽の takePhoto でカメラ本来の画素数で撮れる／向きが違う・返らない・インカメラは映像の1コマ（v511） |
+| e2e/bubble_width.js | 入力欄と吹き出し（送った・受け取った）の改行が同じか。幅 360〜430、相手の列数が小さい時はそちらに合わせる（v512） |
+| e2e/privacy_shield.js | 画面を離れる瞬間に覆う・裏に回るとその場でトップ・戻ってもトークが出ない・電話中は移さない・5回タップで入れる（v512） |
+| e2e/voice_input.js | 音声入力: 空ならマイク・文字で送信、話した言葉が入力欄に入る、停止、音声認識が無い端末・不許可の案内（偽の音声認識）（v512） |
+| e2e/access_late.js | アクセス履歴: 遅れて届いた合図を本当の時刻で記録・「接続が切れました」を付けない・通知サーバー経由と2件にしない（v512） |
+| e2e/cols_sync.js | 1行の文字数（列数）が2台でそろう（幅412と360 → 両方15列、入力欄も15列）（v512） |
 
 ## Worker の試験（ネットなし）
 `node tools/worker_quote_test.mjs` … 日経平均・ドル円の前日比（Yahoo・stooq は作り物の応答）。
