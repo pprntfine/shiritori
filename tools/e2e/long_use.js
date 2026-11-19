@@ -13,7 +13,8 @@ async function dev(b,me,peer,host,tag){ const D=tag==='B'?DIR_B:DIR; const ctx=a
   if(u.startsWith(PS)){ const k=tag+' '+m+' '+(u.includes('/r/')?(u.includes('/json')?'poll':(u.includes('/file/')?'file':(u.includes('cache=no')?'r(流すだけ)':'r(保存)'))):u.replace(PS,'').split('?')[0]); net[k]=(net[k]||0)+1; return r.continue(); }
   if(u.startsWith('https://ntfy.sh/')){ const k=tag+' ntfy '+m; net[k]=(net[k]||0)+1; return r.continue(); }
   return r.abort();});
- const pg=await ctx.newPage(); await pg.goto('https://zg.test/index.html'); await pg.waitForTimeout(6000);
+ return openPage(ctx); }
+async function openPage(ctx){ const pg=await ctx.newPage(); pg.__ctx=ctx; await pg.goto('https://zg.test/index.html'); await pg.waitForTimeout(6000);
  await pg.evaluate(()=>{ window.__shift=0; const real=Date.now.bind(Date); Date.now=()=>real()+window.__shift; });
  await pg.evaluate(()=>{ const w=document.getElementById('storage-warning'); if(w) w.hidden=true; __t.show('play'); __t.setTab('chat');
    window.__byT={}; window.__opens=0; const N=__t.Net, op=N.post.bind(N), os=N.storeFetch.bind(N), on=N.onState;
@@ -28,7 +29,7 @@ const PM=+(process.env.PHASE_MIN||8);
 async function freeze(p,on){ if(!p.__cdp){ p.__cdp=await p.context().newCDPSession(p); await p.__cdp.send('Page.enable'); }
   if(on){ await vis(p,true); await p.waitForTimeout(300); await p.__cdp.send('Page.setWebLifecycleState',{state:'frozen'}); }
   else { await p.__cdp.send('Page.setWebLifecycleState',{state:'active'}); await vis(p,false); } }
-const byType=async()=>{ const o={}; for(const [n,p] of [['A',A],['B',B]]) o[n]=await p.evaluate(()=>{ const r=window.__byT; window.__byT={}; return r; }); return o; };
+const byType=async()=>{ const o={}; for(const [n,p] of [['A',A],['B',B]]) o[n]=p.isClosed()?{}:await p.evaluate(()=>{ const r=window.__byT; window.__byT={}; return r; }); return o; };
 let A,B;
 (async()=>{
  const fake=spawn('node',[path.join(__dirname,'../fake_net.js')],{stdio:['ignore','pipe','inherit']});
@@ -45,16 +46,17 @@ let A,B;
  await A.evaluate(()=>{ const W=1170,H=2532,c=document.createElement('canvas'); c.width=W;c.height=H; const x=c.getContext('2d'); x.fillStyle='#fff'; x.fillRect(0,0,W,H); for(let i=0;i<200;i++){ x.fillStyle='hsl('+(i*37%360)+',70%,50%)'; x.font='40px sans-serif'; x.fillText('写真 '+i,(i*53)%900,60+i*12); }
    const msg={from:__t.S.me.id,at:Date.now(),data:c.toDataURL('image/png'),pid:'A'+Date.now().toString(36),uid:String(9000+((Math.random()*999)|0)),sent:false,n:0,photo:true}; __t.S.chat.push(msg); __t.renderChat(true); __t.sendPhoto(msg); });
  await A.waitForTimeout(60000); const got=await B.evaluate(()=>__t.S.chat.filter(m=>m.photo&&m.data).length); await lap('写真1枚（届いた'+got+'）');
- await freeze(B,true);
+ await B.close();   // 相手がアプリを閉じる（iPhone が裏で終わらせた時と同じ）
  for(let i=0;i<3;i++){ await A.fill('#in-chat','留守'+i); await A.click('#btn-chat-send'); await A.waitForTimeout(5000); }
  await A.waitForTimeout(PM*60000-15000); await lap('相手が閉じている間に3通（'+PM+'分）');
- await freeze(B,false); await B.evaluate(()=>{ __t.show('play'); __t.setTab('chat'); }); await B.waitForTimeout(120000);
+ B=await openPage(B.__ctx); await B.waitForTimeout(120000);
  const gotB=await B.evaluate(()=>__t.S.chat.filter(m=>m.text&&/^留守/.test(m.text)).length); await lap('相手が開く（2分、留守の3通のうち届いた'+gotB+'）');
  await A.waitForTimeout(PM*60000); await lap('2台とも開いたまま何もしない（'+PM+'分）');
  for(const p of [A,B]) await p.evaluate(()=>{ window.__shift=16*60*1000; }); await A.waitForTimeout(60000); await lap('既読から16分で消える（1分）');
  await A.waitForTimeout(3*60000); await lap('消えた後（3分）');
- await freeze(A,true); await freeze(B,true); await A.waitForTimeout(100); await new Promise(r=>setTimeout(r,PM*60000));
- await freeze(A,false); await freeze(B,false); await lap('2台とも閉じている（夜、'+PM+'分）');
+ await lap('寝る前');
+ const ca=A.__ctx, cb=B.__ctx; await A.close(); await B.close(); await new Promise(r=>setTimeout(r,PM*60000));
+ A=await openPage(ca); B=await openPage(cb); await lap('2台とも閉じて朝に開く（夜、'+PM+'分）');
  await A.waitForTimeout(60000); await lap('朝に2台とも開く（1分）');
  console.log('---- まとめ'); let tot=0,ts=0; for(const r of rows){ tot+=r.n; ts+=r.sec; console.log(`${r.name}: 保存 ${r.n}回（1時間あたり約${Math.round(r.n/r.sec*3600)}回）`); }
  console.log('合計',tot,'回 /',Math.round(ts/60),'分。通信:',JSON.stringify(net));
