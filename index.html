@@ -19,7 +19,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="とー君ニュース">
 <meta name="theme-color" content="#5B3DF5">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; font-src 'none'; connect-src https://ntfy.sh wss://ntfy.sh https://*.workers.dev wss://*.workers.dev wss://broker.emqx.io:8084 wss://broker.hivemq.com:8884; worker-src 'self'; img-src 'self' data:; manifest-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; font-src 'none'; connect-src https://ntfy.sh wss://ntfy.sh https://*.workers.dev wss://*.workers.dev wss://broker.emqx.io:8084 wss://broker.hivemq.com:8884; worker-src 'self'; img-src 'self' data:; media-src blob:; manifest-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'">
 <meta http-equiv="Cache-Control" content="no-store">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとしてインストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">新しい版に更新する</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンでアプリとして入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v514</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v515</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">相手を待っています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v514</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v515</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">名前</b> さんが入室を求めています</p>
         <p class="jr-fp">合図 <b id="jr-fp">----</b> ／ 相手の画面と同じかくににて確認</p>
@@ -2708,7 +2708,7 @@ var Net={
       if(!legacy&&env.from&&env.from!==S.me.id){
         /* 未受信の古い本文を水位だけで捨てない。確定した番号だけで重複判定する。 */
         if(env.n>Date.now()+600000) return false;
-        if(!({chats:1,chat:1,'photo-chunk':1}[env.t])&&hwmSeen(env.from,env.n)){ this.reAck(env,legacy); return true; }
+        if(!({chats:1,chat:1,'photo-chunk':1,story:1,'story-part':1,'story-ack':1,'story-seen':1,'story-like':1,'story-del':1}[env.t])&&hwmSeen(env.from,env.n)){ this.reAck(env,legacy); return true; }
 
       }
       /* 成功後にだけ seenN を更新する。 */
@@ -2718,7 +2718,7 @@ var Net={
     if(env.from===S.me.id && env.t!=='nettest' && env.t!=='nettest-ok') return true;   /* 自分の送信は無視（通信テストだけ 例外）。v497: true＝片付け済み（以前は何も返さず、戻ってきた自分の暗号文が受信箱 zg-inbox に残り続け、1.2秒ごとの drainInbox で全部を復号し直して入力中に固まっていた） */
     var ok=this.onMsg?await this.onMsg(env):false;
     if(epoch!==this.epoch||key!==this.key||topic!==this.topic) return false;
-    if(ok===false||(({chats:1,chat:1,photo:1,attachment:1,'photo-ref':1}[env.t])&&ok!==true)) return false;
+    if(ok===false||(({chats:1,chat:1,photo:1,attachment:1,'photo-ref':1,story:1,'story-part':1,'story-ack':1,'story-seen':1,'story-like':1,'story-del':1}[env.t])&&ok!==true)) return false;
     if(typeof env.n==='number'&&env.t!=='photo-chunk'){
       this.seenN.add(String(env.from)+':'+env.n);
       if(!legacy&&env.from!==S.me.id) hwmMark(env.from,env.n);
@@ -11870,6 +11870,16 @@ Net.onMsg=async function(m){
       if(m.from===S.me.id) break;
       return await recvAttachment(m);
       break;
+    /* v515: ストーリー */
+    case 'story':
+      if(m.from===S.me.id) break;
+      return await storyRecvHeader(m);
+    case 'story-part':
+      if(m.from===S.me.id) break;
+      return await storyRecvPart(m);
+    case 'story-ack': case 'story-seen': case 'story-like': case 'story-del':
+      if(m.from===S.me.id) break;
+      return await storyRecvSig(m);
     case 'live-on':
       if(m.from===S.me.id) break;
       (function(){
@@ -11906,6 +11916,7 @@ Net.onMsg=async function(m){
       if(typeof m.ps==='string'&&psrvOk(m.ps)&&m.ps.replace(/\/+$/,'')!==psrvGet()){ psrvSet(m.ps); setTimeout(function(){ try{ bgPushSetup(); }catch(e){} },300); }
       relayPeerMark(m);   /* v451: あいてが じぶんの 中継所を 見て いるか */
       try{ tokunApply(m.tk,S.isHost===false); }catch(e){}
+      try{ setTimeout(function(){ try{ stResend(); }catch(e){} },5000); }catch(e){}   /* v515: 相手がつながった → 届いていないストーリーを送り直す */
       try{ if(typeof m.cw==='number'&&m.cw>=6&&m.cw<=60&&(m.cw|0)!==zgPeerCols){ zgPeerCols=m.cw|0; localStorage.setItem('zg_peer_cols',String(zgPeerCols)); zgColsCalc(); } }catch(e){}   /* v512: 相手の1行の文字数 */
       try{ tokunCmApply(m.tc,S.isHost===false); }catch(e){}   /* v500: とー君のメッセージもそろえる */   /* v499: とー君の設定をそろえる（相手がホストなら同じ版でも合わせる） */
       if(!m.r) setTimeout(function(){ try{ zgColsSent=zgMyCols; Net.send({t:'prof',r:1,nm:meName(),emo:(PROF.me&&PROF.me.emo)||'🐷',img:(PROF.me&&PROF.me.img)||'',ps:psrvGet(),rl:relayHas()?1:0,tk:tokunState(),tc:tokunCmState(),cw:zgMyCols||0}); }catch(e){} },400);
@@ -13696,6 +13707,541 @@ window.addEventListener('pagehide',function(){ closeCam(); stopCall(false); });
     if(eb){ var ep=function(){ eb.textContent=voiceEmoOn()?'オン':'オフ'; }; ep();
       eb.addEventListener('click',function(){ try{ localStorage.setItem('zg_voice_emo',voiceEmoOn()?'0':'1'); }catch(e){} ep(); }); }
   })();
+  /* ===== v515: ストーリー（インスタグラムと同じ形。持ち主） =====
+     写真・短い動画（60秒・50MBまで）に文字・スタンプを載せて投稿。24時間で2人のスマホから消える。
+     送り方: 見出し {t:'story'} ＋ 中身を約1.9MBずつに分けた暗号化ファイル {t:'story-part'}（中継所に12時間）。
+     受け取ったらスマホの中（IndexedDB zg-story）に2人の鍵で暗号化して保存し、全部そろったら story-ack。見たら story-seen。
+     受け取りの印が無いまま3時間たったら（または送れなかったら）、相手がつながった時に送り直す（最大4回）。 */
+  var STORY_TTL=24*3600*1000, STORY_PART=1900000, STORY_VMAX=50*1024*1024, STORY_VSEC=60, STORY_IMAX=1920, STORY_IBYTES=1800000, STORY_PHOTO_MS=5000;
+  var stMeta={}, stURL={}, stLock=Promise.resolve(), stDBp=null, stLoaded=false, stLoading=null;
+  function stKey(from,sid){ return String(from)+'|'+String(sid); }
+  function stDB(){
+    if(stDBp) return stDBp;
+    stDBp=new Promise(function(res,rej){
+      var r=indexedDB.open('zg-story',1);
+      r.onupgradeneeded=function(){ var d=r.result; if(!d.objectStoreNames.contains('m')) d.createObjectStore('m'); if(!d.objectStoreNames.contains('p')) d.createObjectStore('p'); };
+      r.onsuccess=function(){ res(r.result); }; r.onerror=function(){ stDBp=null; rej(r.error||new Error('idb')); };
+    });
+    return stDBp;
+  }
+  function stReq(store,mode,fn){
+    return stDB().then(function(db){ return new Promise(function(res,rej){
+      var tx=db.transaction(store,mode), rq=fn(tx.objectStore(store));
+      tx.oncomplete=function(){ res(rq?rq.result:undefined); }; tx.onerror=tx.onabort=function(){ rej(tx.error||new Error('idb')); };
+    }); });
+  }
+  async function stEnc(bytes){ var k=Net.key; if(!k||!privateReady()) throw new Error('nokey'); var iv=randFrom(12); var ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv:iv},k,bytes)); var o=new Uint8Array(12+ct.length); o.set(iv,0); o.set(ct,12); return o; }
+  async function stDec(buf){ var k=Net.key; if(!k||!privateReady()) throw new Error('nokey'); buf=new Uint8Array(buf); return new Uint8Array(await crypto.subtle.decrypt({name:'AES-GCM',iv:buf.slice(0,12)},k,buf.slice(12))); }
+  function stLocked(fn){ var p=stLock.then(fn,fn); stLock=p.catch(function(){}); return p; }
+  async function stSaveMeta(x){
+    var k=stKey(x.from,x.sid); stMeta[k]=x;
+    var enc=await stEnc(new TextEncoder().encode(JSON.stringify(x)));
+    await stReq('m','readwrite',function(os){ return os.put({at:x.at||Date.now(),e:enc},k); });
+  }
+  async function stDropData(x){
+    var k=stKey(x.from,x.sid); delete stMeta[k]; stForget(k);
+    try{ await stReq('m','readwrite',function(os){ return os.delete(k); }); }catch(e){}
+    try{ await stReq('p','readwrite',function(os){ return os.delete(IDBKeyRange.bound(k+'|',k+'|￿')); }); }catch(e){}
+  }
+  function stForget(k){ if(stURL[k]){ if(stURL[k].indexOf('blob:')===0) try{ URL.revokeObjectURL(stURL[k]); }catch(e){} delete stURL[k]; } }
+  function stLoad(){
+    if(stLoaded) return Promise.resolve(true);
+    if(stLoading) return stLoading;
+    if(!Net.key||!privateReady()) return Promise.resolve(false);
+    stLoading=(async function(){
+      try{
+        var keys=await stReq('m','readonly',function(os){ return os.getAllKeys(); })||[];
+        var vals=await stReq('m','readonly',function(os){ return os.getAll(); })||[];
+        for(var i=0;i<vals.length;i++){
+          var key=keys[i];
+          try{ var x=JSON.parse(new TextDecoder().decode(await stDec(vals[i].e))); if(x&&x.sid) stMeta[key]=x; }
+          catch(e){ try{ await stReq('m','readwrite',function(os){ return os.delete(key); }); }catch(e2){} }   /* 別の部屋の鍵の分は読めないので消す */
+        }
+        stLoaded=true;
+      }catch(e){}
+      stLoading=null; stSweep(); stPaint(); return stLoaded;
+    })();
+    return stLoading;
+  }
+  function stSweep(){
+    var now=Date.now();
+    Object.keys(stMeta).forEach(function(k){ var x=stMeta[k]; if(x&&now-(x.at||0)>STORY_TTL+(x.del?3600000:0)) stDropData(x); });
+  }
+  function stList(from){
+    var now=Date.now();
+    return Object.keys(stMeta).map(function(k){ return stMeta[k]; })
+      .filter(function(x){ return x&&from&&x.from===from&&!x.del&&x.kind&&now-x.at<STORY_TTL; })
+      .sort(function(a,b){ return a.at-b.at; });
+  }
+  function stAgo(at){ var m=Math.max(0,Math.floor((Date.now()-at)/60000)); return m<1?'今':(m<60?m+'分':Math.floor(m/60)+'時間'); }
+  function stValidSid(s){ return typeof s==='string'&&/^[0-9a-f]{8,32}$/.test(s); }
+  function stContrast(c){ var n=parseInt(String(c).slice(1),16), r=(n>>16)&255, g=(n>>8)&255, b=n&255; return (0.299*r+0.587*g+0.114*b)>165?'#000000':'#ffffff'; }
+  function stCleanOv(a){
+    if(!Array.isArray(a)) return [];
+    return a.slice(0,12).map(function(o){
+      o=o||{}; var t=o.t==='e'?'e':'x', c=String(o.c||'#ffffff'); if(!/^#[0-9a-fA-F]{6}$/.test(c)) c='#ffffff';
+      var cl=function(v,a,b,d){ v=+v; return isFinite(v)?Math.max(a,Math.min(b,v)):d; };
+      return {t:t,v:String(o.v||'').slice(0,t==='e'?16:120),c:c,b:o.b?1:0,x:cl(o.x,0,1,.5),y:cl(o.y,0,1,.5),s:cl(o.s,.3,4,1)};
+    }).filter(function(o){ return o.v.trim(); });
+  }
+  /* --- 文字・スタンプ（載せ物）。ステージの幅に対する割合で置くので、2台で同じ位置に出る --- */
+  function stOvEl(o){
+    var d=document.createElement('div'); d.className='zst-ov '+(o.t==='e'?'zst-ov-e':'zst-ov-x');
+    var sp=document.createElement('span'); sp.textContent=o.v; d.appendChild(sp); stOvPlace(d,o); return d;
+  }
+  function stOvPlace(d,o){
+    d.style.left=(o.x*100)+'%'; d.style.top=(o.y*100)+'%'; d.style.setProperty('--s',String(o.s));
+    var sp=d.firstChild;
+    if(o.t==='x'&&sp){ sp.textContent=o.v; sp.style.color=o.b?stContrast(o.c):o.c; sp.style.background=o.b?o.c:'transparent'; sp.classList.toggle('bg',!!o.b); }
+  }
+  function stFitStage(stage,reserveTop,reserveBottom){
+    var W=window.innerWidth, H=window.innerHeight-(reserveTop||0)-(reserveBottom||0);
+    var w=Math.min(W,Math.floor(H*9/16)); if(w<200) w=Math.min(W,200);
+    stage.style.width=w+'px'; stage.style.height=Math.round(w*16/9)+'px'; stage.style.setProperty('--w',w+'px');
+    return w;
+  }
+  async function stBytes(x){
+    var k=stKey(x.from,x.sid), parts=[], total=0;
+    for(var i=0;i<x.n;i++){ var key=k+'|'+i; var enc=await stReq('p','readonly',function(os){ return os.get(key); }); if(!enc) return null; var b=await stDec(enc); parts.push(b); total+=b.length; }
+    var out=new Uint8Array(total), p=0; parts.forEach(function(b){ out.set(b,p); p+=b.length; }); return out;
+  }
+  function stPlayMime(x){ var m=String(x.mime||''); return m==='video/quicktime'?'video/mp4':m; }
+  async function stMediaURL(x){
+    var k=stKey(x.from,x.sid); if(stURL[k]) return stURL[k];
+    var b=await stBytes(x); if(!b) return '';
+    stURL[k]=x.kind==='vid'?URL.createObjectURL(new Blob([b],{type:stPlayMime(x)||'video/mp4'})):bytesDataURL(b,x.mime||'image/jpeg');
+    return stURL[k];
+  }
+  /* --- 送る --- */
+  function stSendNet(x,bytes){
+    if(!privateScope()) return Promise.resolve(false);
+    var n=x.n, fails=0, done=0;
+    try{ Net.send({t:'story',sid:x.sid,at:x.at,kind:x.kind,mime:x.mime,size:x.size,pc:n,dur:x.dur||0,ov:x.ov||[]});   /* 分けた数は pc（n は封筒の番号に使われている） */ }catch(e){ fails++; }
+    return new Promise(function(res){
+      for(var i=0;i<n;i++){ (function(i){
+        var fin=false;
+        var cb=function(ok){ if(fin) return; fin=true; if(!ok) fails++; done++; if(done===n) res(fails===0); };
+        var part=bytes.subarray(i*STORY_PART,Math.min(bytes.length,(i+1)*STORY_PART));
+        var env=0; try{ env=Net.sendFile({t:'story-part',sid:x.sid,i:i,pc:n,at:x.at},part,cb); }catch(e){}
+        if(!env) cb(false);
+      })(i); }
+    });
+  }
+  async function stPost(kind,mime,bytes,dur,ov){
+    if(!privateScope()){ toast('相手とつながってから投稿してください。'); return false; }
+    var x={from:S.me.id,sid:toHex(randFrom(8)),at:Date.now(),kind:kind,mime:mime,size:bytes.length,n:Math.max(1,Math.ceil(bytes.length/STORY_PART)),dur:dur||0,ov:stCleanOv(ov),got:[],complete:true,mine:true,acked:false,sentAt:Date.now(),tries:1};
+    var k=stKey(x.from,x.sid);
+    for(var i=0;i<x.n;i++){ var enc=await stEnc(bytes.subarray(i*STORY_PART,(i+1)*STORY_PART)); var key=k+'|'+i; await stReq('p','readwrite',function(os){ return os.put(enc,key); }); }
+    await stSaveMeta(x); stPaint();
+    toast(x.n>1?'ストーリーを送っています（'+x.n+'個に分けて送ります）…':'ストーリーを送っています…');
+    var ok=await stSendNet(x,bytes);
+    if(!ok){ x.sentAt=0; try{ await stSaveMeta(x); }catch(e){} toast('ストーリーの一部を送れませんでした。つながったら自動で送りなおします。'); }
+    else toast('ストーリーを投稿しました。');
+    return true;
+  }
+  var stResending=false;
+  async function stResend(){
+    if(stResending||!privateReady()) return; stResending=true;
+    try{
+      await stLoad();
+      var now=Date.now();
+      var mine=stList(S.me&&S.me.id).filter(function(x){ return !x.acked&&(x.tries||0)<4&&(!x.sentAt||now-x.sentAt>3*3600*1000)&&now-x.at<STORY_TTL-600000; });
+      for(var j=0;j<mine.length;j++){
+        var x=mine[j], bytes=await stBytes(x); if(!bytes) continue;
+        x.tries=(x.tries||0)+1; x.sentAt=Date.now(); await stSaveMeta(x);
+        var ok=await stSendNet(x,bytes); if(!ok){ x.sentAt=0; await stSaveMeta(x); }
+      }
+    }catch(e){}
+    stResending=false;
+  }
+  async function stDeleteMine(x){
+    try{ Net.send({t:'story-del',sid:x.sid}); }catch(e){}
+    var tomb={from:x.from,sid:x.sid,at:x.at,del:true};
+    await stDropData(x); try{ await stSaveMeta(tomb); }catch(e){}
+    stPaint();
+  }
+  /* --- 受け取る（Net.process の switch から呼ぶ。false＝あとでやり直す） --- */
+  async function storyRecvHeader(m){
+    if(!privateIncoming(m)) return false;
+    if(!stValidSid(m.sid)) return true;
+    var at=+m.at; if(!(at>0)||Date.now()-at>STORY_TTL||at>Date.now()+600000) return true;
+    var kind=m.kind==='vid'?'vid':(m.kind==='img'?'img':''); if(!kind) return true;
+    var n=m.pc|0, size=m.size|0; if(n<1||n>40||size<1||size>STORY_VMAX+STORY_PART) return true;
+    var mime=String(m.mime||''); if(!/^(image\/(jpeg|webp|png)|video\/(mp4|webm|quicktime))$/.test(mime)) mime=kind==='vid'?'video/mp4':'image/jpeg';
+    if(!(await stLoad())) return false;
+    return stLocked(async function(){
+      var k=stKey(m.from,m.sid), x=stMeta[k]||{from:m.from,sid:m.sid,got:[]};
+      if(x.del||x.complete) return true;
+      x.at=at; x.kind=kind; x.mime=mime; x.size=size; x.n=n; x.dur=Math.min(STORY_VSEC+1,Math.max(0,+m.dur||0)); x.ov=stCleanOv(m.ov);
+      await stSaveMeta(x); await stCheck(x); stPaint(); return true;
+    });
+  }
+  async function storyRecvPart(m){
+    if(!privateIncoming(m)) return false;
+    if(!stValidSid(m.sid)) return true;
+    var i=m.i|0, n=m.pc|0; if(i<0||n<1||n>40||i>=n) return true;
+    var at=+m.at; if(at>0&&Date.now()-at>STORY_TTL) return true;
+    if(!(await stLoad())) return false;
+    var k=stKey(m.from,m.sid), x0=stMeta[k];
+    if(x0&&(x0.del||x0.complete||(x0.got||[]).indexOf(i)>=0)) return true;
+    if(!m.__att) return true;
+    var bytes=await Net.fetchFile(m.__att,m); if(!bytes) return false;
+    if(!privateIncoming(m)) return false;
+    var enc=await stEnc(bytes), key=k+'|'+i;
+    await stReq('p','readwrite',function(os){ return os.put(enc,key); });
+    return stLocked(async function(){
+      var x=stMeta[k]||{from:m.from,sid:m.sid,got:[],n:n,at:at||Date.now()};
+      if(x.del) return true;
+      x.got=x.got||[]; if(x.got.indexOf(i)<0) x.got.push(i); if(!x.n) x.n=n;
+      await stSaveMeta(x); await stCheck(x); stPaint(); return true;
+    });
+  }
+  async function stCheck(x){
+    if(x.complete||!x.kind||!x.n||(x.got||[]).length<x.n) return;
+    x.complete=true; await stSaveMeta(x);
+    try{ Net.send({t:'story-ack',sid:x.sid}); }catch(e){}
+    if(stView&&stView.from===x.from) stViewRefresh();
+  }
+  async function storyRecvSig(m){
+    if(!privateIncoming(m)) return false;
+    if(!stValidSid(m.sid)) return true;
+    if(!(await stLoad())) return false;
+    return stLocked(async function(){
+      if(m.t==='story-del'){
+        var x=stMeta[stKey(m.from,m.sid)], tomb={from:m.from,sid:m.sid,at:(x&&x.at)||Date.now(),del:true};
+        await stDropData(tomb); await stSaveMeta(tomb); stPaint(); if(stView&&stView.from===m.from) stViewRefresh(); return true;
+      }
+      var y=stMeta[stKey(S.me.id,m.sid)]; if(!y||y.del) return true;
+      if(m.t==='story-ack') y.acked=true;
+      if(m.t==='story-seen'){ y.acked=true; var sa=+m.at; y.seenAt=(sa>0&&sa<Date.now()+600000)?sa:Date.now(); }
+      if(m.t==='story-like'){ y.acked=true; y.liked=true; }
+      await stSaveMeta(y); if(stView&&stView.mine) stViewFoot(); return true;
+    });
+  }
+  /* --- 上の輪っか（自分＝＋付き、相手＝新しいのがあると色つき） --- */
+  var stInput=document.createElement('input'); stInput.type='file'; stInput.accept='image/*,video/*'; stInput.hidden=true; stInput.id='zg-st-file'; document.body.appendChild(stInput);
+  (function(){
+    var hd=document.querySelector('header.bar'), brand=hd&&hd.querySelector('.brand'); if(!hd||!brand) return;
+    var bar=document.createElement('div'); bar.id='zg-st-bar';
+    bar.innerHTML='<button type="button" id="zg-st-me" class="zst" aria-label="自分のストーリー"><span class="zst-ring"><span class="zst-av"></span></span><b class="zst-plus" aria-hidden="true">＋</b></button>'
+      +'<button type="button" id="zg-st-peer" class="zst" aria-label="相手のストーリー" hidden><span class="zst-ring"><span class="zst-av"></span></span></button>';
+    hd.insertBefore(bar,brand);
+    $('#zg-st-me').addEventListener('click',function(e){
+      e.stopPropagation();
+      if(!privateReady()){ toast('相手とつながってから使えます。'); return; }
+      var plus=e.target&&e.target.closest&&e.target.closest('.zst-plus');
+      if(!plus&&stList(S.me.id).length) stOpenViewer(S.me.id); else stPick();
+    });
+    $('#zg-st-peer').addEventListener('click',function(e){ e.stopPropagation(); stOpenViewer(S.opp&&S.opp.id); });
+  })();
+  function stPaint(){
+    try{
+      var bm=$('#zg-st-me'), bp=$('#zg-st-peer'); if(!bm||!bp) return;
+      var me=stList(S.me&&S.me.id), pe=stList(S.opp&&S.opp.id);
+      fillAv(bm.querySelector('.zst-av'),PROF.me,'🐷'); fillAv(bp.querySelector('.zst-av'),PROF.peer,'🐱');
+      bm.classList.toggle('has',me.length>0);
+      bp.hidden=!pe.length; bp.classList.toggle('has',pe.length>0); bp.classList.toggle('seen',pe.length>0&&pe.every(function(x){ return x.seen; }));
+    }catch(e){}
+  }
+  function stPick(){ try{ stInput.value=''; window.__zgVoiceOn=true; setTimeout(function(){ window.__zgVoiceOn=false; },1500); stInput.click(); }catch(e){} }
+  stInput.addEventListener('change',function(){ var f=stInput.files&&stInput.files[0]; if(f) stOpenEditor(f); });
+  /* --- 作る画面（編集） --- */
+  var stEd=null;
+  var ST_COLORS=['#ffffff','#000000','#ff3b30','#ff9500','#ffcc00','#34c759','#00c7be','#007aff','#af52de','#ff2d55'];
+  var ST_EMOJI=['😍','🥰','😘','😂','🤣','😊','😎','🥺','😭','😴','🤔','😳','🤤','😋','👍','🙏','👏','💪','✌️','👀','❤️','💕','💖','💯','🔥','✨','🎉','🌸','🌙','☀️','⭐','🌈','🍰','🍜','☕','🍺','🐶','🐱','🐰','🍀','🎵','📍','🏠','💤'];
+  function stBuild(id,html){ var d=document.createElement('div'); d.id=id; d.className='zst-full'; d.hidden=true; d.innerHTML=html; document.body.appendChild(d); return d; }
+  function stImgPrep(file){
+    return new Promise(function(res){
+      var fr=new FileReader();
+      fr.onerror=function(){ res(null); };
+      fr.onload=function(){
+        var im=new Image();
+        im.onerror=function(){ res(null); };
+        im.onload=function(){
+          try{
+            var w=im.naturalWidth, h=im.naturalHeight, sc=Math.min(1,STORY_IMAX/Math.max(w,h)), web=canWebP(), qs=[0.9,0.84,0.78,0.7], best=null;
+            for(var step=0;step<5;step++){
+              var c=document.createElement('canvas'); c.width=Math.max(1,Math.round(w*sc)); c.height=Math.max(1,Math.round(h*sc));
+              var ctx=c.getContext('2d'); ctx.fillStyle='#000'; ctx.fillRect(0,0,c.width,c.height); ctx.drawImage(im,0,0,c.width,c.height);
+              for(var q=0;q<qs.length;q++){ var u=c.toDataURL(web?'image/webp':'image/jpeg',qs[q]); best=u; if(Math.floor((u.length-u.indexOf(',')-1)*3/4)<=STORY_IBYTES){ res(u); return; } }
+              sc*=0.8;
+            }
+            res(best);
+          }catch(e){ res(null); }
+        };
+        im.src=String(fr.result||'');
+      };
+      fr.readAsDataURL(file);
+    });
+  }
+  function stOpenEditor(file){
+    var type=String(file.type||''), isVid=/^video\//.test(type), isImg=/^image\//.test(type);
+    if(!isVid&&!isImg){ toast('写真か動画を選んでください。'); return; }
+    if(isVid&&file.size>STORY_VMAX){ toast('動画が大きすぎます（50MBまで）。短くしてから選んでください。'); return; }
+    var box=$('#zg-st-edit')||stBuild('zg-st-edit',
+      '<div class="zst-stage"><div class="zst-bg"></div><div class="zst-media"></div><div class="zst-ovs"></div></div>'
+      +'<div class="zst-top"><button type="button" class="zst-btn zst-x" aria-label="閉じる">✕</button><span class="zst-sp"></span><button type="button" class="zst-btn zst-aa" aria-label="文字">Aa</button><button type="button" class="zst-btn zst-emo" aria-label="スタンプ">☺</button></div>'
+      +'<div class="zst-trash" aria-hidden="true">🗑</div>'
+      +'<div class="zst-bottom"><button type="button" class="zst-post"><span class="zst-av"></span>ストーリーズ</button></div>'
+      +'<div class="zst-panel zst-textpanel" hidden><div class="zst-tp-top"><button type="button" class="zst-btn zst-bgtg" aria-label="背景">A</button><span class="zst-sp"></span><button type="button" class="zst-done">完了</button></div><textarea class="zst-ta" maxlength="120" rows="2" placeholder="文字を入力"></textarea><div class="zst-colors"></div></div>'
+      +'<div class="zst-panel zst-emopanel" hidden><div class="zst-emogrid"></div></div>');
+    stEd={box:box,kind:isVid?'vid':'img',file:file,ov:[],url:'',dur:0,mime:isVid?(type||'video/mp4'):'',data:'',editing:-1,tp:{c:'#ffffff',b:0}};
+    var stage=box.querySelector('.zst-stage'), media=box.querySelector('.zst-media'), bg=box.querySelector('.zst-bg');
+    media.innerHTML=''; bg.style.backgroundImage=''; box.querySelector('.zst-ovs').innerHTML='';
+    fillAv(box.querySelector('.zst-post .zst-av'),PROF.me,'🐷');
+    box.hidden=false; document.body.classList.add('zst-open');
+    stFitStage(stage,56,72);
+    appNav.open('zst-edit',stCloseEditor,function(){ return !!stEd; });
+    if(isVid){
+      var v=document.createElement('video'); v.muted=true; v.loop=true; v.autoplay=true; v.setAttribute('playsinline',''); v.setAttribute('muted','');
+      stEd.url=URL.createObjectURL(file); v.src=stEd.url;
+      v.addEventListener('loadedmetadata',function(){
+        if(!stEd) return; stEd.dur=v.duration||0;
+        if(isFinite(v.duration)&&v.duration>STORY_VSEC+0.5){ toast('動画は60秒までです。短くしてから選んでください。'); stCloseEditor(); }
+      });
+      v.addEventListener('error',function(){ toast('この動画はこのスマホで再生できない形式です。相手のスマホでも再生できないことがあります。'); });
+      media.appendChild(v); try{ var pp=v.play(); if(pp&&pp.catch) pp.catch(function(){}); }catch(e){}
+    }else{
+      media.innerHTML='<div class="zst-wait">準備しています…</div>';
+      stImgPrep(file).then(function(u){
+        if(!stEd||stEd.file!==file) return;
+        if(!u){ toast('写真を読み込めませんでした。'); stCloseEditor(); return; }
+        stEd.data=u; stEd.mime=u.slice(5,u.indexOf(';'));
+        media.innerHTML=''; var im=document.createElement('img'); im.alt=''; im.src=u; media.appendChild(im);
+        bg.style.backgroundImage='url("'+u+'")';
+      });
+    }
+    stEdWire(box);
+  }
+  function stCloseEditor(){
+    if(!stEd) return;
+    var box=stEd.box; if(stEd.url) try{ URL.revokeObjectURL(stEd.url); }catch(e){}
+    var v=box.querySelector('video'); if(v) try{ v.pause(); v.removeAttribute('src'); v.load(); }catch(e){}
+    box.querySelector('.zst-media').innerHTML=''; box.hidden=true; stEd=null;
+    if(!stView) document.body.classList.remove('zst-open');
+    appNav.dismiss('zst-edit');
+  }
+  function stEdRender(){
+    if(!stEd) return; var ovs=stEd.box.querySelector('.zst-ovs'); ovs.innerHTML='';
+    stEd.ov.forEach(function(o,i){ var d=stOvEl(o); d.dataset.i=String(i); ovs.appendChild(d); });
+  }
+  function stEdWire(box){
+    if(box.__wired) return; box.__wired=true;
+    var stage=box.querySelector('.zst-stage'), trash=box.querySelector('.zst-trash'), tp=box.querySelector('.zst-textpanel'), ep=box.querySelector('.zst-emopanel'), ta=box.querySelector('.zst-ta');
+    var cols=box.querySelector('.zst-colors');
+    ST_COLORS.forEach(function(c){ var b=document.createElement('button'); b.type='button'; b.className='zst-col'; b.style.background=c; b.dataset.c=c; b.setAttribute('aria-label','色'); cols.appendChild(b); });
+    var grid=box.querySelector('.zst-emogrid');
+    ST_EMOJI.forEach(function(e){ var b=document.createElement('button'); b.type='button'; b.textContent=e; grid.appendChild(b); });
+    function tpPaint(){ ta.style.setProperty('color',stEd.tp.b?stContrast(stEd.tp.c):stEd.tp.c,'important'); ta.style.setProperty('background',stEd.tp.b?stEd.tp.c:'transparent','important'); ta.style.setProperty('-webkit-text-fill-color',stEd.tp.b?stContrast(stEd.tp.c):stEd.tp.c,'important'); [].forEach.call(cols.children,function(b){ b.classList.toggle('on',b.dataset.c===stEd.tp.c); }); box.querySelector('.zst-bgtg').classList.toggle('on',!!stEd.tp.b); }
+    function openText(i){
+      if(!stEd) return; stEd.editing=i; var o=i>=0?stEd.ov[i]:null;
+      stEd.tp={c:o?o.c:'#ffffff',b:o?o.b:0}; ta.value=o?o.v:''; tpPaint(); tp.hidden=false; ep.hidden=true;
+      setTimeout(function(){ try{ ta.focus(); }catch(e){} },30);
+    }
+    function closeText(){
+      if(!stEd) return; var v=ta.value.replace(/\s+$/,'');
+      if(stEd.editing>=0){ if(v.trim()){ var o=stEd.ov[stEd.editing]; o.v=v; o.c=stEd.tp.c; o.b=stEd.tp.b; } else stEd.ov.splice(stEd.editing,1); }
+      else if(v.trim()&&stEd.ov.length<12) stEd.ov.push({t:'x',v:v,c:stEd.tp.c,b:stEd.tp.b,x:.5,y:.42,s:1});
+      stEd.editing=-1; tp.hidden=true; try{ ta.blur(); }catch(e){} stEdRender();
+    }
+    box.querySelector('.zst-x').addEventListener('click',function(){ stCloseEditor(); });
+    box.querySelector('.zst-aa').addEventListener('click',function(){ openText(-1); });
+    box.querySelector('.zst-emo').addEventListener('click',function(){ ep.hidden=!ep.hidden; tp.hidden=true; });
+    box.querySelector('.zst-done').addEventListener('click',closeText);
+    box.querySelector('.zst-bgtg').addEventListener('click',function(){ stEd.tp.b=stEd.tp.b?0:1; tpPaint(); });
+    cols.addEventListener('click',function(e){ var b=e.target.closest('.zst-col'); if(!b) return; stEd.tp.c=b.dataset.c; tpPaint(); });
+    grid.addEventListener('click',function(e){ var b=e.target.closest('button'); if(!b||!stEd) return; if(stEd.ov.length<12) stEd.ov.push({t:'e',v:b.textContent,c:'#ffffff',b:0,x:.5,y:.5,s:1}); ep.hidden=true; stEdRender(); });
+    box.querySelector('.zst-post').addEventListener('click',async function(){
+      if(!stEd) return; var ed=stEd, btn=this;
+      if(ed.kind==='img'&&!ed.data){ toast('写真を準備しています。少し待ってください。'); return; }
+      if(ed.kind==='vid'&&isFinite(ed.dur)&&ed.dur>STORY_VSEC+0.5){ toast('動画は60秒までです。'); return; }
+      btn.disabled=true;
+      try{
+        var bytes=ed.kind==='img'?dataURLBytes(ed.data):new Uint8Array(await ed.file.arrayBuffer());
+        var ov=ed.ov.slice(), kind=ed.kind, mime=ed.mime, dur=Math.min(STORY_VSEC,ed.dur||0);
+        stCloseEditor();
+        await stPost(kind,mime,bytes,dur,ov);
+      }catch(e){ toast('投稿できませんでした。もう一度お試しください。'); }
+      btn.disabled=false;
+    });
+    /* 載せ物を指で動かす・2本指で大きさを変える・下のごみ箱へ運ぶと消す・軽く押すと文字を直す */
+    var pts={}, drag=null;
+    stage.addEventListener('pointerdown',function(e){
+      var el=e.target.closest&&e.target.closest('.zst-ov'); if(!el||!stEd) return;
+      e.preventDefault(); try{ stage.setPointerCapture(e.pointerId); }catch(x){}
+      pts[e.pointerId]={x:e.clientX,y:e.clientY};
+      var i=+el.dataset.i, o=stEd.ov[i]; if(!o) return;
+      var ids=Object.keys(pts);
+      if(!drag) drag={i:i,el:el,o:o,sx:e.clientX,sy:e.clientY,ox:o.x,oy:o.y,os:o.s,t:Date.now(),moved:false,pinch:0};
+      else if(ids.length===2){ var a=pts[ids[0]],b=pts[ids[1]]; drag.pinch=Math.hypot(a.x-b.x,a.y-b.y)||1; drag.os=drag.o.s; }
+    });
+    stage.addEventListener('pointermove',function(e){
+      if(!drag||!pts[e.pointerId]) return;
+      pts[e.pointerId]={x:e.clientX,y:e.clientY};
+      var r=stage.getBoundingClientRect(), ids=Object.keys(pts), o=drag.o;
+      if(ids.length>=2&&drag.pinch){ var a=pts[ids[0]],b=pts[ids[1]]; o.s=Math.max(.3,Math.min(4,drag.os*(Math.hypot(a.x-b.x,a.y-b.y)/drag.pinch))); drag.moved=true; }
+      else{
+        var dx=e.clientX-drag.sx, dy=e.clientY-drag.sy; if(Math.abs(dx)+Math.abs(dy)>6) drag.moved=true;
+        o.x=Math.max(0,Math.min(1,drag.ox+dx/r.width)); o.y=Math.max(0,Math.min(1,drag.oy+dy/r.height));
+        trash.classList.add('on'); var tr=trash.getBoundingClientRect();
+        drag.over=(e.clientX>tr.left-20&&e.clientX<tr.right+20&&e.clientY>tr.top-20&&e.clientY<tr.bottom+20); trash.classList.toggle('hot',!!drag.over);
+      }
+      stOvPlace(drag.el,o);
+    });
+    function up(e){
+      if(!pts[e.pointerId]) return; delete pts[e.pointerId];
+      if(!drag||Object.keys(pts).length) return;
+      var d=drag; drag=null; trash.classList.remove('on','hot');
+      if(d.over){ stEd.ov.splice(d.i,1); stEdRender(); return; }
+      if(!d.moved&&Date.now()-d.t<350&&d.o.t==='x') openText(d.i);
+    }
+    stage.addEventListener('pointerup',up); stage.addEventListener('pointercancel',up);
+    window.addEventListener('resize',function(){ if(stEd) stFitStage(stage,56,72); });
+  }
+  /* --- 見る画面 --- */
+  var stView=null;
+  function stViewBox(){
+    return $('#zg-st-view')||stBuild('zg-st-view',
+      '<div class="zst-stage"><div class="zst-bg"></div><div class="zst-media"></div><div class="zst-ovs"></div>'
+      +'<div class="zst-bars"></div><div class="zst-head"><span class="zst-av"></span><b class="zst-nm"></b><span class="zst-ago"></span><span class="zst-sp"></span><button type="button" class="zst-btn zst-snd" aria-label="音" hidden>🔇</button><button type="button" class="zst-btn zst-close" aria-label="閉じる">✕</button></div>'
+      +'<div class="zst-wait" hidden>読み込んでいます…</div></div>'
+      +'<div class="zst-foot zst-foot-peer"><input type="text" class="zst-reply" maxlength="300" placeholder="メッセージを送信" enterkeyhint="send" autocomplete="off"><button type="button" class="zst-btn zst-like" aria-label="いいね">♡</button><button type="button" class="zst-btn zst-send" aria-label="送信" hidden>➤</button></div>'
+      +'<div class="zst-foot zst-foot-me"><span class="zst-seen"></span><span class="zst-sp"></span><button type="button" class="zst-btn zst-add" aria-label="追加">＋</button><button type="button" class="zst-btn zst-del" aria-label="削除">🗑</button></div>');
+  }
+  function stOpenViewer(from){
+    if(!from) return;
+    var items=stList(from); if(!items.length) return;
+    var mine=(from===S.me.id), idx=0;
+    if(!mine){ for(var i=0;i<items.length;i++){ if(!items[i].seen){ idx=i; break; } } }
+    var box=stViewBox(); stViewWire(box);
+    stView={box:box,from:from,mine:mine,items:items,idx:-1,t0:0,el:0,paused:false,dur:STORY_PHOTO_MS,raf:0,muted:false};
+    box.classList.toggle('mine',mine); box.hidden=false; document.body.classList.add('zst-open');
+    stFitStage(box.querySelector('.zst-stage'),0,mine?60:64);
+    fillAv(box.querySelector('.zst-head .zst-av'),mine?PROF.me:PROF.peer,mine?'🐷':'🐱');
+    box.querySelector('.zst-nm').textContent=mine?'あなたのストーリー':(peerName()||'相手');
+    appNav.open('zst-view',stCloseViewer,function(){ return !!stView; });
+    stShow(idx);
+    var loop=function(){ if(!stView) return; stTick(); stView.raf=requestAnimationFrame(loop); }; stView.raf=requestAnimationFrame(loop);
+  }
+  function stCloseViewer(){
+    if(!stView) return; var box=stView.box; cancelAnimationFrame(stView.raf);
+    var v=box.querySelector('video'); if(v) try{ v.pause(); v.removeAttribute('src'); v.load(); }catch(e){}
+    box.querySelector('.zst-media').innerHTML=''; box.hidden=true; stView=null;
+    if(!stEd) document.body.classList.remove('zst-open');
+    try{ box.querySelector('.zst-reply').blur(); }catch(e){}
+    appNav.dismiss('zst-view'); stPaint();
+  }
+  function stBars(){
+    var bars=stView.box.querySelector('.zst-bars'); bars.innerHTML='';
+    stView.items.forEach(function(x,i){ var b=document.createElement('div'); b.className='zst-bar'; b.innerHTML='<i></i>'; if(i<stView.idx) b.firstChild.style.width='100%'; bars.appendChild(b); });
+  }
+  async function stShow(i){
+    if(!stView) return; var V=stView, box=V.box; if(i<0) i=0; if(i>=V.items.length){ stCloseViewer(); return; }
+    V.idx=i; V.el=0; V.t0=Date.now(); V.paused=false; V.ready=false; var x=V.items[i];
+    stBars(); box.querySelector('.zst-ago').textContent=stAgo(x.at);
+    var media=box.querySelector('.zst-media'), ovs=box.querySelector('.zst-ovs'), wait=box.querySelector('.zst-wait'), bg=box.querySelector('.zst-bg'), snd=box.querySelector('.zst-snd');
+    ovs.innerHTML=''; bg.style.backgroundImage=''; snd.hidden=true;
+    var old=media.querySelector('video'); if(old) try{ old.pause(); }catch(e){}
+    if(!x.complete){ media.innerHTML=''; wait.hidden=false; wait.textContent='受け取っています…（'+((x.got||[]).length)+'/'+(x.n||'?')+'）'; return; }
+    wait.hidden=false; wait.textContent='読み込んでいます…';
+    var url=''; try{ url=await stMediaURL(x); }catch(e){}
+    if(!stView||stView!==V||V.idx!==i) return;
+    wait.hidden=true;
+    if(!url){ wait.hidden=false; wait.textContent='このストーリーを開けませんでした。'; return; }
+    (x.ov||[]).forEach(function(o){ ovs.appendChild(stOvEl(o)); });
+    if(x.kind==='vid'){
+      var v=media.querySelector('video');
+      if(!v){ media.innerHTML=''; v=document.createElement('video'); v.setAttribute('playsinline',''); v.playsInline=true; media.appendChild(v); v.addEventListener('ended',function(){ if(stView) stNext(); });
+        v.addEventListener('error',function(){ if(!stView) return; stView.ready=false; var w=stView.box.querySelector('.zst-wait'); w.hidden=false; w.textContent='この動画はこのスマホで再生できない形式です。右をタップすると次へ進みます。'; }); }
+      v.muted=V.muted; v.src=url; V.dur=(x.dur||15)*1000; snd.hidden=false; snd.textContent=V.muted?'🔇':'🔊';
+      v.addEventListener('loadedmetadata',function(){ if(stView===V&&isFinite(v.duration)&&v.duration>0) V.dur=v.duration*1000; },{once:true});
+      try{ var p=v.play(); if(p&&p.catch) p.catch(function(){ v.muted=true; V.muted=true; snd.textContent='🔇'; try{ v.play().catch(function(){}); }catch(e){} }); }catch(e){}
+    }else{
+      media.innerHTML=''; var im=document.createElement('img'); im.alt=''; im.src=url; media.appendChild(im); bg.style.backgroundImage='url("'+url+'")'; V.dur=STORY_PHOTO_MS;
+    }
+    V.t0=Date.now(); V.ready=true;
+    if(V.mine) stViewFoot();
+    else if(!x.seen){ x.seen=true; try{ await stSaveMeta(x); }catch(e){} try{ Net.send({t:'story-seen',sid:x.sid,at:Date.now()}); }catch(e){} stPaint(); }
+    var lk=box.querySelector('.zst-like'); if(lk){ lk.classList.toggle('on',!!x.likedByMe); lk.textContent=x.likedByMe?'♥':'♡'; }
+  }
+  function stTick(){
+    var V=stView; if(!V||!V.ready) return;
+    var x=V.items[V.idx]; if(!x) return;
+    var v=V.box.querySelector('.zst-media video'), p;
+    if(x.kind==='vid'&&v){ p=(v.duration&&isFinite(v.duration))?v.currentTime/v.duration:0; }
+    else{ var el=V.paused?V.el:V.el+(Date.now()-V.t0); p=el/V.dur; if(p>=1){ stNext(); return; } }
+    var bar=V.box.querySelectorAll('.zst-bar i')[V.idx]; if(bar) bar.style.width=Math.min(100,Math.max(0,p*100))+'%';
+  }
+  function stPause(on){
+    var V=stView; if(!V||V.paused===on) return; var v=V.box.querySelector('.zst-media video');
+    if(on){ V.el+=Date.now()-V.t0; V.paused=true; if(v) try{ v.pause(); }catch(e){} }
+    else{ V.t0=Date.now(); V.paused=false; if(v&&V.items[V.idx]&&V.items[V.idx].kind==='vid') try{ var p=v.play(); if(p&&p.catch) p.catch(function(){}); }catch(e){} }
+  }
+  function stNext(){ if(!stView) return; if(stView.idx+1<stView.items.length) stShow(stView.idx+1); else stCloseViewer(); }
+  function stPrev(){ if(!stView) return; stShow(Math.max(0,stView.idx-1)); }
+  function stViewRefresh(){
+    var V=stView; if(!V) return; var cur=V.items[V.idx], items=stList(V.from);
+    if(!items.length){ stCloseViewer(); return; }
+    V.items=items; var j=cur?items.findIndex(function(x){ return x.sid===cur.sid; }):-1;
+    if(j<0) stShow(Math.min(V.idx,items.length-1)); else{ V.idx=j; stBars(); if(!V.ready&&items[j].complete) stShow(j); }
+  }
+  function stViewFoot(){
+    var V=stView; if(!V||!V.mine) return; var x=V.items[V.idx]; if(!x) return;
+    var s=V.box.querySelector('.zst-seen');
+    s.textContent=x.seenAt?('👁 既読 '+fmtTime(x.seenAt)+(x.liked?'　♥':'')):(x.acked?'届きました（まだ見ていません）':(x.sentAt?'相手のスマホにまだ届いていません':'送れていません（つながったら送りなおします）'));
+  }
+  function stViewWire(box){
+    if(box.__wired) return; box.__wired=true;
+    var stage=box.querySelector('.zst-stage'), reply=box.querySelector('.zst-reply'), send=box.querySelector('.zst-send'), like=box.querySelector('.zst-like');
+    var down=null, holdT=0;
+    stage.addEventListener('pointerdown',function(e){
+      if(e.target.closest('.zst-head button')) return;
+      down={x:e.clientX,y:e.clientY,t:Date.now(),held:false};
+      clearTimeout(holdT); holdT=setTimeout(function(){ if(down){ down.held=true; stPause(true); } },220);
+    });
+    stage.addEventListener('pointerup',function(e){
+      clearTimeout(holdT); if(!down) return; var d=down; down=null;
+      if(d.held){ stPause(false); return; }
+      var dy=e.clientY-d.y, dx=e.clientX-d.x;
+      if(dy>80&&Math.abs(dy)>Math.abs(dx)){ stCloseViewer(); return; }
+      if(Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy)){ if(dx<0) stNext(); else stPrev(); return; }
+      var r=stage.getBoundingClientRect(); if(e.clientX-r.left<r.width/3) stPrev(); else stNext();
+    });
+    stage.addEventListener('pointercancel',function(){ clearTimeout(holdT); if(down&&down.held) stPause(false); down=null; });
+    box.querySelector('.zst-close').addEventListener('click',function(e){ e.stopPropagation(); stCloseViewer(); });
+    box.querySelector('.zst-snd').addEventListener('click',function(e){ e.stopPropagation(); if(!stView) return; stView.muted=!stView.muted; var v=box.querySelector('.zst-media video'); if(v){ v.muted=stView.muted; try{ v.play().catch(function(){}); }catch(x){} } this.textContent=stView.muted?'🔇':'🔊'; });
+    reply.addEventListener('focus',function(){ stPause(true); });
+    reply.addEventListener('blur',function(){ setTimeout(function(){ if(stView&&document.activeElement!==reply) stPause(false); },150); });
+    reply.addEventListener('input',function(){ var t=!!reply.value.trim(); send.hidden=!t; like.hidden=t; });
+    function doReply(){
+      var t=reply.value.trim(); if(!t||!stView) return;
+      queueChat('（ストーリーへの返信）\n'+t); reply.value=''; send.hidden=true; like.hidden=false; try{ reply.blur(); }catch(e){} toast('送信しました。');
+    }
+    send.addEventListener('click',doReply);
+    reply.addEventListener('keydown',function(e){ if(e.key==='Enter'&&!e.isComposing){ e.preventDefault(); doReply(); } });
+    like.addEventListener('click',async function(){
+      var V=stView; if(!V) return; var x=V.items[V.idx]; if(!x||x.likedByMe) return;
+      x.likedByMe=true; like.classList.add('on','pop'); like.textContent='♥'; setTimeout(function(){ like.classList.remove('pop'); },500);
+      try{ await stSaveMeta(x); }catch(e){}
+      try{ Net.send({t:'story-like',sid:x.sid}); }catch(e){}
+      queueChat('ストーリーに「いいね！」しました❤️');
+    });
+    box.querySelector('.zst-add').addEventListener('click',function(){ stCloseViewer(); stPick(); });
+    box.querySelector('.zst-del').addEventListener('click',async function(){
+      var V=stView; if(!V) return; var x=V.items[V.idx]; if(!x) return;
+      stPause(true); window.__zgVoiceOn=true; var ok=window.confirm('このストーリーを削除しますか？相手のスマホからも消えます。'); window.__zgVoiceOn=false;
+      if(!ok){ stPause(false); return; }
+      await stDeleteMine(x); stViewRefresh();
+    });
+    window.addEventListener('resize',function(){ if(stView) stFitStage(stage,0,stView.mine?60:64); });
+  }
+  /* 画面を離れたら閉じる（トークを隠す処理と同じ時に） */
+  document.addEventListener('visibilitychange',function(){ if(document.hidden){ stCloseViewer(); stCloseEditor(); } });
+  window.addEventListener('pagehide',function(){ stCloseViewer(); stCloseEditor(); });
+  setInterval(function(){ try{ if(!privateReady()) return; if(!stLoaded){ stLoad(); return; } stSweep(); stPaint(); }catch(e){} },15000);
+  setTimeout(function(){ try{ stLoad(); }catch(e){} },2500);
+  setInterval(function(){ try{ if(privateReady()&&(Net.open||Relay.up)) stResend(); }catch(e){} },300000);
+  window.__zgStory={list:stList,load:stLoad,meta:stMeta,post:stPost,open:stOpenViewer,close:stCloseViewer,editor:stOpenEditor,resend:stResend,paint:stPaint,sweep:stSweep,bytes:stBytes,save:stSaveMeta,cur:function(){ return stView&&stView.items[stView.idx]; }};
 })();
 </script>
 
@@ -14660,6 +15206,87 @@ html body #pane-chat #form-chat #btn-mic.zg-rec{background:#E53935!important;col
 @keyframes zgRec{50%{box-shadow:0 0 0 7px rgba(229,57,53,.22)}}
 html body #pane-chat #form-chat{grid-template-columns:minmax(0,1fr) 52px!important}
 html body #pane-chat .line-composer #btn-chat-send{width:52px!important;min-width:52px!important}
+/* ===== v515: ストーリー（インスタと同じ形） ===== */
+html body:not(.in-play) #zg-st-bar{display:none!important}
+#zg-st-bar{display:flex;align-items:center;gap:6px;flex:none;margin-right:2px}
+#zg-st-bar .zst{position:relative;width:36px;height:36px;padding:0;border:0;background:transparent;display:grid;place-items:center;-webkit-tap-highlight-color:transparent}
+#zg-st-bar .zst[hidden]{display:none!important}
+#zg-st-bar .zst-ring{display:grid;place-items:center;width:36px;height:36px;border-radius:50%;padding:2px;box-sizing:border-box;background:transparent}
+#zg-st-bar .zst.has .zst-ring{background:conic-gradient(from 210deg,#FEDA75,#FA7E1E,#D62976,#962FBF,#4F5BD5,#FEDA75)}
+#zg-st-bar .zst.has.seen .zst-ring{background:#B9B3D9}
+#zg-st-bar .zst-av{width:100%;height:100%;border-radius:50%;box-sizing:border-box;border:2px solid #5B3FE0;background:#F4F1FF;display:grid;place-items:center;font-size:16px;line-height:1;overflow:hidden}
+#zg-st-bar .zst-av img{width:100%;height:100%;object-fit:cover}
+#zg-st-bar .zst-plus{position:absolute;right:-1px;bottom:-1px;width:15px;height:15px;border-radius:50%;background:#0095F6;color:#fff;font:900 11px/13px system-ui,sans-serif;text-align:center;border:1.5px solid #4B2ED6;box-sizing:border-box}
+@media (max-width:370px){ #zg-st-bar .zst,#zg-st-bar .zst-ring{width:32px;height:32px} #zg-st-bar{gap:4px} html body header.bar .brand .zb-txt>small{font-size:.56rem;letter-spacing:0} html body header.bar .brand>span.zb-peer{gap:5px!important} }
+body.zst-open{overflow:hidden!important}
+.zst-full{position:fixed;inset:0;z-index:2147483000;background:#000;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;touch-action:none;-webkit-user-select:none;user-select:none;font-family:system-ui,-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif}
+.zst-full[hidden]{display:none!important}
+.zst-stage{position:relative;overflow:hidden;border-radius:10px;background:#111;flex:none}
+.zst-bg{position:absolute;inset:-20px;background:center/cover no-repeat;filter:blur(22px) brightness(.6);transform:scale(1.1)}
+.zst-media{position:absolute;inset:0;display:grid;place-items:center}
+.zst-media img,.zst-media video{max-width:100%;max-height:100%;width:100%;height:100%;object-fit:contain;display:block}
+.zst-ovs{position:absolute;inset:0;pointer-events:none}
+.zst-ov{position:absolute;transform:translate(-50%,-50%) scale(var(--s,1));transform-origin:center;max-width:92%;text-align:center;white-space:pre-wrap;word-break:break-word;line-height:1.25}
+#zg-st-edit .zst-ovs{pointer-events:auto}
+#zg-st-edit .zst-ov{cursor:grab;touch-action:none}
+.zst-ov-x span{display:inline;font-weight:800;font-size:calc(var(--w,360px) * .068);text-shadow:0 1px 3px rgba(0,0,0,.35);padding:.06em .2em;border-radius:.25em;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+.zst-ov-x span.bg{text-shadow:none;padding:.12em .38em}
+.zst-ov-e span{font-size:calc(var(--w,360px) * .17);line-height:1}
+.zst-btn{width:40px;height:40px;border:0;border-radius:50%;background:rgba(0,0,0,.32);color:#fff;font:800 18px/1 system-ui,sans-serif;display:grid;place-items:center;padding:0;-webkit-tap-highlight-color:transparent}
+.zst-btn[hidden]{display:none!important}
+.zst-sp{flex:1}
+.zst-wait{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.55);padding:10px 14px;border-radius:12px;font-size:14px;text-align:center;max-width:80%}
+.zst-wait[hidden]{display:none!important}
+/* 作る画面 */
+#zg-st-edit .zst-top{position:absolute;top:calc(8px + env(safe-area-inset-top));left:10px;right:10px;display:flex;gap:10px;align-items:center;z-index:5}
+#zg-st-edit .zst-aa{font-size:16px}
+#zg-st-edit .zst-emo{font-size:22px}
+#zg-st-edit .zst-bottom{position:absolute;left:0;right:0;bottom:calc(12px + env(safe-area-inset-bottom));display:flex;justify-content:flex-end;padding:0 14px;z-index:5}
+#zg-st-edit .zst-post{display:flex;align-items:center;gap:8px;border:0;border-radius:999px;background:#fff;color:#111;font:800 15px/1 system-ui,sans-serif;padding:7px 16px 7px 7px;box-shadow:0 2px 10px rgba(0,0,0,.35)}
+#zg-st-edit .zst-post:disabled{opacity:.6}
+#zg-st-edit .zst-post .zst-av{width:30px;height:30px;border-radius:50%;background:#F4F1FF;display:grid;place-items:center;font-size:16px;overflow:hidden}
+#zg-st-edit .zst-post .zst-av img{width:100%;height:100%;object-fit:cover}
+#zg-st-edit .zst-trash{position:absolute;left:50%;bottom:calc(70px + env(safe-area-inset-bottom));transform:translateX(-50%) scale(.8);width:54px;height:54px;border-radius:50%;border:2px solid #fff;display:grid;place-items:center;font-size:24px;background:rgba(0,0,0,.3);opacity:0;transition:transform .15s,opacity .15s,background .15s;z-index:6;pointer-events:none}
+#zg-st-edit .zst-trash.on{opacity:1}
+#zg-st-edit .zst-trash.hot{transform:translateX(-50%) scale(1.15);background:#E53935;border-color:#E53935}
+#zg-st-edit .zst-panel{position:absolute;inset:0;z-index:8;background:rgba(0,0,0,.72);display:flex;flex-direction:column}
+#zg-st-edit:has(.zst-panel:not([hidden])) .zst-bottom,#zg-st-edit:has(.zst-panel:not([hidden])) .zst-top{visibility:hidden}
+#zg-st-edit .zst-panel[hidden]{display:none!important}
+#zg-st-edit .zst-tp-top{display:flex;align-items:center;gap:10px;padding:calc(8px + env(safe-area-inset-top)) 12px 8px}
+#zg-st-edit .zst-bgtg{font-size:16px;border:2px solid #fff;border-radius:8px;width:36px;height:36px}
+#zg-st-edit .zst-bgtg.on{background:#fff;color:#000}
+#zg-st-edit .zst-done{border:0;background:transparent;color:#fff;font:800 17px/1 system-ui,sans-serif;padding:8px 6px}
+html body #zg-st-edit textarea.zst-ta{flex:none!important;margin:auto 16px!important;align-self:center!important;max-width:calc(100% - 32px)!important;width:auto!important;min-width:60%!important;height:auto!important;min-height:0!important;border:0!important;outline:0!important;box-shadow:none!important;resize:none!important;text-align:center!important;font:800 26px/1.3 system-ui,"Hiragino Sans","Noto Sans JP",sans-serif!important;padding:.15em .4em!important;border-radius:.3em!important;caret-color:#fff}
+#zg-st-edit .zst-ta::placeholder{color:rgba(255,255,255,.6)}
+#zg-st-edit .zst-colors{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;padding:12px 12px calc(16px + env(safe-area-inset-bottom))}
+#zg-st-edit .zst-col{width:26px;height:26px;border-radius:50%;border:2px solid #fff;padding:0}
+#zg-st-edit .zst-col.on{transform:scale(1.25);box-shadow:0 0 0 2px rgba(255,255,255,.5)}
+#zg-st-edit .zst-emopanel{justify-content:flex-end}
+#zg-st-edit .zst-emogrid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;max-height:55vh;overflow:auto;background:#1c1c1e;border-radius:18px 18px 0 0;padding:16px 12px calc(16px + env(safe-area-inset-bottom))}
+#zg-st-edit .zst-emogrid button{border:0;background:transparent;font-size:32px;line-height:1.3;padding:4px}
+/* 見る画面 */
+#zg-st-view .zst-stage{margin-bottom:auto;margin-top:env(safe-area-inset-top)}
+#zg-st-view .zst-bars{position:absolute;top:8px;left:8px;right:8px;display:flex;gap:4px;z-index:3}
+#zg-st-view .zst-bar{flex:1;height:2.5px;background:rgba(255,255,255,.35);border-radius:2px;overflow:hidden}
+#zg-st-view .zst-bar i{display:block;height:100%;width:0;background:#fff}
+#zg-st-view .zst-head{position:absolute;top:18px;left:10px;right:6px;display:flex;align-items:center;gap:8px;z-index:3;text-shadow:0 1px 3px rgba(0,0,0,.5)}
+#zg-st-view .zst-head .zst-av{width:32px;height:32px;border-radius:50%;background:#F4F1FF;display:grid;place-items:center;font-size:17px;overflow:hidden;flex:none;text-shadow:none}
+#zg-st-view .zst-head .zst-av img{width:100%;height:100%;object-fit:cover}
+#zg-st-view .zst-nm{font-size:14px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:45%}
+#zg-st-view .zst-ago{font-size:13px;opacity:.75;white-space:nowrap}
+#zg-st-view .zst-head .zst-btn{background:transparent;width:36px;height:36px;font-size:20px}
+#zg-st-view .zst-foot{position:relative;width:100%;max-width:560px;box-sizing:border-box;display:flex;align-items:center;gap:10px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));flex:none}
+#zg-st-view .zst-foot-me{display:none}
+#zg-st-view.mine .zst-foot-me{display:flex}
+#zg-st-view.mine .zst-foot-peer{display:none}
+html body #zg-st-view input.zst-reply{flex:1!important;min-width:0!important;height:44px!important;border:1.5px solid rgba(255,255,255,.75)!important;border-radius:999px!important;background:transparent!important;color:#fff!important;padding:0 16px!important;font-size:16px!important;outline:0!important;box-shadow:none!important;margin:0!important}
+#zg-st-view .zst-reply::placeholder{color:rgba(255,255,255,.75)}
+#zg-st-view .zst-foot .zst-btn{background:transparent;font-size:26px;width:44px;height:44px}
+#zg-st-view .zst-like.on{color:#FF3040}
+#zg-st-view .zst-like.pop{animation:zstPop .45s ease-out}
+@keyframes zstPop{40%{transform:scale(1.45)}100%{transform:scale(1)}}
+#zg-st-view .zst-seen{font-size:14px;font-weight:700;opacity:.9}
+#zg-st-view .zst-foot-me .zst-btn{font-size:22px;background:rgba(255,255,255,.12)}
 </style>
 </body>
 </html>
