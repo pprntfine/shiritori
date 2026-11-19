@@ -34,8 +34,8 @@
 **環境**
 - この作業環境から `*.workers.dev` へは届かない。送受信は `tools/run_e2e.sh`（手元で中継所を立てる）で確かめる。Cloudflare の Worker は 2026-11 時点でデプロイ済み（変更したら API で書き込む必要があり、トークンが要る）。
 - 次に聞かれそうな未着手: 閉じている時の電話通知、赤ちゃんスタンプ（約5MB）の軽量化。
-- **次の会話で最初にやること（2026-11-19 時点）**: 2人とも v508 以上（v509 公開済み）。Cloudflare の GraphQL で 11/20(UTC) 以降の部屋の DO の書き込み（`durableObjectsPeriodicGroups` の `datetimeHour` ごとの rowsWritten・`durableObjectsInvocationsAdaptiveGroups` の http 数）が少ないまま（1日数千行以下）かを確かめて持ち主に報告する。
-  確かめ終わったら、**今のトークン（環境に保存済み・期限なしの可能性が高い）の削除を持ち主に必ずお願いする**（場所: Cloudflare「アカウントの管理」→「アカウント API トークン」→「…」→削除）。持ち主が先に消していたら確認はできないので、そう伝える。
+- **確認済み（2026-11-20 06:45 JST）**: 11/19(UTC) の部屋の DO の書き込みは 15,151 行（うち 8,950 行は 02 時台の前日分の掃除）、読み出し 47,347 行。上限（書き込み10万）の約15%で正常。v508/v509 の直しは効いている。
+  確かめ終わったので、**持ち主にトークンの削除をお願いした**（場所: Cloudflare「アカウントの管理」→「アカウント API トークン」→「…」→削除）。次に Worker を書き換える時は `request_credential` でもらい直す。
 
 **Cloudflare の Worker を書き換える手順（`worker/zatsugaku-push.js` を変えた時だけ。アプリだけの更新では不要）**
 1. `request_credential` で api.cloudflare.com 用のトークンを持ち主にもらう（権限: Workers Scripts 編集・Workers KV 読み取り・Account Analytics 読み取り。トークンはチャットに貼らせない）。
