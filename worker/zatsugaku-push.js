@@ -31,7 +31,8 @@ const KEEP_SEC = 12 * 3600;    // 中継所に のこす 時間
 const DAY_LIMIT = 20000;       // 1とおりみち 1日の 上限（いたずら よけ）
 // 2026-11-19: 1日に「保存」する数の上限（ブレーキ）。Durable Objects の書き込みは無料で1日10万行、保存1件で約5行（入れる4＋12時間後の削除1）。
 // これを超えた分は保存せず、いまつながっている相手へ流すだけにする（中継所ごと止まるより良い。送った側はアプリが受領まで送り直す）。ふだんは1日数百件。
-const SOFT_STORE = 8000;
+// 2026-11-19 持ち主の判断で「いったんはいらない」→ 既定は 0（ブレーキなし）。使う時は 8000 などにする。
+const SOFT_STORE = 0;
 const FILE_LIMIT = 300;        // 1とおりみちに 同時に おける ファイル数
 const POLL_ROWS = 500;
 
@@ -491,8 +492,8 @@ export class ZgRelay {
     this.cnt.n = used + 1;
     if (this.cnt.n - this.cnt.saved >= 20) { this.kvPut(day, this.cnt.n + '|' + this.cnt.s); this.cnt.saved = this.cnt.n; }
     const row = { id: randId(), t: now, msg, an: bytes ? String(filename).slice(0, 64) : null, asz: bytes ? bytes.length : 0 };
-    const soft = parseInt((this.env && this.env.SOFT_STORE) || '', 10) || SOFT_STORE;
-    const keep = bytes || ((url.searchParams.get('cache') || '').toLowerCase() !== 'no' && this.cnt.s < soft);
+    const sv = parseInt((this.env && this.env.SOFT_STORE) || '', 10), soft = Number.isFinite(sv) ? sv : SOFT_STORE;
+    const keep = bytes || ((url.searchParams.get('cache') || '').toLowerCase() !== 'no' && (soft <= 0 || this.cnt.s < soft));
     if (keep) {
       this.cnt.s++;
       this.sql.exec('INSERT INTO m(id,t,msg,an,asz) VALUES(?,?,?,?,?)', row.id, row.t, row.msg, row.an, row.asz);
