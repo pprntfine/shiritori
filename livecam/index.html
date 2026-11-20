@@ -69,7 +69,7 @@ dialog select,dialog input{background:var(--bg)}
 </head>
 <body>
 <header>
-  <div class="top"><div><h1>ライブカメラ一覧</h1><div id="ver" class="hint" style="margin-top:0">バージョン <b>v10</b>・<span id="total"></span></div></div><button id="add">＋ 追加</button></div>
+  <div class="top"><div><h1>ライブカメラ一覧</h1><div id="ver" class="hint" style="margin-top:0">バージョン <b>v11</b>・<span id="total"></span></div></div><button id="add">＋ 追加</button></div>
   <div class="row2">
     <select id="pref" aria-label="県を選ぶ"></select>
     <input id="q" type="search" placeholder="地名で探す" aria-label="地名で探す">
@@ -185,7 +185,7 @@ var viewer=document.getElementById('viewer'),vbody=document.getElementById('vbod
 function openViewer(c){
   document.getElementById('vname').textContent=c.name+'（'+(c.pref||'県の指定なし')+'）';
   document.getElementById('vopen').href=c.url;
-  vbody.textContent='';var ld=document.createElement('div');ld.className='vload';ld.textContent='読み込んでいます…\n映らない時は、上の「開く」を押してください。';ld.style.whiteSpace='pre-line';vbody.appendChild(ld);play(vbody,c);
+  vbody.textContent='';play(vbody,c);
   viewer.hidden=false;document.body.classList.add('vopen');
   try{history.pushState({v:1},'')}catch(e){}
 }
