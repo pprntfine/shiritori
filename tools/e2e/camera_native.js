@@ -3,6 +3,7 @@
 //  ② カメラアプリに行っている間（裏に回る）もトップへ戻さない・覆いは出る。戻るとトークのまま、2.5秒後に「戻さない」を解除
 //  ③ 撮った写真（4000×3000・重い）が確認のあと、大きいまま写真として送られる（2MB を超えても断らない）
 //  ④ 写真選び（写真・動画）でも 2MB を超える写真を断らない
+//  ⑤ v522: 戻る合図（visibilitychange）より先に change が来ても（Android）トップへ戻らない（上のカメラ・ストーリーのカメラ）
 // 使い方: python3 tools/make_test.py index.html /tmp/zg && node tools/e2e/camera_native.js /tmp/zg
 const {chromium}=require('playwright');const DIR=process.argv[2];
 const SK=Buffer.alloc(32,9).toString('base64'),TOPIC='gskr3s-'+'c'.repeat(24);
@@ -37,4 +38,13 @@ const SK=Buffer.alloc(32,9).toString('base64'),TOPIC='gskr3s-'+'c'.repeat(24);
  chk('③撮った写真が大きいまま送られる（2MB超でも断らない）',a.added&&a.photo&&a.size&&a.size[0]>=3000&&!a.toast,a);
  a=await send('chat-photo-file');
  chk('④写真選びでも 2MB 超の写真を断らない',a.added&&a.photo&&a.size&&a.size[0]>=3000&&!a.toast,a);
+
+ for(const id of ['zg-cam-native','zg-st-camp']){
+  await pg.evaluate(()=>{ __t.show('play'); __t.setTab('chat'); const e=document.getElementById('zg-st-edit'); if(e) e.hidden=true; });
+  a=await pg.evaluate(async(id)=>{ const inp=document.getElementById(id); window.__zgPicking=Date.now(); window.__vis='hidden'; document.dispatchEvent(new Event('visibilitychange'));
+    const cv=document.createElement('canvas'); cv.width=800; cv.height=600; const blob=await new Promise(r=>cv.toBlob(r,'image/jpeg',0.9)); const dt=new DataTransfer(); dt.items.add(new File([blob],'a.jpg',{type:'image/jpeg'})); inp.files=dt.files;
+    inp.dispatchEvent(new Event('change')); window.__vis='visible'; document.dispatchEvent(new Event('visibilitychange')); window.dispatchEvent(new Event('pageshow'));
+    await new Promise(r=>setTimeout(r,1500)); const p1=__t.S.phase; await new Promise(r=>setTimeout(r,2000)); return {phase:p1,tab:__t.S.tab,pickingLater:!!window.__zgPicking}; },id);
+  chk('⑤戻る前に change が来てもトークのまま（'+id+'）',a.phase==='play'&&a.tab==='chat'&&!a.pickingLater,a);
+ }
  console.log(all?'OK: カメラアプリで撮って送る':'NG'); await b.close(); process.exit(all?0:1);})();
