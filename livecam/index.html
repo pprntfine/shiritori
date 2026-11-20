@@ -43,13 +43,14 @@ select,input{width:100%;font:inherit;padding:10px;border-radius:10px;border:1px 
 .acts{display:flex;gap:2px;flex:none}
 .acts a,.acts button{background:none;color:var(--sub);padding:4px 8px;font-size:14px;text-decoration:none}
 #more{display:block;margin:18px auto 0;width:100%;max-width:420px}
-#viewer{position:fixed;inset:0;background:#000;z-index:50;display:flex;flex-direction:column}
+#viewer{position:fixed;left:0;top:0;width:100vw;height:100vh;height:100dvh;background:#000;z-index:50;display:flex;flex-direction:column}
 #viewer[hidden]{display:none}
 #viewer .vbar{display:flex;align-items:center;gap:8px;padding:calc(8px + env(safe-area-inset-top)) 12px 8px;color:#fff;background:#111}
 #viewer .vbar b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:16px}
 #viewer .vbar a,#viewer .vbar button{flex:none;color:#fff;background:#ffffff22;border-radius:10px;padding:8px 12px;font-size:15px;text-decoration:none}
-#viewer .vbody{flex:1;position:relative;background:#000}
-#viewer .vbody iframe,#viewer .vbody video{position:absolute;inset:0;width:100%;height:100%;border:0;background:#000}
+#viewer .vbody{flex:1 1 auto;min-height:60vh;position:relative;background:#000}
+#viewer .vload{position:absolute;left:0;right:0;top:40%;text-align:center;color:#ccd;font-size:15px;line-height:1.7;padding:0 16px}
+#viewer .vbody iframe,#viewer .vbody video{position:absolute;left:0;top:0;width:100%;height:100%;border:0;background:transparent}
 body.vopen{overflow:hidden}
 .empty{color:var(--sub);text-align:center;padding:48px 8px}
 dialog{border:0;border-radius:16px;padding:20px;width:min(92vw,420px);background:var(--card);color:var(--tx)}
@@ -64,7 +65,7 @@ dialog select,dialog input{background:var(--bg)}
 </head>
 <body>
 <header>
-  <div class="top"><div><h1>ライブカメラ一覧</h1><div id="ver" class="hint" style="margin-top:0">バージョン <b>v8</b>・<span id="total"></span></div></div><button id="add">＋ 追加</button></div>
+  <div class="top"><div><h1>ライブカメラ一覧</h1><div id="ver" class="hint" style="margin-top:0">バージョン <b>v9</b>・<span id="total"></span></div></div><button id="add">＋ 追加</button></div>
   <div class="row2">
     <select id="pref" aria-label="県を選ぶ"></select>
     <input id="q" type="search" placeholder="地名で探す" aria-label="地名で探す">
@@ -180,7 +181,7 @@ var viewer=document.getElementById('viewer'),vbody=document.getElementById('vbod
 function openViewer(c){
   document.getElementById('vname').textContent=c.name+'（'+(c.pref||'県の指定なし')+'）';
   document.getElementById('vopen').href=c.url;
-  vbody.textContent='';play(vbody,c);
+  vbody.textContent='';var ld=document.createElement('div');ld.className='vload';ld.textContent='読み込んでいます…\n映らない時は、上の「開く」を押してください。';ld.style.whiteSpace='pre-line';vbody.appendChild(ld);play(vbody,c);
   viewer.hidden=false;document.body.classList.add('vopen');
   try{history.pushState({v:1},'')}catch(e){}
 }
@@ -192,11 +193,12 @@ function closeViewer(back){
 document.getElementById('vclose').onclick=function(){closeViewer(true)};
 window.addEventListener('popstate',function(){closeViewer(false)});
 function play(th,c){
-  th.textContent='';
   var k=kind(c.url),el;
   if(k==='yt'||k==='ytc'){
     el=document.createElement('iframe');
-    el.src=k==='yt'?'https://www.youtube-nocookie.com/embed/'+ytId(c.url)+'?autoplay=1&playsinline=1':'https://www.youtube-nocookie.com/embed/live_stream?channel='+ytCh(c.url)+'&autoplay=1&playsinline=1';
+    var yq='autoplay=1&mute=1&playsinline=1&rel=0&origin='+encodeURIComponent(location.origin);
+    el.src=k==='yt'?'https://www.youtube.com/embed/'+ytId(c.url)+'?'+yq:'https://www.youtube.com/embed/live_stream?channel='+ytCh(c.url)+'&'+yq;
+    el.referrerPolicy='strict-origin-when-cross-origin';
     el.allow='autoplay; encrypted-media; picture-in-picture; fullscreen';el.allowFullscreen=true;
   }else if(k==='hls'||k==='file'){
     el=document.createElement('video');el.controls=true;el.autoplay=true;el.muted=true;el.playsInline=true;
