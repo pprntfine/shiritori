@@ -22,8 +22,8 @@ const DIR=process.argv[2];const SK=Buffer.alloc(32,9).toString('base64'),TOPIC='
  const n0=r.n; r=await tap('x'); chk('⑤キャンセル',r.shut&&r.n===n0,r);
  // ⑥ 撮った写真
  const png=await pg.evaluate(()=>{ const c=document.createElement('canvas'); c.width=900; c.height=1600; const x=c.getContext('2d'); x.fillStyle='#3a7'; x.fillRect(0,0,900,1600); return c.toDataURL('image/png').split(',')[1]; });
- await pg.setInputFiles('#zg-st-camp',{name:'cam.png',mimeType:'image/png',buffer:Buffer.from(png,'base64')}); await pg.waitForTimeout(1500);
+ await pg.setInputFiles('#zg-st-camp',{name:'cam.png',mimeType:'image/png',buffer:Buffer.from(png,'base64')}); await pg.waitForTimeout(3500);
  r=await pg.evaluate(()=>({edit:!document.getElementById('zg-st-edit').hidden,play:document.body.classList.contains('in-play'),pick:window.__zgPicking}));
  await pg.screenshot({path:'/tmp/claude-0/sc/story_cap_edit.png'});
- chk('⑥撮った写真で作る画面・トークのまま',r.edit&&!r.pick,r);
+ chk('⑥撮った写真で作る画面・トークのまま・3秒後に解除',r.edit&&r.play&&!r.pick,r);
  console.log(all?'ALL OK':'SOME NG'); await b.close(); process.exit(all?0:1);})();

@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとしてインストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">新しい版に更新する</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンでアプリとして入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v521</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v522</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">相手を待っています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v521</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v522</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">名前</b> さんが入室を求めています</p>
         <p class="jr-fp">合図 <b id="jr-fp">----</b> ／ 相手の画面と同じかくににて確認</p>
@@ -9488,11 +9488,15 @@ function attachmentPhoto(url){ return new Promise(function(resolve,reject){
   var im=new Image(); im.onerror=function(){ reject(new Error('image')); };
   im.onload=function(){ try{ var scale=Math.min(1,4000/Math.max(im.naturalWidth,im.naturalHeight));   /* v496: 1600→2000、v510: 3000、v511: 4000 */ var c=document.createElement('canvas'); c.width=Math.max(1,Math.round(im.naturalWidth*scale)); c.height=Math.max(1,Math.round(im.naturalHeight*scale)); var ctx=c.getContext('2d'); ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,c.width,c.height); ctx.drawImage(im,0,0,c.width,c.height); resolve(c.toDataURL(canWebP()?'image/webp':'image/jpeg',0.9)); }catch(e){ reject(e); } }; im.src=url;
 }); }
+/* v522: 撮った・選んだ直後は、まだ「戻った」合図（visibilitychange・pageshow → resumeToTop）が後から来ることがある（Android）。
+   すぐ 0 にするとトップへ戻されるので、3秒だけ守ってから外す。 */
+function zgPickDone(){ var t=Date.now(); window.__zgPicking=t; setTimeout(function(){ if(window.__zgPicking===t) window.__zgPicking=0; },3000); }
+window.__zgPickDone=zgPickDone;
 function attachmentButton(id,input){ $('#'+id).addEventListener('click',function(){ if(!attachmentReady()) return; var f=$('#'+input); f.value=''; window.__zgPicking=Date.now(); f.click(); }); }   /* v517: 選ぶ画面に行く間はトップへ戻さない */
 attachmentButton('btn-attach-photo','chat-photo-file');
 /* 一般ファイルを選ぶ項目は表示しない。過去の添付の表示は残す。 */
 async function attachmentSelected(input,isPhoto,fromCam){
-  var file=input.files&&input.files[0]; input.value=''; window.__zgPicking=0; if(!file||!attachmentReady()) return;
+  var file=input.files&&input.files[0]; input.value=''; zgPickDone(); if(!file||!attachmentReady()) return;
   /* v220: 選択欄ではなく安全な形式判定で写真と動画を分ける。動画は変換しない。 */
   var mime=attachmentKind(new Uint8Array(0),file.name,file.type);
   if(isPhoto&&mime.indexOf('image/')!==0&&mime.indexOf('video/')!==0){ toast('写真か動画を選んでください。'); return; }
@@ -13647,7 +13651,7 @@ window.addEventListener('pagehide',function(){ closeCam(); stopCall(false); });
       f(function(){ f(uncover); });
     }
     window.__zgShield={cover:cover,uncover:uncover,leave:leave,on:function(){ return sh.classList.contains('on'); }};
-    document.addEventListener('visibilitychange',function(){ if(document.hidden) leave(); else{ reveal(); if(picking()) setTimeout(function(){ window.__zgPicking=0; },2500); } });   /* v517: 戻ったら解除（撮らずに戻った時も） */
+    document.addEventListener('visibilitychange',function(){ if(document.hidden) leave(); else{ reveal(); if(picking()){ var __t0=window.__zgPicking; setTimeout(function(){ if(window.__zgPicking===__t0) window.__zgPicking=0; },3000); } } });   /* v517: 戻ったら解除（撮らずに戻った時も） */
     window.addEventListener('pagehide',leave);
     document.addEventListener('freeze',leave);
     window.addEventListener('blur',function(){ if(window.__zgVoiceOn) return; if(inTalk()) cover(); });
@@ -13996,7 +14000,7 @@ window.addEventListener('pagehide',function(){ closeCam(); stopCall(false); });
     if(k==='p') stOpenInput(stCamP); else if(k==='v') stOpenInput(stCamV); else if(k==='g') stOpenInput(stInput);
   });
   function stPick(){ stSheet.hidden=false; }
-  [stInput,stCamP,stCamV].forEach(function(inp){ inp.addEventListener('change',function(){ window.__zgPicking=0; var f=inp.files&&inp.files[0]; if(f) stOpenEditor(f); }); });
+  [stInput,stCamP,stCamV].forEach(function(inp){ inp.addEventListener('change',function(){ try{ window.__zgPickDone(); }catch(e){} var f=inp.files&&inp.files[0]; if(f) stOpenEditor(f); }); });
   /* --- 作る画面（編集） --- */
   var stEd=null;
   var ST_COLORS=['#ffffff','#000000','#ff3b30','#ff9500','#ffcc00','#34c759','#00c7be','#007aff','#af52de','#ff2d55'];
