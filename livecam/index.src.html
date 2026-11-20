@@ -64,7 +64,7 @@ dialog select,dialog input{background:var(--bg)}
 </head>
 <body>
 <header>
-  <div class="top"><div><h1>ライブカメラ一覧</h1><div id="ver" class="hint" style="margin-top:0">バージョン <b>v6</b>・<span id="total"></span></div></div><button id="add">＋ 追加</button></div>
+  <div class="top"><div><h1>ライブカメラ一覧</h1><div id="ver" class="hint" style="margin-top:0">バージョン <b>v7</b>・<span id="total"></span></div></div><button id="add">＋ 追加</button></div>
   <div class="row2">
     <select id="pref" aria-label="県を選ぶ"></select>
     <input id="q" type="search" placeholder="地名で探す" aria-label="地名で探す">
@@ -73,6 +73,7 @@ dialog select,dialog input{background:var(--bg)}
     <button data-s="*" aria-pressed="true">すべて</button>
     <button data-s="yt" aria-pressed="false">YouTube</button>
     <button data-s="wn" aria-pressed="false">ウェザーニュース</button>
+    <button data-s="ot" aria-pressed="false">道路・河川・観光など</button>
     <button data-s="me" aria-pressed="false">自分で追加</button>
   </div>
   <div id="count"></div>
@@ -127,12 +128,17 @@ try{(JSON.parse(ls(HID)||'[]')||[]).forEach(function(u){hidden[u]=1})}catch(e){}
 function saveHidden(){lw(HID,JSON.stringify(Object.keys(hidden)))}
 
 var preset=[];
-DATA.yt.forEach(function(a){preset.push({pref:PREFS[a[0]],name:a[1],url:'https://www.youtube.com/watch?v='+a[2],src:'yt',ext:a[3]===1})});
+DATA.yt.forEach(function(a){if(a[3]===1)return;preset.push({pref:PREFS[a[0]],name:a[1],url:'https://www.youtube.com/watch?v='+a[2],src:'yt'})});
+(DATA.yc||[]).forEach(function(a){preset.push({pref:PREFS[a[0]],name:a[1],url:'https://www.youtube.com/channel/'+a[2]+'/live',src:'yt'})});
+var OTN={road:'道路',highway:'高速道路',river:'河川',mount:'山',sea:'海',port:'港',snow:'スキー場',spot:'観光地',city:'街',rail:'駅・鉄道',airport:'空港',lake:'湖',sky:'空',animal:'動物',facility:'施設'};
+(DATA.ot||[]).forEach(function(a){preset.push({pref:PREFS[a[0]],name:a[1],url:a[2],src:'ot',ty:OTN[a[3]]||''})});
 DATA.wn.forEach(function(a){preset.push({pref:PREFS[a[0]],name:a[1],url:'https://weathernews.jp/onebox/livecam/'+a[2]+'/',src:'wn'})});
 
+function ytCh(s){var m=s.match(/youtube\.com\/channel\/(UC[\w-]{20,})\/live/);return m?m[1]:null}
 function ytId(s){var m=s.match(/(?:youtu\.be\/|[?&]v=|\/live\/|\/embed\/|\/shorts\/)([\w-]{11})/);return m?m[1]:null}
 function kind(u){
   if(ytId(u))return 'yt';
+  if(ytCh(u))return 'ytc';
   if(/\.m3u8(\?|#|$)/i.test(u))return 'hls';
   if(/\.(mp4|webm|mov)(\?|#|$)/i.test(u))return 'file';
   return 'page';
@@ -188,9 +194,9 @@ window.addEventListener('popstate',function(){closeViewer(false)});
 function play(th,c){
   th.textContent='';
   var k=kind(c.url),el;
-  if(k==='yt'){
+  if(k==='yt'||k==='ytc'){
     el=document.createElement('iframe');
-    el.src='https://www.youtube-nocookie.com/embed/'+ytId(c.url)+'?autoplay=1&playsinline=1';
+    el.src=k==='yt'?'https://www.youtube-nocookie.com/embed/'+ytId(c.url)+'?autoplay=1&playsinline=1':'https://www.youtube-nocookie.com/embed/live_stream?channel='+ytCh(c.url)+'&autoplay=1&playsinline=1';
     el.allow='autoplay; encrypted-media; picture-in-picture; fullscreen';el.allowFullscreen=true;
   }else if(k==='hls'||k==='file'){
     el=document.createElement('video');el.controls=true;el.autoplay=true;el.muted=true;el.playsInline=true;
@@ -206,7 +212,7 @@ function play(th,c){
   }
   th.appendChild(el);
 }
-var SRCNAME={yt:'YouTube',wn:'ウェザーニュース',me:'自分で追加'};
+var SRCNAME={yt:'YouTube',wn:'ウェザーニュース',me:'自分で追加',ot:'ライブカメラ'};
 function card(c){
   var k=kind(c.url);
   var el=document.createElement('div');el.className='card';
@@ -219,14 +225,12 @@ function card(c){
     th.appendChild(img);
   }else{
     var ph=document.createElement('div');ph.className='ph'+(c.src==='me'?' mine':'');
-    ph.textContent=c.src==='wn'?'ソラカメ（空のライブカメラ）':(host(c.url)||'ライブカメラ');
+    ph.textContent=c.src==='wn'?'ソラカメ（空のライブカメラ）':c.src==='ot'?((c.ty?c.ty+'のカメラ':'ライブカメラ')+'\n'+host(c.url)):(k==='ytc'?'YouTube ライブ':(host(c.url)||'ライブカメラ'));ph.style.whiteSpace='pre-line';
     th.appendChild(ph);
   }
   var pl=document.createElement('div');pl.className='play';pl.textContent='▶';th.appendChild(pl);
   var sb=document.createElement('div');sb.className='src';sb.textContent=SRCNAME[c.src]||'';th.appendChild(sb);
-  if(c.ext){var nb=document.createElement('div');nb.className='src';nb.style.left='auto';nb.style.right='8px';nb.textContent='YouTube で開く';th.appendChild(nb);
-    th.onclick=function(){window.open(c.url,'_blank','noopener')};}
-  else th.onclick=function(){openViewer(c)};
+  th.onclick=function(){openViewer(c)};
   var meta=document.createElement('div');meta.className='meta';
   var d=document.createElement('div');
   var b=document.createElement('b');b.textContent=c.name;
