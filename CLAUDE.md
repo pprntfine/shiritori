@@ -63,6 +63,7 @@
   `ot`・`yc` の出どころは「ライブカメラマップ」ultimate-map.com の `livecameramap/cams.php?set=jp`（行=[ID,名前,種類,屋内,緯度,経度,県コード,市区町村,YouTubeID,動画ライブ1,業種]）で動画ライブ=1 の物だけ、元ページは `spot.php?id=` の外部リンク。robots.txt で禁止されていない範囲（track.php・jobs.php 以外）。
 - v12: Brave でインストールの項目が出ない（持ち主）→ `livecam/sw.js`（保存しない Service Worker。開く時だけ fetch を通す）を足し、make_worker.js で /sw.js も返す。
 - v13: アイコンを可愛く（持ち主）。PIL で描いたパステルのグラデーション＋白いカメラ（ほっぺ・にっこり口・ハート・星）。icon-192/512.png。
+- v14: アイコンに「ライブカメラ」の文字（白い帯・紫の文字、IPAゴシックを縁取りで太く）。カメラは0.8倍で上へ。丸く切られても文字が欠けないのを確認。
 - 公開: `node livecam/make_worker.js 出力先` で worker.js と meta.json を作り、PUT する（下の行）。
 - 更新したら `livecam/` の4ファイル（index.html・manifest.webmanifest・icon-192/512.png）を1つの Worker（ファイルを埋め込んで返すだけ）にまとめ、`PUT /accounts/{id}/workers/scripts/livecam`（metadata は main_module と compatibility_date のみ、bindings なし）。`zatsugaku-push` には触らない。
 
