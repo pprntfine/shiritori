@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとしてインストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">新しい版に更新する</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンでアプリとして入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v515</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v516</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">相手を待っています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v515</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v516</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">名前</b> さんが入室を求めています</p>
         <p class="jr-fp">合図 <b id="jr-fp">----</b> ／ 相手の画面と同じかくににて確認</p>
@@ -2369,6 +2369,7 @@ function refreshKeyMark(){
     crypto.subtle.exportKey('raw',k).then(function(raw){ return keyMarkFrom(b64(raw)); }).then(function(m){ if(S.sessKey===k) S.keyMark=m; }).catch(function(){});
   }catch(e){}
 }
+var NET_FILE_TYPES={photo:1,attachment:1,'photo-ref':1,'story-part':1};   /* v516 */
 function privateType(t){ return typeof t==='string'&&!Object.prototype.hasOwnProperty.call(HANDSHAKE_TYPES,t); }
 function privateReady(){
   var p=S&&S.opp&&S.opp.id;
@@ -2621,13 +2622,17 @@ var Net={
       if(self.seen.has(ev.id)) return true;
       try{ await saveIngress(ev.message,ev.attachment); }catch(e){ return false; }
       var ok=await self.process(ev.message,ev.attachment);
-      if(ok===true) await deleteIngress(ev.message);
-      if(ok===true&&epoch===self.epoch){
-        self.seen.add(ev.id);
-        if(typeof ev.time==='number') self.lastTs=Math.max(self.lastTs,ev.time-1);
-        self.saveSince(ev.id);
-      } else if(ok===false) self.retryLater(ev.message,ev.attachment);
-      return ok;
+      var after=async function(ok){
+        if(ok===true) await deleteIngress(ev.message);
+        if(ok===true&&epoch===self.epoch){
+          self.seen.add(ev.id);
+          if(typeof ev.time==='number') self.lastTs=Math.max(self.lastTs,ev.time-1);
+          self.saveSince(ev.id);
+        } else if(ok===false) self.retryLater(ev.message,ev.attachment);
+        return ok;
+      };
+      if(ok&&ok.__lane){ ok.__lane.then(after).catch(function(){}); return 'lane'; }   /* v516: ファイルの受け取りは待たない */
+      return after(ok);
     });
     return this.recvQueue;
   },
@@ -2648,7 +2653,7 @@ var Net={
           j.k++;
           if(j.k>12) return;
           self.recvQueue=self.recvQueue.then(function(){ if(epoch!==self.epoch) return true; return self.process(j.b,j.a); })
-            .then(function(r){ if(r===false) self.retryQ.push(j); })
+            .then(function(r){ if(r&&r.__lane){ r.__lane.then(function(x){ if(x===false) self.retryQ.push(j); }).catch(function(){ self.retryQ.push(j); }); return; } if(r===false) self.retryQ.push(j); })
             .catch(function(){ self.retryQ.push(j); });
         });
       }catch(e){}
@@ -2708,7 +2713,7 @@ var Net={
       if(!legacy&&env.from&&env.from!==S.me.id){
         /* 未受信の古い本文を水位だけで捨てない。確定した番号だけで重複判定する。 */
         if(env.n>Date.now()+600000) return false;
-        if(!({chats:1,chat:1,'photo-chunk':1,story:1,'story-part':1,'story-ack':1,'story-seen':1,'story-like':1,'story-del':1}[env.t])&&hwmSeen(env.from,env.n)){ this.reAck(env,legacy); return true; }
+        if(!({chats:1,chat:1,'photo-chunk':1,photo:1,attachment:1,'photo-ref':1,story:1,'story-part':1,'story-ack':1,'story-seen':1,'story-like':1,'story-del':1}[env.t])&&hwmSeen(env.from,env.n)){ this.reAck(env,legacy); return true; }
 
       }
       /* 成功後にだけ seenN を更新する。 */
@@ -2716,14 +2721,25 @@ var Net={
     }
     try{ this.lastRecv=Date.now(); }catch(e){}
     if(env.from===S.me.id && env.t!=='nettest' && env.t!=='nettest-ok') return true;   /* 自分の送信は無視（通信テストだけ 例外）。v497: true＝片付け済み（以前は何も返さず、戻ってきた自分の暗号文が受信箱 zg-inbox に残り続け、1.2秒ごとの drainInbox で全部を復号し直して入力中に固まっていた） */
-    var ok=this.onMsg?await this.onMsg(env):false;
-    if(epoch!==this.epoch||key!==this.key||topic!==this.topic) return false;
-    if(ok===false||(({chats:1,chat:1,photo:1,attachment:1,'photo-ref':1,story:1,'story-part':1,'story-ack':1,'story-seen':1,'story-like':1,'story-del':1}[env.t])&&ok!==true)) return false;
-    if(typeof env.n==='number'&&env.t!=='photo-chunk'){
-      this.seenN.add(String(env.from)+':'+env.n);
-      if(!legacy&&env.from!==S.me.id) hwmMark(env.from,env.n);
+    var self=this;
+    var finish=function(ok){
+      if(epoch!==self.epoch||key!==self.key||topic!==self.topic) return false;
+      if(ok===false||(({chats:1,chat:1,photo:1,attachment:1,'photo-ref':1,story:1,'story-part':1,'story-ack':1,'story-seen':1,'story-like':1,'story-del':1}[env.t])&&ok!==true)) return false;
+      if(typeof env.n==='number'&&env.t!=='photo-chunk'){
+        self.seenN.add(String(env.from)+':'+env.n);
+        if(!legacy&&env.from!==S.me.id) hwmMark(env.from,env.n);
+      }
+      return true;
+    };
+    /* v516: 写真・添付・ストーリーの中身など「ファイルを取りに行く」受け取りは、別の列（fileLane）で1つずつ進める。
+       受け取りの列（recvQueue）は1つずつ順番なので、2MBの写真や動画を取りに行く間、後ろのメッセージが何秒も待たされていた（持ち主「遅くなった」）。
+       呼び出し元には {__lane: 最後の結果} を返し、受信箱から消す・既読番号を覚える・やり直すは、取り終わってから行う。 */
+    if(NET_FILE_TYPES[env.t]&&this.onMsg){
+      var lane=this.fileLane=(this.fileLane||Promise.resolve()).catch(function(){}).then(function(){ return self.onMsg(env); }).then(finish,function(){ return false; });
+      return {__lane:lane};
     }
-    return true;
+    var ok=this.onMsg?await this.onMsg(env):false;
+    return finish(ok);
   },
   send:function(obj,onDone){
     var self=this;
@@ -12497,13 +12513,17 @@ var Relay={ws:null,topic:'',base:'',ts:0,seen:null,ids:[],retry:0,timer:null,pin
       if(self.seen.has(ev.id)) return true;
       try{ await saveIngress(ev.message,ev.attachment); }catch(e){ return false; }
       var ok=await Net.process(ev.message,ev.attachment);
-      if(ok===true) await deleteIngress(ev.message);
-      if(ok===true&&epoch===Net.epoch&&self.topic===topic){
-        self.seen.add(ev.id);
-        if(typeof ev.time==='number') self.ts=Math.max(self.ts,ev.time-1);
-        self.save(ev.id);
-      } else if(ok===false) Net.retryLater(ev.message,ev.attachment);
-      return ok;
+      var after=async function(ok){
+        if(ok===true) await deleteIngress(ev.message);
+        if(ok===true&&epoch===Net.epoch&&self.topic===topic){
+          self.seen.add(ev.id);
+          if(typeof ev.time==='number') self.ts=Math.max(self.ts,ev.time-1);
+          self.save(ev.id);
+        } else if(ok===false) Net.retryLater(ev.message,ev.attachment);
+        return ok;
+      };
+      if(ok&&ok.__lane){ ok.__lane.then(after).catch(function(){}); return 'lane'; }   /* v516: ファイルの受け取りは待たない（後ろのメッセージを止めない） */
+      return after(ok);
     });
   },
   status:function(){
@@ -12917,7 +12937,7 @@ function normalizeInbox(value){
 }
 async function consumeInbox(value){
   var body=normalizeInbox(value);if(!body||!privateReady()||!S.chatLoaded)return false;
-  try{return await Net.recvFast(body,value&&typeof value==='object'?value.att:null)===true;}catch(e){return false;}
+  try{ var __r=await Net.recvFast(body,value&&typeof value==='object'?value.att:null); if(__r&&__r.__lane) __r=await __r.__lane; return __r===true; }catch(e){return false;}   /* v516: ファイルの受け取りは別の列の結果を待つ */
 }
 function inboxDbOpen(name,store){return new Promise(function(res,rej){
   var r=indexedDB.open(name,1);r.onupgradeneeded=function(){if(!r.result.objectStoreNames.contains(store))r.result.createObjectStore(store);};
