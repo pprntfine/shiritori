@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとしてインストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">新しい版に更新する</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンでアプリとして入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v519</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v520</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">相手を待っています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v519</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v520</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">名前</b> さんが入室を求めています</p>
         <p class="jr-fp">合図 <b id="jr-fp">----</b> ／ 相手の画面と同じかくににて確認</p>
@@ -8340,7 +8340,22 @@ function swClearNotifs(){ try{ if(navigator.clearAppBadge){ var cb=navigator.cle
 /* メッセージ着信：中身は 出さない。短い通知だけ */
 function notifyIncoming(){
   var viewing=chatOnScreen();
-  if(viewing){ swClearNotifs(); notifyAlarm(); return; }   /* v142: 見ている ときは 通知を 出さない。v238: バイブだけは ならす */
+  if(viewing){   /* v142: 見ている時は通知を出さない（v238: バイブだけ）→ v520: 見ている時も通知を出す（持ち主）。上に一瞬出して、6秒後に一覧から消す（もう見ているので残さない） */
+    var __ok=false;
+    try{
+      if('Notification' in window&&Notification.permission==='granted'&&localStorage.getItem('mtp_notify_off')!=='1'&&!(navigator.serviceWorker&&swReg)){
+        var __n=new Notification('とー君ニュース',Object.assign({body:'新しいニュースが更新されました',tag:'mtp-chat-live'},notifExtra())); __ok=true;
+        setTimeout(function(){ try{ __n.close(); }catch(e){} },6000);
+      }
+      else if('Notification' in window&&Notification.permission==='granted'&&localStorage.getItem('mtp_notify_off')!=='1'&&navigator.serviceWorker&&swReg){
+        var __o=Object.assign({body:'新しいニュースが更新されました',tag:'mtp-chat-live',renotify:true,badge:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AAAEe0lEQVR42u2dvYtcVRjGf++9k038ICGKSTQEGyWmsdMiXSIiFoKthY2VCBaKKBbCWlqICaQSSRNtEvIHRBttFgWLgAYVPwqLEBSj+EHQnbmPxZ6Lx2UmmTt7ztyZOe8PlmFnh5lz3ue873mfO5ez4DiO4ziO4ziO4ziO4ziO4zjZsZRvJsmKCZyZFmIgkkzSoKTgh3nXkqpeM0BSbWaj6Pf9gFJn1iLFPTz+0c57ewzmJoCkyswaSQeAF4AngQdWOPixCNeADeC0mX0pyWYtSbbD4D8BnAXuK3QP3QReBU4D1SyZYLOWHUmPAx+Gp4dAVcDqj7OgCXOugDfNbH2WcmQdg9++/i7gCnAgDKQuNAMUFt8AOGFmn3QVoesuXoVa9yJwEBgVHPx2AbeZvx66IuXOgBr4HHh4itWvjBNftM7ob+Comf3Y7pFJMyDa6fcC90fqTxpU247m+GkWLAsE7AEe7LpABjMqrlv8vR3Ar9EAU010XxB+kt8YZgp0PUVgOy+MQYZ0NOAX4Fng08QCABwG3gMejTqRnHPKSg4BRsAzZvZRpjFfl/QUcBk4tE1cA84BPyQUnpB1z4Xym9TpDxIHvwJ+AzYk1VOUq5lKgZn9JOkKcG8QvN3PXjazdzJd+7kQfM9tKRuBHOlqwG4z+2snFv0mgWhCNzaIhB+E/eaMpN2JV3/bfm9I+gw4mbL9zlUvs16qNTNJUiR4A9wJnDSzS5ky4CBwLMp0FlmAPlrBXcAHkl4Hvk/UrrZt717gjVDyGhdgcod0N/BuZtNVpXzDVREgDlCTwSnrFsbTBdhm1nLsQVWOAa+aAMUbsT5LT/FGrE8aN2L9rn43Yj1vvG7E3Ii5AG7ExgSETOXAJnyGG7Ew2GHGWxUt3JO06UZs/ORvBw6Z2e+SdkkaJQ7+KIh7ZEK2Ff+N2B7gfUlPm9nVDOVnDTgDPBRtiG7EojQV8AhwWdIXCQfbdjWHgaPbNkQ3YmMCdU8wLTmdb5t1tRux8ZnQZBK4ciM2XaDmdduiGzE3YmUL4EZsDMOehSjOiK16di2NEctpiPoimxHr0oZZeNwv6bq2aPR/huG5l1ZtpUo6LulPSaMx8x6FxxPhtXUfGTAPQ9QXS2HE5mKIesyApTBiuQxRn/5iqYzYvAxRn+3tUhixXIaoz8AvlRHL+c1UbxuxGzE3Ym7E3Ii5EXMj5kbMjZgbMTdibsTciPUpgKbIhBLPEerccMyiaKnBzbKgOwkQvMAN4OcVvNSw071vE7jaNROmFiCc+VCZ2Q3g4yXvblLSxuA74NtwPkaTJQMiZd/mv1NKSs+CYViMb5nZZteYdnpxuC+/NrOvgVdCzWuCGCUJ0XZ5/wBrwEXg3CzHVnbeNML9+ZWZnZK0D1gfk46rTntS4hpwHnh+1j1xJ0cXWzg25jHgNeA4cEdBZecr4JSZnY3jMTcBwofW0SHWR9g6O7oErgHfhJJsUZPSQzHcOsa9qKPr47mn6F9TDaa0s6O1MP/EwXEcx3Ecx3Ecx3Ecx3Ecx3Fuzr+U47aohfYQxAAAAABJRU5ErkJggg==',icon:'./icon-paw-192.png',data:{app:'zg',live:1}},notifExtra());
+        swReg.showNotification('とー君ニュース',__o); __ok=true;
+        setTimeout(function(){ try{ swReg.getNotifications({tag:'mtp-chat-live'}).then(function(ns){ ns.forEach(function(n){ n.close(); }); }); }catch(e){} },6000);
+      }
+    }catch(e){}
+    if(!__ok) notifyAlarm(); else { try{ playPing(); }catch(e){} }
+    return;
+  }
   updateBadge(); updateTalkbackBadges(); updateTitleBadge();
   setAppBadgeCount(S.unread||1);
   /* v236: アプリを ひらいている ときの バイブ */

@@ -68,6 +68,7 @@ node tools/sw_badge_test.mjs                   # sw.js の通知の小さいア�
 | e2e/story_block.js | 15MBの動画（ストーリー）を受け取っている最中のメッセージがすぐ届くか（中身の受け取りを2秒遅らせる）（v516） |
 | e2e/photo_block.js | 重い写真3枚を受け取っている最中のメッセージ（v516） |
 | e2e/camera_native.js | 上のカメラがカメラアプリ（capture）で開く・その間トップへ戻さない・2MB超の写真も送れる（v517） |
+| e2e/notify_viewing.js | トークを見ている時もメッセージの通知が出る・トップの時は今までどおり（v520） |
 
 ## Worker の試験（ネットなし）
 `node tools/worker_quote_test.mjs` … 日経平均・ドル円の前日比（Yahoo・stooq は作り物の応答）。
