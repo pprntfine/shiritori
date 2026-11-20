@@ -48,6 +48,11 @@
 4. 状況の確認は GraphQL（`workersInvocationsAdaptive`、`durableObjectsInvocationsAdaptiveGroups`）で、エラー数・呼び出し数が見られる。この環境から workers.dev へは届かない。
 5. 終わったら**持ち主にトークの削除をお願いする**。
 
+## 別のアプリ: ライブカメラ一覧（`livecam/`。とー君ニュースとは無関係）
+- 2026-11-20 に持ち主の依頼で作成。全国47都道府県の YouTube ライブカメラ328件を自動登録（配信中・埋め込み可を確かめた物）。県ごとに選べる。
+- 公開先は**別の Cloudflare Worker `livecam`**（https://livecam.pprnt908.workers.dev）。とー君ニュースと同じ場所の下に置くと、とー君の manifest の scope に入り「すでにインストール済み」になるため。
+- 更新したら `livecam/` の4ファイル（index.html・manifest.webmanifest・icon-192/512.png）を1つの Worker（ファイルを埋め込んで返すだけ）にまとめ、`PUT /accounts/{id}/workers/scripts/livecam`（metadata は main_module と compatibility_date のみ、bindings なし）。`zatsugaku-push` には触らない。
+
 ## ファイル構成（すべて同じフォルダに置く／静的ホスティング）
 - `index.html`  本体。1ファイル（約8.6MB）。大半は埋め込み画像(base64)。コードは約1.5MB・約1.3万行。
 - `sw.js`  通知用 Service Worker。本文は復号しない（暗号文だけIndexedDB `zg-sw-inbox/pin` に保存）。互換契約なので形式を変えない。
