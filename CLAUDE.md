@@ -80,6 +80,7 @@
 - v18: 戻るボタンで選択画面・ゴミ箱・追加を閉じる（`openDlg` が pushState、popstate で開いているダイアログを閉じる、閉じるボタンの時は history.back）。地域の欄 `#areas`: 県を選ぶと市町村ごとのボタン（data.json の `mu`＝県番号ごとの市町村名、政令市の区は市にまとめる。`areaOf` が名前から決める）。少ない所（県の件数100未満なら1件、以上なら2件以下）は「その他」。選んだ地域は localStorage `zg_livecam_area`。カードの下に「県・市町村」。
 - v19: 名所の名前で検索（scratchpad の spots.json＝県ごとの名所545か所×「ライブ」「ライブカメラ」＋個人カメラ向けの言葉34＋県×4語、計1,312回。ライブ絞り込みの1ページ目だけ）→ 配信中・埋め込み可の +404件、SkylineWebcams の日本153件（中身は全部 YouTube の埋め込み）から新しい +7件。計5,817か所。金閣寺そのもののライブは見つからない（京都市観光協会の銀閣寺・清水坂などは入った）。
   YouTube の内部 API（youtubei、続きのページ）は自動で止められたので使わない。国交省の地方整備局のカメラは多くが数分ごとの静止画（jpg）で対象外。WebcamTaxi・EarthCam は機械の読み取りを断る（403）。Default 環境に skylinewebcams・ipcamlive・webcamtaxi・earthcam・各地方整備局（ktr/thr/hrr/cbr/kkr/cgr/skr/qsr）・www6.kaiho.mlit.go.jp を許可済み。
+- v20: 「アプリでは再生できないのに、YouTube で開くと見える」（持ち主・Brave/Android。石垣島730交差点）。サーバー側の埋め込み情報は playableInEmbed:true で、原因は端末側の埋め込みエラー（番号は未確認）。`ytStart` がエラー（100・2・5 以外）の時に別の形を順に試す: ①www.youtube.com＋origin ②youtube-nocookie.com＋referrer=origin ③enablejsapi・origin なし＋referrer=unsafe-url（監視なし）。エラー表示に番号と「YouTubeで開く」ボタンを追加。**実機で直ったかは未確認**（番号が出たら原因の手がかり）。
 - 公開: `node livecam/make_worker.js 出力先` で worker.js と meta.json を作り、PUT する（下の行）。
 - 更新したら `livecam/` の4ファイル（index.html・manifest.webmanifest・icon-192/512.png）を1つの Worker（ファイルを埋め込んで返すだけ）にまとめ、`PUT /accounts/{id}/workers/scripts/livecam`（metadata は main_module と compatibility_date のみ、bindings なし）。`zatsugaku-push` には触らない。
 

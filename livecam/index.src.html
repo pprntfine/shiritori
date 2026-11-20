@@ -96,7 +96,7 @@ dialog select,dialog input{background:var(--bg)}
 </head>
 <body>
 <header>
-  <div class="top"><div><h1>ライブカメラ一覧</h1><div id="ver" class="hint" style="margin-top:0">バージョン <b>v19</b>・<span id="total"></span></div></div><button id="add">＋ 追加</button></div>
+  <div class="top"><div><h1>ライブカメラ一覧</h1><div id="ver" class="hint" style="margin-top:0">バージョン <b>v20</b>・<span id="total"></span></div></div><button id="add">＋ 追加</button></div>
   <div class="row2">
     <select id="pref" aria-label="県を選ぶ"></select>
     <button id="prefbtn" type="button"><span id="preftxt">全国</span>▾</button>
@@ -259,13 +259,15 @@ function openDlg(d){d.showModal();d.__pop=0;try{history.pushState({d:d.id},'')}c
 // YouTube の再生が始まらない・エラーの時に知らせる（配信が止まった物など）
 var ytWatch=null;
 function stopYTWatch(){if(ytWatch){window.removeEventListener('message',ytWatch.on);clearTimeout(ytWatch.t);clearInterval(ytWatch.p);ytWatch=null}}
-function watchYT(el,c){
+function watchYT(el,c,onerr){
   stopYTWatch();var w={ok:false};ytWatch=w;
   function hello(){try{el.contentWindow.postMessage(JSON.stringify({event:'listening',id:1,channel:'widget'}),'*')}catch(e){}}
   el.addEventListener('load',function(){hello()});w.p=setInterval(hello,1500);
   w.on=function(ev){if(ev.source!==el.contentWindow)return;var d;try{d=typeof ev.data==='string'?JSON.parse(ev.data):ev.data}catch(e){return}
     if(!d)return;
-    if(d.event==='onError'){showBad(c,'このカメラは今、再生できません。配信が止まっているか、終わった可能性があります。');stopYTWatch();return}
+    if(d.event==='onError'){var code=+(d.info&&d.info.code!=null?d.info.code:d.info);
+      if(onerr&&onerr(code)){return}
+      showBad(c,'このカメラは今、アプリの中では再生できません（エラー'+code+'）。配信が止まっているか、YouTube 側で埋め込みが許可されていない可能性があります。「YouTubeで開く」では見られることがあります。');stopYTWatch();return}
     var st=d.info&&d.info.playerState;if(d.event==='onStateChange')st=d.info;
     if(st===1||st===3){w.ok=true;clearInterval(w.p);var b=vbody.querySelector('.vbad');if(b)b.remove()}
     if(st===0){showBad(c,'配信が終わりました。')}};
@@ -281,6 +283,9 @@ function showBad(c,msg){
   del.onclick=function(){removeCam(c);closeViewer(true)};
   var keep=document.createElement('button');keep.className='ghost';keep.textContent='このまま見る';keep.style.color='#fff';
   keep.onclick=function(){b.remove()};
+  var op=document.createElement('a');op.href=c.url;op.target='_blank';op.rel='noopener noreferrer';op.textContent='YouTubeで開く';
+  op.style.cssText='display:inline-block;background:#ffffff22;color:#fff;border-radius:10px;padding:9px 14px;text-decoration:none;font-size:15px';
+  if(/youtube\.com|youtu\.be/.test(c.url))r.insertBefore(op,r.firstChild);
   r.appendChild(del);r.appendChild(keep);b.appendChild(r);vbody.appendChild(b);
 }
 function removeCam(c){
@@ -302,15 +307,27 @@ function showToast(msg,t){
   document.getElementById('toastundo').onclick=function(){restoreCam(t);el.hidden=true};
   clearTimeout(toastT);toastT=setTimeout(function(){el.hidden=true},6000);
 }
+// YouTube の埋め込み。エラーの時は別の形（nocookie・参照元を変える・監視なし）で順に試す
+function ytStart(th,c,k,n){
+  var el=document.createElement('iframe'),host=n===1?'www.youtube-nocookie.com':'www.youtube.com';
+  var base=k==='yt'?'https://'+host+'/embed/'+ytId(c.url)+'?':'https://'+host+'/embed/live_stream?channel='+ytCh(c.url)+'&';
+  var yq='autoplay=1&mute=1&playsinline=1&rel=0';
+  if(n<2)yq+='&enablejsapi=1&origin='+encodeURIComponent(location.origin);
+  el.src=base+yq;
+  el.referrerPolicy=n===0?'strict-origin-when-cross-origin':n===1?'origin':'unsafe-url';
+  el.allow='autoplay; encrypted-media; picture-in-picture; fullscreen';el.allowFullscreen=true;
+  th.textContent='';th.appendChild(el);
+  if(n<2)watchYT(el,c,function(code){
+    // 100=見つからない・非公開は別の形でも同じ。101/150/153 などは埋め込みの設定の問題なので別の形を試す
+    if(code===100||code===2||code===5)return false;
+    ytStart(th,c,k,n+1);return true;
+  });
+  else stopYTWatch();
+}
 function play(th,c){
   var k=kind(c.url),el;
   if(k==='yt'||k==='ytc'){
-    el=document.createElement('iframe');
-    var yq='autoplay=1&mute=1&playsinline=1&rel=0&enablejsapi=1&origin='+encodeURIComponent(location.origin);
-    el.src=k==='yt'?'https://www.youtube.com/embed/'+ytId(c.url)+'?'+yq:'https://www.youtube.com/embed/live_stream?channel='+ytCh(c.url)+'&'+yq;
-    el.referrerPolicy='strict-origin-when-cross-origin';
-    el.allow='autoplay; encrypted-media; picture-in-picture; fullscreen';el.allowFullscreen=true;
-    watchYT(el,c);
+    ytStart(th,c,k,0);return;
   }else if(k==='hls'||k==='file'){
     el=document.createElement('video');el.controls=true;el.autoplay=true;el.muted=true;el.playsInline=true;
     if(k==='file'||el.canPlayType('application/vnd.apple.mpegurl')){el.src=c.url}
