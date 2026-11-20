@@ -65,11 +65,23 @@ dialog select,dialog input{background:var(--bg)}
 #err{color:#d33;font-size:14px;min-height:20px;margin-top:8px}
 .hint{font-size:13px;color:var(--sub);margin-top:6px}
 #restore{background:none;color:var(--sub);font-size:13px;padding:4px 0;text-decoration:underline}
+.chips button.trash{background:transparent;border:1px solid var(--line);color:var(--sub)}
+#toast{position:fixed;left:16px;right:16px;bottom:calc(16px + env(safe-area-inset-bottom));background:#222;color:#fff;border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10px;z-index:60;font-size:15px}
+#toast[hidden]{display:none}
+#toast span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#toast button{background:#fff;color:#222;padding:6px 12px;font-size:14px}
+#trashdlg .tlist{max-height:60vh;overflow:auto;margin:10px 0}
+#trashdlg .titem{display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--line)}
+#trashdlg .titem div{flex:1;min-width:0}
+#trashdlg .titem b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:15px}
+#trashdlg .titem small{color:var(--sub)}
+#trashdlg .row button{white-space:nowrap;padding:9px 12px}
+#trashdlg .titem button{white-space:nowrap;flex:none;padding:6px 10px;font-size:14px}
 </style>
 </head>
 <body>
 <header>
-  <div class="top"><div><h1>ライブカメラ一覧</h1><div id="ver" class="hint" style="margin-top:0">バージョン <b>v14</b>・<span id="total"></span></div></div><button id="add">＋ 追加</button></div>
+  <div class="top"><div><h1>ライブカメラ一覧</h1><div id="ver" class="hint" style="margin-top:0">バージョン <b>v15</b>・<span id="total"></span></div></div><button id="add">＋ 追加</button></div>
   <div class="row2">
     <select id="pref" aria-label="県を選ぶ"></select>
     <input id="q" type="search" placeholder="地名で探す" aria-label="地名で探す">
@@ -80,6 +92,7 @@ dialog select,dialog input{background:var(--bg)}
     <button data-s="wn" aria-pressed="false">ウェザーニュース</button>
     <button data-s="ot" aria-pressed="false">道路・河川・観光など</button>
     <button data-s="me" aria-pressed="false">自分で追加</button>
+    <button class="trash" id="trashbtn" type="button">🗑 ゴミ箱</button>
   </div>
   <div id="count"></div>
 </header>
@@ -88,7 +101,10 @@ dialog select,dialog input{background:var(--bg)}
 <button id="more" class="ghost" hidden>もっと見る</button>
 <div id="empty" class="empty" hidden></div>
 <div id="viewer" hidden><div class="vbar"><b id="vname"></b><a id="vopen" target="_blank" rel="noopener noreferrer">開く</a><button id="vclose" aria-label="閉じる">✕ 閉じる</button></div><div class="vbody" id="vbody"></div></div>
-<div class="hint" style="text-align:center;margin-top:24px"><button id="restore" hidden>消したカメラを元に戻す</button></div>
+<div id="toast" hidden><span id="toastmsg"></span><button id="toastundo" type="button">元に戻す</button></div>
+<dialog id="trashdlg"><b>ゴミ箱</b><div class="hint" style="margin-top:4px">消したカメラはここに入ります。「元に戻す」で一覧に戻せます。</div>
+<div class="tlist" id="tlist"></div>
+<div class="row"><button type="button" class="ghost" id="trashempty">空にする</button><button type="button" class="ghost" id="trashall">全部戻す</button><button type="button" id="trashclose">閉じる</button></div></dialog>
 
 <dialog id="dlg">
   <form method="dialog" id="f">
@@ -131,8 +147,13 @@ saveMine();
 var hidden={};
 try{(JSON.parse(ls(HID)||'[]')||[]).forEach(function(u){hidden[u]=1})}catch(e){}
 function saveHidden(){lw(HID,JSON.stringify(Object.keys(hidden)))}
+// ゴミ箱（消したカメラ）。自動で入れたカメラは hidden にも入れて一覧から隠す。空にしても hidden は残す（戻ってこない）
+var TRASH='zg_livecam_trash';var trash=[];
+try{trash=JSON.parse(ls(TRASH)||'[]')}catch(e){}
+if(!Array.isArray(trash))trash=[];
+function saveTrash(){lw(TRASH,JSON.stringify(trash))}
 
-var preset=[];
+var preset=[];var trashInit=true;
 DATA.yt.forEach(function(a){if(a[3]===1)return;preset.push({pref:PREFS[a[0]],name:a[1],url:'https://www.youtube.com/watch?v='+a[2],src:'yt'})});
 (DATA.yc||[]).forEach(function(a){preset.push({pref:PREFS[a[0]],name:a[1],url:'https://www.youtube.com/channel/'+a[2]+'/live',src:'yt'})});
 var OTN={road:'道路',highway:'高速道路',river:'河川',mount:'山',sea:'海',port:'港',snow:'スキー場',spot:'観光地',city:'街',rail:'駅・鉄道',airport:'空港',lake:'湖',sky:'空',animal:'動物',facility:'施設'};
@@ -161,12 +182,18 @@ function loadHls(){
   return hlsP;
 }
 
+function trashFill(){
+  if(!trashInit)return;trashInit=false;var have={};trash.forEach(function(t){have[t.url]=1});var add=0;
+  preset.forEach(function(c){if(hidden[c.url]&&!have[c.url]){trash.push({name:c.name,pref:c.pref,url:c.url,src:c.src,at:0});add++}});
+  if(add)saveTrash();
+}
 function all(){
+  trashFill();
   var a=mine.map(function(c,i){return {pref:c.pref||'',name:c.name,url:c.url,src:'me',mi:i}});
   return a.concat(preset.filter(function(c){return !hidden[c.url]}));
 }
 var sel=document.getElementById('pref'),q=document.getElementById('q'),grid=document.getElementById('grid'),empty=document.getElementById('empty'),more=document.getElementById('more'),cnt=document.getElementById('count');
-var srcSel=ls(SRC)||'*',PAGE=40,limit=PAGE;
+var srcSel=ls(SRC),PAGE=40,limit=PAGE;if(!srcSel||srcSel==='undefined')srcSel='*';
 function fillSel(items){
   var c={};items.forEach(function(x){c[x.pref]=(c[x.pref]||0)+1});
   var cur=sel.value||ls(SEL)||'*';
@@ -224,9 +251,23 @@ function showBad(c,msg){
   r.appendChild(del);r.appendChild(keep);b.appendChild(r);vbody.appendChild(b);
 }
 function removeCam(c){
+  var t={name:c.name,pref:c.pref||'',url:c.url,src:c.src,at:Date.now()};
   if(c.src==='me'){var i=mine.findIndex(function(x){return x.url===c.url});if(i>=0){mine.splice(i,1);saveMine()}}
   else{hidden[c.url]=1;saveHidden()}
+  trash=trash.filter(function(x){return x.url!==c.url});trash.unshift(t);saveTrash();
+  render(true);showToast('「'+c.name+'」をゴミ箱に移しました',t);
+}
+function restoreCam(t){
+  if(t.src==='me'){if(!mine.some(function(x){return x.url===t.url}))mine.unshift({name:t.name,pref:t.pref,url:t.url});saveMine()}
+  else{delete hidden[t.url];saveHidden()}
+  trash=trash.filter(function(x){return x.url!==t.url});saveTrash();
   render(true);
+}
+var toastT=null;
+function showToast(msg,t){
+  var el=document.getElementById('toast');document.getElementById('toastmsg').textContent=msg;el.hidden=false;
+  document.getElementById('toastundo').onclick=function(){restoreCam(t);el.hidden=true};
+  clearTimeout(toastT);toastT=setTimeout(function(){el.hidden=true},6000);
 }
 function play(th,c){
   var k=kind(c.url),el;
@@ -279,7 +320,6 @@ function card(c){
   var a=document.createElement('a');a.href=c.url;a.target='_blank';a.rel='noopener noreferrer';a.textContent='開く';
   var del=document.createElement('button');del.textContent='削除';
   del.onclick=function(){
-    if(!confirm('「'+c.name+'」を一覧から消しますか？'))return;
     removeCam(c);
   };
   acts.appendChild(a);acts.appendChild(del);
@@ -317,18 +357,36 @@ function render(keep){
   more.textContent='もっと見る（残り'+Math.max(0,shown.length-limit)+'件）';
   empty.hidden=shown.length>0;
   empty.textContent='条件に合うカメラはありません。県や種類を変えるか、「＋ 追加」から登録してください。';
-  document.getElementById('restore').hidden=!Object.keys(hidden).length;
+  document.getElementById('trashbtn').textContent='🗑 ゴミ箱'+(trash.length?'（'+trash.length+'）':'');
 }
 sel.onchange=function(){lw(SEL,sel.value);render()};
 var qt;q.oninput=function(){clearTimeout(qt);qt=setTimeout(function(){render()},250)};
 document.getElementById('chips').onclick=function(e){
-  var b=e.target.closest('button');if(!b)return;
+  var b=e.target.closest('button');if(!b||!b.dataset.s)return;
   srcSel=b.dataset.s;lw(SRC,srcSel);render();
 };
 more.onclick=function(){limit+=PAGE;render(true)};
-document.getElementById('restore').onclick=function(){
-  if(!confirm('消したカメラ（'+Object.keys(hidden).length+'件）を一覧に戻しますか？'))return;
-  hidden={};saveHidden();render(true);
+// ゴミ箱の画面
+var tdlg=document.getElementById('trashdlg');
+function paintTrash(){
+  var L=document.getElementById('tlist');L.textContent='';
+  if(!trash.length){var e=document.createElement('div');e.className='hint';e.textContent='ゴミ箱は空です。';L.appendChild(e)}
+  trash.forEach(function(t){
+    var r=document.createElement('div');r.className='titem';
+    var d=document.createElement('div');var b=document.createElement('b');b.textContent=t.name;var sm=document.createElement('small');
+    var dt=new Date(t.at||0);sm.textContent=(t.pref||'県の指定なし')+(t.at?'・'+(dt.getMonth()+1)+'/'+dt.getDate()+' '+dt.getHours()+':'+('0'+dt.getMinutes()).slice(-2)+'に削除':'');
+    d.appendChild(b);d.appendChild(sm);
+    var bt=document.createElement('button');bt.textContent='元に戻す';bt.onclick=function(){restoreCam(t);paintTrash()};
+    r.appendChild(d);r.appendChild(bt);L.appendChild(r);
+  });
+  document.getElementById('trashall').disabled=!trash.length;document.getElementById('trashempty').disabled=!trash.length;
+}
+document.getElementById('trashbtn').onclick=function(){paintTrash();tdlg.showModal()};
+document.getElementById('trashclose').onclick=function(){tdlg.close()};
+document.getElementById('trashall').onclick=function(){trash.slice().forEach(restoreCam);paintTrash()};
+document.getElementById('trashempty').onclick=function(){
+  if(!confirm('ゴミ箱のカメラ（'+trash.length+'件）を完全に消しますか？元に戻せなくなります。'))return;
+  trash=[];saveTrash();paintTrash();render(true);
 };
 
 var dlg=document.getElementById('dlg'),nm=document.getElementById('nm'),url=document.getElementById('url'),fp=document.getElementById('fp'),err=document.getElementById('err');
