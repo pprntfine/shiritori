@@ -22,7 +22,17 @@ button{font:inherit;border:0;border-radius:10px;padding:9px 14px;background:var(
 button.ghost{background:transparent;color:var(--sub);border:1px solid var(--line)}
 select,input{width:100%;font:inherit;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--tx)}
 .row2{display:flex;gap:8px;margin-top:8px}
-.row2 select{flex:1.1}.row2 input{flex:1}
+.row2 select{display:none}.row2 input{flex:1}
+#prefbtn{flex:1.1;text-align:left;background:var(--card);color:var(--tx);border:1px solid var(--line);padding:10px 12px;display:flex;align-items:center;gap:6px;min-width:0}
+#prefbtn span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#prefdlg{width:min(96vw,460px);padding:16px}
+#prefdlg h3{font-size:14px;color:var(--sub);margin:12px 0 6px}
+#prefdlg .pg{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+#prefdlg .pg button{background:var(--chip);color:var(--tx);padding:9px 2px;font-size:15px;line-height:1.2}
+#prefdlg .pg button small{display:block;font-size:11px;color:var(--sub)}
+#prefdlg .pg button.on{background:var(--ac);color:#fff}#prefdlg .pg button.on small{color:#fff}
+#prefdlg .pg button.zero{opacity:.45}
+#prefdlg .pbody{max-height:70vh;overflow:auto}
 .chips{display:flex;gap:6px;margin-top:8px;overflow-x:auto;scrollbar-width:none}
 .chips button{flex:none;background:var(--chip);color:var(--tx);padding:6px 12px;border-radius:999px;font-size:14px}
 .chips button[aria-pressed="true"]{background:var(--ac);color:#fff}
@@ -81,9 +91,10 @@ dialog select,dialog input{background:var(--bg)}
 </head>
 <body>
 <header>
-  <div class="top"><div><h1>ライブカメラ一覧</h1><div id="ver" class="hint" style="margin-top:0">バージョン <b>v16</b>・<span id="total"></span></div></div><button id="add">＋ 追加</button></div>
+  <div class="top"><div><h1>ライブカメラ一覧</h1><div id="ver" class="hint" style="margin-top:0">バージョン <b>v17</b>・<span id="total"></span></div></div><button id="add">＋ 追加</button></div>
   <div class="row2">
     <select id="pref" aria-label="県を選ぶ"></select>
+    <button id="prefbtn" type="button"><span id="preftxt">全国</span>▾</button>
     <input id="q" type="search" placeholder="地名で探す" aria-label="地名で探す">
   </div>
   <div class="chips" id="chips">
@@ -102,6 +113,7 @@ dialog select,dialog input{background:var(--bg)}
 <div id="empty" class="empty" hidden></div>
 <div id="viewer" hidden><div class="vbar"><b id="vname"></b><a id="vopen" target="_blank" rel="noopener noreferrer">開く</a><button id="vclose" aria-label="閉じる">✕ 閉じる</button></div><div class="vbody" id="vbody"></div></div>
 <div id="toast" hidden><span id="toastmsg"></span><button id="toastundo" type="button">元に戻す</button></div>
+<dialog id="prefdlg"><div class="top"><b>都道府県を選ぶ</b><button type="button" class="ghost" id="prefclose">閉じる</button></div><div class="pbody" id="pbody"></div></dialog>
 <dialog id="trashdlg"><b>ゴミ箱</b><div class="hint" style="margin-top:4px">消したカメラはここに入ります。「元に戻す」で一覧に戻せます。</div>
 <div class="tlist" id="tlist"></div>
 <div class="row"><button type="button" class="ghost" id="trashempty">空にする</button><button type="button" class="ghost" id="trashall">全部戻す</button><button type="button" id="trashclose">閉じる</button></div></dialog>
@@ -204,6 +216,7 @@ function fillSel(items){
   if(c['']){opt('','県の指定なし（'+c['']+'）')}
   sel.value=cur;
   if(sel.value!==cur)sel.value='*';
+  var pt=document.getElementById('preftxt');if(pt){var o=sel.options[sel.selectedIndex];pt.textContent=o?o.textContent:'全国'}
 }
 function paintChips(){
   [].forEach.call(document.querySelectorAll('#chips button'),function(b){b.setAttribute('aria-pressed',String(b.dataset.s===srcSel))});
@@ -360,6 +373,33 @@ function render(keep){
   document.getElementById('trashbtn').textContent='🗑 ゴミ箱'+(trash.length?'（'+trash.length+'）':'');
 }
 sel.onchange=function(){lw(SEL,sel.value);render()};
+// 都道府県をボタンで選ぶ（地方ごと・よく選ぶ県）
+var REGIONS=[['北海道・東北',0,7],['関東',7,14],['中部',14,23],['近畿',23,30],['中国',30,35],['四国',35,39],['九州・沖縄',39,47]];
+var RECENT='zg_livecam_recent';
+function shortP(p){return p==='北海道'?'北海道':p.replace(/[県府都]$/,'')}
+function pickPref(v){
+  sel.value=v;if(sel.value!==v)sel.value='*';
+  if(PREFS.indexOf(v)>=0){var r=[];try{r=JSON.parse(ls(RECENT)||'[]')}catch(e){}r=[v].concat(r.filter(function(x){return x!==v})).slice(0,4);lw(RECENT,JSON.stringify(r))}
+  document.getElementById('prefdlg').close();sel.onchange();
+}
+function prefCounts(){var c={},n=0;all().forEach(function(x){c[x.pref]=(c[x.pref]||0)+1;n++});c['*']=n;return c}
+function prefButton(v,label,c){
+  var b=document.createElement('button');b.type='button';var n=c[v]||0;
+  b.textContent=label;var sm=document.createElement('small');sm.textContent=n+'件';b.appendChild(sm);
+  if(sel.value===v)b.className='on';else if(!n)b.className='zero';
+  b.onclick=function(){pickPref(v)};return b;
+}
+function paintPrefDlg(){
+  var B=document.getElementById('pbody');B.textContent='';var c=prefCounts();
+  function grid(title,list){var h=document.createElement('h3');h.textContent=title;B.appendChild(h);var g=document.createElement('div');g.className='pg';list.forEach(function(x){g.appendChild(prefButton(x[0],x[1],c))});B.appendChild(g)}
+  var r=[];try{r=JSON.parse(ls(RECENT)||'[]')}catch(e){}
+  grid('',[['*','全国']].concat(r.filter(function(x){return PREFS.indexOf(x)>=0}).map(function(x){return [x,shortP(x)]})));
+  B.firstChild.textContent=r.length?'全国・よく選ぶ県':'全国';
+  REGIONS.forEach(function(R){grid(R[0],PREFS.slice(R[1],R[2]).map(function(x){return [x,shortP(x)]}))});
+  if(c['']){grid('その他',[['','県の指定なし']])}
+}
+document.getElementById('prefbtn').onclick=function(){paintPrefDlg();document.getElementById('prefdlg').showModal()};
+document.getElementById('prefclose').onclick=function(){document.getElementById('prefdlg').close()};
 var qt;q.oninput=function(){clearTimeout(qt);qt=setTimeout(function(){render()},250)};
 document.getElementById('chips').onclick=function(e){
   var b=e.target.closest('button');if(!b||!b.dataset.s)return;

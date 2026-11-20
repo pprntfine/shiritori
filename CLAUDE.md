@@ -66,6 +66,7 @@
 - v14: アイコンに「ライブカメラ」の文字（白い帯・紫の文字、IPAゴシックを縁取りで太く）。カメラは0.8倍で上へ。丸く切られても文字が欠けないのを確認。
 - v15: ゴミ箱（持ち主）。消したカメラは localStorage `zg_livecam_trash`（名前・県・URL・種類・時刻）に入り、上の「🗑 ゴミ箱」から1件ずつ・全部戻せる。消した直後は下に「元に戻す」が6秒出る（確認ダイアログはやめた）。空にすると自動の分は hidden のまま戻らない。前の版で消した分も最初に開いた時にゴミ箱へ入れる。チップの onclick は data-s の無いボタンを無視。
 - v16: 「アイコンが変わらない」（持ち主）。アイコンと manifest を1時間覚える設定（max-age=3600）だった → すべて no-cache、manifest とアイコンの URL に ?v=16（変える時はこの数字も上げる）。
+- v17: 都道府県を選びやすく（持ち主: 一覧が長い）。`#pref` の select は隠して残し、`#prefbtn` を押すと `#prefdlg`（全国・よく選ぶ県4つ＝localStorage `zg_livecam_recent`・地方ごとのボタン、件数つき）。選ぶと `pickPref` が sel.value を入れて onchange。
 - 公開: `node livecam/make_worker.js 出力先` で worker.js と meta.json を作り、PUT する（下の行）。
 - 更新したら `livecam/` の4ファイル（index.html・manifest.webmanifest・icon-192/512.png）を1つの Worker（ファイルを埋め込んで返すだけ）にまとめ、`PUT /accounts/{id}/workers/scripts/livecam`（metadata は main_module と compatibility_date のみ、bindings なし）。`zatsugaku-push` には触らない。
 
