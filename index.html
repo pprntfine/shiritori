@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとしてインストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">新しい版に更新する</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンでアプリとして入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v524</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v526</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">相手を待っています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v524</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v526</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">名前</b> さんが入室を求めています</p>
         <p class="jr-fp">合図 <b id="jr-fp">----</b> ／ 相手の画面と同じかくににて確認</p>
@@ -15377,6 +15377,10 @@ html body #zg-st-view input.zst-reply{flex:1!important;min-width:0!important;hei
 #zg-st-sheet .zss-box{width:100%;max-width:520px;background:#fff;border-radius:18px 18px 0 0;padding:10px 12px calc(14px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:8px}
 #zg-st-sheet .zss-box button{border:0;border-radius:14px;background:#F4F1FF;color:#2A2350;font:700 16px/1 system-ui,"Hiragino Sans","Noto Sans JP",sans-serif;padding:16px;text-align:left}
 #zg-st-sheet .zss-box button.zss-x{background:#fff;color:#6B6880;text-align:center;border:1px solid #E6E2F3}
+/* v525: メニューの「カメラ」は出さない（上のカメラがあるため。持ち主）。ボタン自体は残す */
+html body #chat-tools button#btn-photo{display:none!important}
+/* v526: ストーリーは出さない（持ち主: 画質が悪いのでいらない）。コードは残す */
+html body #zg-st-bar,html body #zg-st-sheet,html body #zg-st-edit,html body #zg-st-view{display:none!important}
 </style>
 </body>
 </html>
