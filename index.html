@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとしてインストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">新しい版に更新する</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンでアプリとして入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v520</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v521</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">相手を待っています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v520</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v521</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">名前</b> さんが入室を求めています</p>
         <p class="jr-fp">合図 <b id="jr-fp">----</b> ／ 相手の画面と同じかくににて確認</p>
@@ -13983,8 +13983,20 @@ window.addEventListener('pagehide',function(){ closeCam(); stopCall(false); });
       bp.hidden=!pe.length; bp.classList.toggle('has',pe.length>0); bp.classList.toggle('seen',pe.length>0&&pe.every(function(x){ return x.seen; }));
     }catch(e){}
   }
-  function stPick(){ try{ stInput.value=''; window.__zgVoiceOn=true; setTimeout(function(){ window.__zgVoiceOn=false; },1500); stInput.click(); }catch(e){} }
-  stInput.addEventListener('change',function(){ var f=stInput.files&&stInput.files[0]; if(f) stOpenEditor(f); });
+  /* v521: 撮る（カメラアプリ）か選ぶかを下から出す（持ち主: ストーリーで写真を撮りたい） */
+  var stCamP=document.createElement('input'); stCamP.type='file'; stCamP.accept='image/*'; stCamP.setAttribute('capture','environment'); stCamP.hidden=true; stCamP.id='zg-st-camp'; document.body.appendChild(stCamP);
+  var stCamV=document.createElement('input'); stCamV.type='file'; stCamV.accept='video/*'; stCamV.setAttribute('capture','environment'); stCamV.hidden=true; stCamV.id='zg-st-camv'; document.body.appendChild(stCamV);
+  var stSheet=document.createElement('div'); stSheet.id='zg-st-sheet'; stSheet.hidden=true;
+  stSheet.innerHTML='<div class="zss-box"><button type="button" data-k="p">📷　写真を撮る</button><button type="button" data-k="v">🎥　動画を撮る</button><button type="button" data-k="g">🖼　写真・動画を選ぶ</button><button type="button" data-k="x" class="zss-x">キャンセル</button></div>';
+  document.body.appendChild(stSheet);
+  function stOpenInput(inp){ try{ inp.value=''; window.__zgPicking=Date.now(); inp.click(); }catch(e){} }
+  stSheet.addEventListener('click',function(e){
+    var b=e.target.closest&&e.target.closest('button'); stSheet.hidden=true; if(!b) return;
+    var k=b.getAttribute('data-k');
+    if(k==='p') stOpenInput(stCamP); else if(k==='v') stOpenInput(stCamV); else if(k==='g') stOpenInput(stInput);
+  });
+  function stPick(){ stSheet.hidden=false; }
+  [stInput,stCamP,stCamV].forEach(function(inp){ inp.addEventListener('change',function(){ window.__zgPicking=0; var f=inp.files&&inp.files[0]; if(f) stOpenEditor(f); }); });
   /* --- 作る画面（編集） --- */
   var stEd=null;
   var ST_COLORS=['#ffffff','#000000','#ff3b30','#ff9500','#ffcc00','#34c759','#00c7be','#007aff','#af52de','#ff2d55'];
@@ -15327,6 +15339,12 @@ html body #zg-st-view input.zst-reply{flex:1!important;min-width:0!important;hei
 @keyframes zstPop{40%{transform:scale(1.45)}100%{transform:scale(1)}}
 #zg-st-view .zst-seen{font-size:14px;font-weight:700;opacity:.9}
 #zg-st-view .zst-foot-me .zst-btn{font-size:22px;background:rgba(255,255,255,.12)}
+/* v521: ストーリーの撮る・選ぶ */
+#zg-st-sheet{position:fixed;inset:0;z-index:2147482000;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center}
+#zg-st-sheet[hidden]{display:none!important}
+#zg-st-sheet .zss-box{width:100%;max-width:520px;background:#fff;border-radius:18px 18px 0 0;padding:10px 12px calc(14px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:8px}
+#zg-st-sheet .zss-box button{border:0;border-radius:14px;background:#F4F1FF;color:#2A2350;font:700 16px/1 system-ui,"Hiragino Sans","Noto Sans JP",sans-serif;padding:16px;text-align:left}
+#zg-st-sheet .zss-box button.zss-x{background:#fff;color:#6B6880;text-align:center;border:1px solid #E6E2F3}
 </style>
 </body>
 </html>
