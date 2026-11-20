@@ -36,6 +36,11 @@ select,input{width:100%;font:inherit;padding:10px;border-radius:10px;border:1px 
 .chips{display:flex;gap:6px;margin-top:8px;overflow-x:auto;scrollbar-width:none}
 .chips button{flex:none;background:var(--chip);color:var(--tx);padding:6px 12px;border-radius:999px;font-size:14px}
 .chips button[aria-pressed="true"]{background:var(--ac);color:#fff}
+#areas{display:flex;gap:6px;margin-top:8px;overflow-x:auto;scrollbar-width:none}
+#areas[hidden]{display:none}
+#areas button{flex:none;background:var(--card);color:var(--tx);border:1px solid var(--line);padding:5px 11px;border-radius:999px;font-size:14px}
+#areas button small{color:var(--sub);margin-left:3px;font-size:12px}
+#areas button[aria-pressed="true"]{background:#1b1d27;color:#fff;border-color:#1b1d27}#areas button[aria-pressed="true"] small{color:#ddd}
 #count{font-size:13px;color:var(--sub);margin-top:6px}
 #grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));margin-top:8px}
 .card{background:var(--card);border-radius:14px;overflow:hidden;border:1px solid var(--line)}
@@ -91,7 +96,7 @@ dialog select,dialog input{background:var(--bg)}
 </head>
 <body>
 <header>
-  <div class="top"><div><h1>ライブカメラ一覧</h1><div id="ver" class="hint" style="margin-top:0">バージョン <b>v17</b>・<span id="total"></span></div></div><button id="add">＋ 追加</button></div>
+  <div class="top"><div><h1>ライブカメラ一覧</h1><div id="ver" class="hint" style="margin-top:0">バージョン <b>v18</b>・<span id="total"></span></div></div><button id="add">＋ 追加</button></div>
   <div class="row2">
     <select id="pref" aria-label="県を選ぶ"></select>
     <button id="prefbtn" type="button"><span id="preftxt">全国</span>▾</button>
@@ -105,6 +110,7 @@ dialog select,dialog input{background:var(--bg)}
     <button data-s="me" aria-pressed="false">自分で追加</button>
     <button class="trash" id="trashbtn" type="button">🗑 ゴミ箱</button>
   </div>
+  <div id="areas" hidden></div>
   <div id="count"></div>
 </header>
 <div id="find" class="hint" hidden></div>
@@ -172,6 +178,16 @@ var OTN={road:'道路',highway:'高速道路',river:'河川',mount:'山',sea:'�
 (DATA.ot||[]).forEach(function(a){preset.push({pref:PREFS[a[0]],name:a[1],url:a[2],src:'ot',ty:OTN[a[3]]||''})});
 DATA.wn.forEach(function(a){preset.push({pref:PREFS[a[0]],name:a[1],url:'https://weathernews.jp/onebox/livecam/'+a[2]+'/',src:'wn'})});
 
+// 市町村（名前から決める。政令市の区は市にまとめる）
+var MU=DATA.mu||{};
+function areaOf(c){
+  if(c.area!==undefined)return c.area;
+  var pi=PREFS.indexOf(c.pref),a='';
+  if(pi>=0){var t=c.name.split(c.pref).join(' ');var l=MU[pi]||[],bl=0,i,n,st;
+    for(i=0;i<l.length;i++){n=l[i];if(t.indexOf(n)>=0&&n.length+10>bl){a=n;bl=n.length+10}}
+    if(!a)for(i=0;i<l.length;i++){n=l[i];st=n.replace(/[市町村区]$/,'');if(st.length>=2&&t.indexOf(st)>=0&&st.length>bl){a=n;bl=st.length}}}
+  c.area=a;return a;
+}
 function ytCh(s){var m=s.match(/youtube\.com\/channel\/(UC[\w-]{20,})\/live/);return m?m[1]:null}
 function ytId(s){var m=s.match(/(?:youtu\.be\/|[?&]v=|\/live\/|\/embed\/|\/shorts\/)([\w-]{11})/);return m?m[1]:null}
 function kind(u){
@@ -235,7 +251,11 @@ function closeViewer(back){
   if(back){try{if(history.state&&history.state.v)history.back()}catch(e){}}
 }
 document.getElementById('vclose').onclick=function(){closeViewer(true)};
-window.addEventListener('popstate',function(){closeViewer(false)});
+window.addEventListener('popstate',function(){closeViewer(false);[].forEach.call(document.querySelectorAll('dialog[open]'),function(d){d.__pop=1;d.close()})});
+// ダイアログを開いたら履歴を1つ足す（スマホの戻るボタンでアプリではなく画面を閉じる）
+function openDlg(d){d.showModal();d.__pop=0;try{history.pushState({d:d.id},'')}catch(e){}}
+[].forEach.call(document.querySelectorAll('dialog'),function(d){d.addEventListener('close',function(){
+  if(d.__pop){d.__pop=0;return}try{if(history.state&&history.state.d===d.id)history.back()}catch(e){}})});
 // YouTube の再生が始まらない・エラーの時に知らせる（配信が止まった物など）
 var ytWatch=null;
 function stopYTWatch(){if(ytWatch){window.removeEventListener('message',ytWatch.on);clearTimeout(ytWatch.t);clearInterval(ytWatch.p);ytWatch=null}}
@@ -327,7 +347,7 @@ function card(c){
   var meta=document.createElement('div');meta.className='meta';
   var d=document.createElement('div');
   var b=document.createElement('b');b.textContent=c.name;
-  var sm=document.createElement('small');sm.textContent=c.pref||'県の指定なし';
+  var sm=document.createElement('small');sm.textContent=(c.pref||'県の指定なし')+(areaOf(c)?'・'+areaOf(c):'');
   d.appendChild(b);d.appendChild(sm);
   var acts=document.createElement('div');acts.className='acts';
   var a=document.createElement('a');a.href=c.url;a.target='_blank';a.rel='noopener noreferrer';a.textContent='開く';
@@ -357,10 +377,12 @@ function render(keep){
     });
     fd.appendChild(document.createTextNode('　→ 見つけた URL を「＋ 追加」で登録'));
   }
+  paintAreas(items,p);
   var shown=items.filter(function(c){
     if(p!=='*'&&c.pref!==p)return false;
+    if(areaSel&&p!=='*'&&areaKey(c)!==areaSel)return false;
     if(srcSel!=='*'&&c.src!==srcSel)return false;
-    if(w&&(c.name+' '+c.pref).indexOf(w)<0)return false;
+    if(w&&(c.name+' '+c.pref+' '+areaOf(c)).indexOf(w)<0)return false;
     return true;
   });
   grid.textContent='';
@@ -372,7 +394,23 @@ function render(keep){
   empty.textContent='条件に合うカメラはありません。県や種類を変えるか、「＋ 追加」から登録してください。';
   document.getElementById('trashbtn').textContent='🗑 ゴミ箱'+(trash.length?'（'+trash.length+'）':'');
 }
-sel.onchange=function(){lw(SEL,sel.value);render()};
+sel.onchange=function(){if(sel.value!==ls(SEL))areaSel='';lw(SEL,sel.value);lw(AREA,areaSel);render()};
+// 地域（市町村）の欄。少ない所は「その他」にまとめる
+var AREA='zg_livecam_area',areaSel=ls(AREA)||'',areaBig={};
+function areaKey(c){var a=areaOf(c);return a&&areaBig[a]?a:'その他'}
+function paintAreas(items,p){
+  var box=document.getElementById('areas');box.textContent='';areaBig={};
+  if(PREFS.indexOf(p)<0){box.hidden=true;return}
+  var c={},n=0;items.forEach(function(x){if(x.pref!==p)return;n++;var a=areaOf(x);if(a)c[a]=(c[a]||0)+1});
+  var min=n<100?2:3,list=Object.keys(c).filter(function(a){return c[a]>=min}).sort(function(a,b){return c[b]-c[a]});
+  list.forEach(function(a){areaBig[a]=1});
+  var other=n;list.forEach(function(a){other-=c[a]});
+  if(!list.length){box.hidden=true;areaSel='';return}
+  if(areaSel&&!(areaBig[areaSel]||(areaSel==='その他'&&other)))areaSel='';
+  box.hidden=false;
+  function b(v,t,k){var e=document.createElement('button');e.type='button';e.textContent=t;var sm=document.createElement('small');sm.textContent=k;e.appendChild(sm);e.setAttribute('aria-pressed',String(areaSel===v));e.onclick=function(){areaSel=v;lw(AREA,v);render()};box.appendChild(e)}
+  b('','すべて',n);list.forEach(function(a){b(a,a,c[a])});if(other)b('その他','その他',other);
+}
 // 都道府県をボタンで選ぶ（地方ごと・よく選ぶ県）
 var REGIONS=[['北海道・東北',0,7],['関東',7,14],['中部',14,23],['近畿',23,30],['中国',30,35],['四国',35,39],['九州・沖縄',39,47]];
 var RECENT='zg_livecam_recent';
@@ -398,7 +436,7 @@ function paintPrefDlg(){
   REGIONS.forEach(function(R){grid(R[0],PREFS.slice(R[1],R[2]).map(function(x){return [x,shortP(x)]}))});
   if(c['']){grid('その他',[['','県の指定なし']])}
 }
-document.getElementById('prefbtn').onclick=function(){paintPrefDlg();document.getElementById('prefdlg').showModal()};
+document.getElementById('prefbtn').onclick=function(){paintPrefDlg();openDlg(document.getElementById('prefdlg'))};
 document.getElementById('prefclose').onclick=function(){document.getElementById('prefdlg').close()};
 var qt;q.oninput=function(){clearTimeout(qt);qt=setTimeout(function(){render()},250)};
 document.getElementById('chips').onclick=function(e){
@@ -421,7 +459,7 @@ function paintTrash(){
   });
   document.getElementById('trashall').disabled=!trash.length;document.getElementById('trashempty').disabled=!trash.length;
 }
-document.getElementById('trashbtn').onclick=function(){paintTrash();tdlg.showModal()};
+document.getElementById('trashbtn').onclick=function(){paintTrash();openDlg(tdlg)};
 document.getElementById('trashclose').onclick=function(){tdlg.close()};
 document.getElementById('trashall').onclick=function(){trash.slice().forEach(restoreCam);paintTrash()};
 document.getElementById('trashempty').onclick=function(){
@@ -434,7 +472,7 @@ PREFS.forEach(function(p){var o=document.createElement('option');o.value=p;o.tex
 document.getElementById('add').onclick=function(){
   nm.value='';url.value='';err.textContent='';
   if(PREFS.indexOf(sel.value)>=0)fp.value=sel.value;
-  dlg.showModal();
+  openDlg(dlg);
 };
 document.getElementById('cancel').onclick=function(){dlg.close()};
 document.getElementById('f').addEventListener('submit',function(e){

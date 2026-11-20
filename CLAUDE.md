@@ -67,6 +67,7 @@
 - v15: ゴミ箱（持ち主）。消したカメラは localStorage `zg_livecam_trash`（名前・県・URL・種類・時刻）に入り、上の「🗑 ゴミ箱」から1件ずつ・全部戻せる。消した直後は下に「元に戻す」が6秒出る（確認ダイアログはやめた）。空にすると自動の分は hidden のまま戻らない。前の版で消した分も最初に開いた時にゴミ箱へ入れる。チップの onclick は data-s の無いボタンを無視。
 - v16: 「アイコンが変わらない」（持ち主）。アイコンと manifest を1時間覚える設定（max-age=3600）だった → すべて no-cache、manifest とアイコンの URL に ?v=16（変える時はこの数字も上げる）。
 - v17: 都道府県を選びやすく（持ち主: 一覧が長い）。`#pref` の select は隠して残し、`#prefbtn` を押すと `#prefdlg`（全国・よく選ぶ県4つ＝localStorage `zg_livecam_recent`・地方ごとのボタン、件数つき）。選ぶと `pickPref` が sel.value を入れて onchange。
+- v18: 戻るボタンで選択画面・ゴミ箱・追加を閉じる（`openDlg` が pushState、popstate で開いているダイアログを閉じる、閉じるボタンの時は history.back）。地域の欄 `#areas`: 県を選ぶと市町村ごとのボタン（data.json の `mu`＝県番号ごとの市町村名、政令市の区は市にまとめる。`areaOf` が名前から決める）。少ない所（県の件数100未満なら1件、以上なら2件以下）は「その他」。選んだ地域は localStorage `zg_livecam_area`。カードの下に「県・市町村」。
 - 公開: `node livecam/make_worker.js 出力先` で worker.js と meta.json を作り、PUT する（下の行）。
 - 更新したら `livecam/` の4ファイル（index.html・manifest.webmanifest・icon-192/512.png）を1つの Worker（ファイルを埋め込んで返すだけ）にまとめ、`PUT /accounts/{id}/workers/scripts/livecam`（metadata は main_module と compatibility_date のみ、bindings なし）。`zatsugaku-push` には触らない。
 
