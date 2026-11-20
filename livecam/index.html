@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ライブカメラ一覧</title>
+<style>
+:root{--bg:#f4f5f9;--card:#fff;--tx:#1b1d27;--sub:#6b7080;--ac:#2f6bff;--line:#e2e4ec}
+@media(prefers-color-scheme:dark){:root{--bg:#12141b;--card:#1d2029;--tx:#eceef5;--sub:#9aa0b2;--ac:#6c95ff;--line:#2d3140}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.5 system-ui,-apple-system,"Hiragino Sans",sans-serif;padding:0 16px 96px}
+header{position:sticky;top:0;background:var(--bg);padding:14px 0 10px;display:flex;align-items:center;justify-content:space-between;z-index:5}
+h1{font-size:20px;margin:0}
+button{font:inherit;border:0;border-radius:10px;padding:9px 14px;background:var(--ac);color:#fff;cursor:pointer}
+button.ghost{background:transparent;color:var(--sub);border:1px solid var(--line)}
+#grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+.card{background:var(--card);border-radius:14px;overflow:hidden;border:1px solid var(--line)}
+.thumb{position:relative;aspect-ratio:16/9;background:#000;cursor:pointer}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.thumb .play{position:absolute;inset:0;display:grid;place-items:center;color:#fff;font-size:44px;text-shadow:0 2px 8px #0008}
+.thumb iframe{width:100%;height:100%;border:0;display:block}
+.meta{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;gap:8px}
+.meta b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.del{background:none;color:var(--sub);padding:4px 8px;font-size:14px}
+.empty{color:var(--sub);text-align:center;padding:48px 8px}
+dialog{border:0;border-radius:16px;padding:20px;width:min(92vw,420px);background:var(--card);color:var(--tx)}
+dialog::backdrop{background:#0008}
+label{display:block;font-size:14px;color:var(--sub);margin:12px 0 4px}
+input{width:100%;font:inherit;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--tx)}
+.row{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
+#err{color:#d33;font-size:14px;min-height:20px;margin-top:8px}
+</style>
+</head>
+<body>
+<header>
+  <h1>ライブカメラ一覧</h1>
+  <button id="add">＋ 追加</button>
+</header>
+<div id="grid"></div>
+<div id="empty" class="empty" hidden>まだカメラがありません。<br>右上の「＋ 追加」から、YouTube ライブの URL を登録してください。</div>
+
+<dialog id="dlg">
+  <form method="dialog" id="f">
+    <b>カメラを追加</b>
+    <label for="nm">名前</label>
+    <input id="nm" placeholder="例：徳島駅前" maxlength="30">
+    <label for="url">YouTube の URL</label>
+    <input id="url" inputmode="url" placeholder="https://www.youtube.com/watch?v=…">
+    <div id="err"></div>
+    <div class="row">
+      <button type="button" class="ghost" id="cancel">やめる</button>
+      <button type="submit" id="ok">追加</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+(function(){
+'use strict';
+var KEY='zg_livecam_list';
+var list=[];
+try{list=JSON.parse(localStorage.getItem(KEY)||'[]')}catch(e){list=[]}
+if(!Array.isArray(list))list=[];
+function save(){try{localStorage.setItem(KEY,JSON.stringify(list))}catch(e){}}
+
+function videoId(s){
+  s=(s||'').trim();
+  if(/^[\w-]{11}$/.test(s))return s;
+  var m=s.match(/(?:youtu\.be\/|[?&]v=|\/live\/|\/embed\/|\/shorts\/)([\w-]{11})/);
+  return m?m[1]:null;
+}
+var grid=document.getElementById('grid'),empty=document.getElementById('empty');
+function render(){
+  grid.textContent='';
+  empty.hidden=list.length>0;
+  list.forEach(function(c,i){
+    var card=document.createElement('div');card.className='card';
+    var th=document.createElement('div');th.className='thumb';
+    var img=document.createElement('img');img.alt='';img.loading='lazy';
+    img.src='https://i.ytimg.com/vi/'+c.id+'/hqdefault_live.jpg';
+    img.onerror=function(){img.onerror=null;img.src='https://i.ytimg.com/vi/'+c.id+'/hqdefault.jpg'};
+    var pl=document.createElement('div');pl.className='play';pl.textContent='▶';
+    th.appendChild(img);th.appendChild(pl);
+    th.onclick=function(){
+      th.textContent='';
+      var f=document.createElement('iframe');
+      f.src='https://www.youtube-nocookie.com/embed/'+c.id+'?autoplay=1&playsinline=1';
+      f.allow='autoplay; encrypted-media; picture-in-picture; fullscreen';
+      f.allowFullscreen=true;
+      th.appendChild(f);
+    };
+    var meta=document.createElement('div');meta.className='meta';
+    var b=document.createElement('b');b.textContent=c.name;
+    var d=document.createElement('button');d.className='del';d.textContent='削除';
+    d.onclick=function(){if(confirm('「'+c.name+'」を一覧から消しますか？')){list.splice(i,1);save();render()}};
+    meta.appendChild(b);meta.appendChild(d);
+    card.appendChild(th);card.appendChild(meta);
+    grid.appendChild(card);
+  });
+}
+var dlg=document.getElementById('dlg'),nm=document.getElementById('nm'),url=document.getElementById('url'),err=document.getElementById('err');
+document.getElementById('add').onclick=function(){nm.value='';url.value='';err.textContent='';dlg.showModal()};
+document.getElementById('cancel').onclick=function(){dlg.close()};
+document.getElementById('f').addEventListener('submit',function(e){
+  var id=videoId(url.value),name=nm.value.trim();
+  if(!name||!id){
+    e.preventDefault();
+    err.textContent=!name?'名前を入れてください。':'YouTube の動画 URL を入れてください。';
+    return;
+  }
+  list.push({name:name,id:id});save();render();
+});
+render();
+})();
+</script>
+</body>
+</html>
