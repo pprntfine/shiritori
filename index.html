@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとしてインストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">新しい版に更新する</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンでアプリとして入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v522</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v523</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">相手を待っています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v522</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v523</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">名前</b> さんが入室を求めています</p>
         <p class="jr-fp">合図 <b id="jr-fp">----</b> ／ 相手の画面と同じかくににて確認</p>
@@ -6965,7 +6965,7 @@ async function chatSaveSnapshot(){
       if(m.sys) return {mid:m.mid||('cl'+(m.at||0)),f:'',t:m.text,cl:1,a:m.at||0};
       var __pt=!!(m.photo||m.file);
       if(__pt&&m.data){ var __k=photoKeyOf(m); if(__k) __ps.push({k:__k,v:m.data,l:m.data.length,m:m}); }
-      return {mid:m.mid||'',f:m.from,t:m.text||'',p:m.photo?1:0,pd:__pt?1:0,d:'',file:m.file?1:0,fn:m.fileName||'',fs:m.fileSize||0,failed:m.failed?1:0,a:m.at||0,n:m.n||0,s:m.sent===false?0:1,k:m.acked?1:0,r:m.read?1:0,ra:m.rad||0,u:m.pid||''};
+      return {mid:m.mid||'',f:m.from,t:m.text||'',p:m.photo?1:0,pd:__pt?1:0,d:'',file:m.file?1:0,fn:m.fileName||'',fs:m.fileSize||0,failed:m.failed?1:0,a:m.at||0,n:m.n||0,on:(Array.isArray(m.oldN)&&m.oldN.length)?m.oldN.slice(-20):undefined,s:m.sent===false?0:1,k:m.acked?1:0,r:m.read?1:0,ra:m.rad||0,u:m.pid||''};
     });
     if(__ps.length) await chatPhotoPutList(__ps);
     if(!privateCurrent(saveScope)) throw new Error('保存中にペアが変わりました');
@@ -7024,6 +7024,7 @@ async function chatRestore(sk){
       if(have[key]) return; have[key]=1;
       if(it.cl){ S.chat.push({sys:true,callLog:true,text:String(it.t).slice(0,80),at:it.a||Date.now(),mid:it.mid||''}); return; }   /* v491: 電話の 記録 */
       var m={mid:it.mid||'',from:it.f,at:it.a||Date.now(),n:it.n||0,sent:!!it.s,acked:!!it.k,read:!!it.r,rad:it.ra||0,uid:String(++UID)};
+      if(Array.isArray(it.on)) m.oldN=it.on.filter(Number.isSafeInteger).slice(-20);   /* v523 */
       if(it.p){ m.photo=true; m.data=(ph[key]||it.d||''); if(!m.data) m.lost=1; m.__ps=(typeof phRaw[key]==='string')?0:(m.data?m.data.length:0); m.pid=it.u||''; }
       else if(it.file){ m.file=true; m.data=(ph[key]||it.d||''); if(!m.data) m.lost=1; m.__ps=(typeof phRaw[key]==='string')?0:(m.data?m.data.length:0); m.fileName=String(it.fn||'ファイル').slice(0,180); m.fileSize=it.fs||0; m.pid=it.u||''; m.failed=!!it.failed||!it.s; }
       else m.text=String(it.t).slice(0,MAX_CHAT);
@@ -8074,7 +8075,8 @@ function maybeSendRead(force){   /* v232: force=立て直し。相手に届か�
       if(vc) persistChat();
     }
     var ids=S.chat.filter(function(c){return c&&!c.sys&&c.from===S.opp.id&&ns.indexOf(c.n)>=0&&validDeletionId(c.mid);}).map(function(c){return c.mid;});
-    Net.send({t:'read',ns:ns,ids:ids,exp:exp,at:Date.now()},function(ok){ if(ok){ if(!force) S.readSent=up; } else { S.readSent=0; setTimeout(maybeSendRead,4000); } });   /* v232: 届いてから 記録を進める・force は 記録を 動かさない */
+    var ps=S.chat.filter(function(c){return c&&!c.sys&&c.from===S.opp.id&&(c.photo||c.file)&&c.pid&&ns.indexOf(c.n)>=0;}).map(function(c){return String(c.pid);});   /* v523 */
+    Net.send({t:'read',ns:ns,ids:ids,ps:ps,exp:exp,at:Date.now()},function(ok){ if(ok){ if(!force) S.readSent=up; } else { S.readSent=0; setTimeout(maybeSendRead,4000); } });   /* v232: 届いてから 記録を進める・force は 記録を 動かさない */
   },700);
 }
 /* v237: 既読から 15分で きえる（じぶんの スマホからも あいての スマホからも 消す。もどせない） */
@@ -9528,7 +9530,7 @@ function sendAttachment(msg,tries){
     else if(tries<6){ privateLater(function(){ if(S.chat.indexOf(msg)>=0) sendAttachment(msg,tries+1); },5000*(tries+1),msg.__privateScope); }
     else{ msg.failed=true; toast('ファイルを送れませんでした。通信を確認し、選びなおしてください。'); }
     renderChat(true);
-  }); if(env&&env.n) msg.n=env.n;
+  }); msgSetN(msg,env);
 }
 var attachmentReceiving=new Set();
 async function recvAttachment(m){
@@ -9537,7 +9539,7 @@ async function recvAttachment(m){
   if(!m.__att||!m.id||typeof m.size!=='number'||m.size<0||m.size>ATTACH_MAX) return;
   var id=String(m.from)+':'+String(m.id),topic=Net.topic,key=Net.key;
   var exists=function(){ return S.chat.some(function(c){ return c.pid===m.id&&c.from===m.from; }); };
-  if(exists()){await chatSaveNow();return true;}
+  if(exists()){await chatSaveNow(); if(m.n) Net.send({t:'ack',n1:m.n,ps:[String(m.id)]}); return true;}
   if(attachmentReceiving.has(id)) return false;
   attachmentReceiving.add(id);
   try{
@@ -9547,7 +9549,7 @@ async function recvAttachment(m){
     S.chat.push({file:true,from:m.from,at:typeof m.at==='number'?m.at:Date.now(),data:bytesDataURL(bytes,attachmentKind(bytes,m.name,m.mime)),fileName:String(m.name||'ファイル').slice(0,180),fileSize:bytes.length,pid:m.id,uid:String(++UID),n:m.n||0,sent:true});
     await chatSaveNow();
     if(!privateIncoming(m)) return false;
-    S.lastPeerN=Math.max(S.lastPeerN||0,m.n||0); if(m.n) Net.send({t:'ack',n1:m.n});
+    S.lastPeerN=Math.max(S.lastPeerN||0,m.n||0); if(m.n) Net.send({t:'ack',n1:m.n,ps:[String(m.id)]});
     if(!chatOnScreen()){ S.unread++; updateBadge(); updateTitleBadge(); updateTalkbackBadges(); notifyIncoming(); }
     if(S.tab==='chat') renderChat(true); else persistChat();
     maybeSendRead();
@@ -9929,7 +9931,7 @@ function sendPhoto(msg,tries){
     else photoGiveUp(msg,'写真を送信できませんでした（電波、または中継所の回数せいげん）。吹き出しの「もう一度送る」を押してください。');
     if(S.tab==='chat') renderChat(true);
   });
-  if(env&&env.n) msg.n=env.n;
+  msgSetN(msg,env);
 }
 /* v278: しゃしんの 種類を 中身の 先頭で 見わける（JPEG だけ うけとると、PNG の しゃしんが 無言で すてられる） */
 function photoMimeOf(b){
@@ -9968,7 +9970,7 @@ async function recvPhoto(m){
   if(!m.__att){ try{ photoDiagPush('受け取り','しるしなし'); }catch(e){} }
   if(!m.__att||messageDeleted({from:m.from,pid:m.id})){ if(!m.__att){ try{ toast('写真を受け取れませんでした（しるしがありません）'); }catch(e){} photoAskAgain(m); } return; }
   var topic=Net.topic,key=Net.key;
-  for(var i=0;i<S.chat.length;i++){ if(S.chat[i].pid&&S.chat[i].pid===m.id&&S.chat[i].from===m.from){await chatSaveNow();return true;} }
+  for(var i=0;i<S.chat.length;i++){ if(S.chat[i].pid&&S.chat[i].pid===m.id&&S.chat[i].from===m.from){await chatSaveNow(); if(m.n) Net.send({t:'ack',n1:m.n,ps:[String(m.id)]}); return true;} }   /* v523: 送り直しで来た同じ写真にも受領を返す（相手の番号が変わっているため） */
   var bytes=await Net.fetchFile(m.__att,m);
   if(!privateIncoming(m)) return;
   if(!bytes){ try{ photoDiagPush('受け取り','とれなかった'); }catch(e){} try{ toast('写真をとりにいけませんでした（もう一度頼みます）'); }catch(e){} photoAskAgain(m); return; }
@@ -9981,7 +9983,7 @@ async function recvPhoto(m){
   var viewing=(S.phase==='play'&&S.tab==='chat'&&document.visibilityState==='visible');
   S.chat.push({photo:true,from:m.from,at:(typeof m.at==='number'?m.at:Date.now()),data:url,pid:m.id,uid:String(++UID),n:m.n||0,sent:true});
   S.lastPeerN=Math.max(S.lastPeerN||0,m.n||0);
-  try{ await chatSaveNow(); if(privateIncoming(m)&&m.n) Net.send({t:'ack',n1:m.n}); }catch(e){ return false; }
+  try{ await chatSaveNow(); if(privateIncoming(m)&&m.n) Net.send({t:'ack',n1:m.n,ps:[String(m.id)]}); }catch(e){ return false; }
   if(!viewing){ S.unread++; }
   notifyIncoming();
   if(S.tab==='chat') renderChat(true);
@@ -11226,14 +11228,18 @@ var STORED_KEEP=11*3600*1000;
 function storedMark(env){ if(!env) return; env.__storedAt=Date.now(); if(env.__onStored){ try{ env.__onStored(); }catch(e){} } }
 function storedFresh(t){ return !!t&&Date.now()-t<STORED_KEEP; }
 function retryGap(tries){ return tries===0?0:Math.min(600000,15000*Math.pow(2,Math.min(tries-1,6))); }
+/* v523: 写真・ファイルは送り直すたびに封筒の番号（n）が変わる。相手が先の分を受け取って既読を返しても、
+   今の n と合わず「送信済み」のままだった（写真には文字の mid が無い）。前の番号を覚えておき、受領・既読はどれでも合わせる。 */
+function msgSetN(msg,env){ if(!msg||!env||!env.n) return; if(msg.n&&msg.n!==env.n){ var o=msg.oldN||(msg.oldN=[]); if(o.indexOf(msg.n)<0) o.push(msg.n); if(o.length>20) o.splice(0,o.length-20); } msg.n=env.n; }
 var receiptQueue=Promise.resolve();
-function exactReceipt(ns,read,ids){
+function exactReceipt(ns,read,ids,ps){
   var scope=privateScope();
   var job=receiptQueue.catch(function(){}).then(async function(){
     if(!privateCurrent(scope))return false;
     var set=new Set((Array.isArray(ns)?ns:[]).filter(Number.isSafeInteger));
     var receivedIds=new Set(Array.isArray(ids)?ids.filter(validDeletionId):[]);
-    var touched=S.chat.filter(function(m){return m&&!m.sys&&m.from===S.me.id&&(receivedIds.has(m.mid)||set.has(m.n));});
+    var pids=new Set(Array.isArray(ps)?ps.filter(function(x){return typeof x==='string'&&x.length>0&&x.length<80;}):[]);   /* v523: 写真・ファイルは pid でも合わせる */
+    var touched=S.chat.filter(function(m){return m&&!m.sys&&m.from===S.me.id&&(receivedIds.has(m.mid)||set.has(m.n)||(m.pid&&(m.photo||m.file)&&pids.has(m.pid))||(Array.isArray(m.oldN)&&m.oldN.some(function(x){return set.has(x);})));});
     if(!touched.length)return true;
     var old=touched.map(function(m){return {m:m,acked:m.acked,peerAck:m.peerAck,delivered:m.delivered,read:m.read,rad:m.rad};});
     touched.forEach(function(m){m.acked=true;m.peerAck=true;m.delivered=true;if(read){m.read=true;markReadAt(m);}});
@@ -11840,7 +11846,7 @@ Net.onMsg=async function(m){
       bellReset();
       try{ var __ra=Date.now(); if(typeof m.at==='number'&&__ra-m.at>=0&&__ra-m.at<12*3600*1000) __ra=m.at; plogMarkRead(__ra); }catch(e){}   /* v266: 既読＝トーク画面を 見て いた 証拠（v512: 読んだ 時刻で） */
       try{ if(m.upTo) applyPeerRead(m.upTo); }catch(e){}   /* v267: 水位で まとめて 既読（とんでも なおる） */
-      return await exactReceipt(m.ns,true,m.ids);
+      return await exactReceipt(m.ns,true,m.ids,m.ps);
 
       /* v154: 既読に なっても けさない（けすのは「🗑 けす」だけ） */
       break;
@@ -12049,7 +12055,7 @@ Net.onMsg=async function(m){
 
 case 'ack':
       if(m.from===S.me.id) break;
-      return await exactReceipt(m.n1?[m.n1]:m.ns,false,m.ids);
+      return await exactReceipt(m.n1?[m.n1]:m.ns,false,m.ids,m.ps);
 
       break;
 
