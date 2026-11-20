@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ライブカメラ一覧</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icon-192.png">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="ライブカメラ">
+<meta name="theme-color" content="#2f6bff">
+<style>
+:root{--bg:#f4f5f9;--card:#fff;--tx:#1b1d27;--sub:#6b7080;--ac:#2f6bff;--line:#e2e4ec;--chip:#e8ecf8}
+@media(prefers-color-scheme:dark){:root{--bg:#12141b;--card:#1d2029;--tx:#eceef5;--sub:#9aa0b2;--ac:#6c95ff;--line:#2d3140;--chip:#262b3a}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.5 system-ui,-apple-system,"Hiragino Sans",sans-serif;padding:0 16px 96px}
+header{position:sticky;top:0;background:var(--bg);padding:12px 0 8px;z-index:5}
+.top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+h1{font-size:20px;margin:0}
+button{font:inherit;border:0;border-radius:10px;padding:9px 14px;background:var(--ac);color:#fff;cursor:pointer}
+button.ghost{background:transparent;color:var(--sub);border:1px solid var(--line)}
+select,input{width:100%;font:inherit;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--tx)}
+.row2{display:flex;gap:8px;margin-top:8px}
+.row2 select{flex:1.1}.row2 input{flex:1}
+.chips{display:flex;gap:6px;margin-top:8px;overflow-x:auto;scrollbar-width:none}
+.chips button{flex:none;background:var(--chip);color:var(--tx);padding:6px 12px;border-radius:999px;font-size:14px}
+.chips button[aria-pressed="true"]{background:var(--ac);color:#fff}
+#count{font-size:13px;color:var(--sub);margin-top:6px}
+#grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));margin-top:8px}
+.card{background:var(--card);border-radius:14px;overflow:hidden;border:1px solid var(--line)}
+.thumb{position:relative;aspect-ratio:16/9;background:#000;cursor:pointer}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.thumb .ph{width:100%;height:100%;display:grid;place-items:center;color:#cfd6ea;font-size:14px;padding:8px;text-align:center;background:linear-gradient(135deg,#1f6fb8,#123a6b)}
+.thumb .ph.mine{background:linear-gradient(135deg,#27304a,#12141b)}
+.thumb .play{position:absolute;inset:0;display:grid;place-items:center;color:#fff;font-size:44px;text-shadow:0 2px 8px #0008}
+.thumb .src{position:absolute;left:8px;top:8px;background:#000a;color:#fff;font-size:12px;padding:2px 8px;border-radius:6px}
+.thumb iframe,.thumb video{width:100%;height:100%;border:0;display:block;background:#000}
+.meta{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;gap:8px}
+.meta div{min-width:0}
+.meta b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.meta small{color:var(--sub)}
+.acts{display:flex;gap:2px;flex:none}
+.acts a,.acts button{background:none;color:var(--sub);padding:4px 8px;font-size:14px;text-decoration:none}
+#more{display:block;margin:18px auto 0;width:100%;max-width:420px}
+.empty{color:var(--sub);text-align:center;padding:48px 8px}
+dialog{border:0;border-radius:16px;padding:20px;width:min(92vw,420px);background:var(--card);color:var(--tx)}
+dialog::backdrop{background:#0008}
+label{display:block;font-size:14px;color:var(--sub);margin:12px 0 4px}
+dialog select,dialog input{background:var(--bg)}
+.row{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
+#err{color:#d33;font-size:14px;min-height:20px;margin-top:8px}
+.hint{font-size:13px;color:var(--sub);margin-top:6px}
+#restore{background:none;color:var(--sub);font-size:13px;padding:4px 0;text-decoration:underline}
+</style>
+</head>
+<body>
+<header>
+  <div class="top"><h1>ライブカメラ一覧</h1><button id="add">＋ 追加</button></div>
+  <div class="row2">
+    <select id="pref" aria-label="県を選ぶ"></select>
+    <input id="q" type="search" placeholder="地名で探す" aria-label="地名で探す">
+  </div>
+  <div class="chips" id="chips">
+    <button data-s="*" aria-pressed="true">すべて</button>
+    <button data-s="yt" aria-pressed="false">YouTube</button>
+    <button data-s="wn" aria-pressed="false">ウェザーニュース</button>
+    <button data-s="me" aria-pressed="false">自分で追加</button>
+  </div>
+  <div id="count"></div>
+</header>
+<div id="find" class="hint" hidden></div>
+<div id="grid"></div>
+<button id="more" class="ghost" hidden>もっと見る</button>
+<div id="empty" class="empty" hidden></div>
+<div class="hint" style="text-align:center;margin-top:24px"><button id="restore" hidden>消したカメラを元に戻す</button></div>
+
+<dialog id="dlg">
+  <form method="dialog" id="f">
+    <b>カメラを追加</b>
+    <label for="nm">名前</label>
+    <input id="nm" placeholder="例：徳島駅前" maxlength="30">
+    <label for="fp">県</label>
+    <select id="fp"></select>
+    <label for="url">URL</label>
+    <input id="url" inputmode="url" placeholder="https://…">
+    <div class="hint">YouTube、映像ファイル（.mp4・.m3u8）、ライブカメラのサイトなど、ブラウザで見られる URL なら何でも登録できます。</div>
+    <div id="err"></div>
+    <div class="row">
+      <button type="button" class="ghost" id="cancel">やめる</button>
+      <button type="submit">追加</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+(function(){
+'use strict';
+var PREFS=['北海道','青森県','岩手県','宮城県','秋田県','山形県','福島県','茨城県','栃木県','群馬県','埼玉県','千葉県','東京都','神奈川県','新潟県','富山県','石川県','福井県','山梨県','長野県','岐阜県','静岡県','愛知県','三重県','滋賀県','京都府','大阪府','兵庫県','奈良県','和歌山県','鳥取県','島根県','岡山県','広島県','山口県','徳島県','香川県','愛媛県','高知県','福岡県','佐賀県','長崎県','熊本県','大分県','宮崎県','鹿児島県','沖縄県'];
+// 自動で集めたカメラ（2026-11-20。YouTube は配信中・埋め込みできると確かめた物、ウェザーニュースは県ごとの一覧に載っている物）
+var DATA=/*DATA*/;
+var KEY='zg_livecam_list2',SEL='zg_livecam_pref',HID='zg_livecam_hidden',SRC='zg_livecam_src';
+function ls(k){try{return localStorage.getItem(k)}catch(e){return null}}
+function lw(k,v){try{localStorage.setItem(k,v)}catch(e){}}
+// 自分で追加した分（前の版で自動登録した分 auto:1 は、新しい一覧に置き換えるので外す）
+var mine=[];
+try{mine=JSON.parse(ls(KEY)||'[]')}catch(e){}
+if(!Array.isArray(mine))mine=[];
+try{JSON.parse(ls('zg_livecam_list')||'[]').forEach(function(c){
+  if(c&&c.id&&!mine.some(function(x){return x.url==='https://www.youtube.com/watch?v='+c.id}))
+    mine.push({name:c.name,pref:'',url:'https://www.youtube.com/watch?v='+c.id});
+})}catch(e){}
+mine=mine.filter(function(c){return c&&!c.auto&&c.url});
+function saveMine(){lw(KEY,JSON.stringify(mine))}
+saveMine();
+var hidden={};
+try{(JSON.parse(ls(HID)||'[]')||[]).forEach(function(u){hidden[u]=1})}catch(e){}
+function saveHidden(){lw(HID,JSON.stringify(Object.keys(hidden)))}
+
+var preset=[];
+DATA.yt.forEach(function(a){preset.push({pref:PREFS[a[0]],name:a[1],url:'https://www.youtube.com/watch?v='+a[2],src:'yt'})});
+DATA.wn.forEach(function(a){preset.push({pref:PREFS[a[0]],name:a[1],url:'https://weathernews.jp/onebox/livecam/'+a[2]+'/',src:'wn'})});
+
+function ytId(s){var m=s.match(/(?:youtu\.be\/|[?&]v=|\/live\/|\/embed\/|\/shorts\/)([\w-]{11})/);return m?m[1]:null}
+function kind(u){
+  if(ytId(u))return 'yt';
+  if(/\.m3u8(\?|#|$)/i.test(u))return 'hls';
+  if(/\.(mp4|webm|mov)(\?|#|$)/i.test(u))return 'file';
+  return 'page';
+}
+function host(u){try{return new URL(u).hostname}catch(e){return ''}}
+var hlsP=null;
+function loadHls(){
+  if(window.Hls)return Promise.resolve();
+  if(hlsP)return hlsP;
+  hlsP=new Promise(function(ok,ng){
+    var s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.13/hls.min.js';
+    s.onload=ok;s.onerror=ng;document.head.appendChild(s);
+  });
+  return hlsP;
+}
+
+function all(){
+  var a=mine.map(function(c,i){return {pref:c.pref||'',name:c.name,url:c.url,src:'me',mi:i}});
+  return a.concat(preset.filter(function(c){return !hidden[c.url]}));
+}
+var sel=document.getElementById('pref'),q=document.getElementById('q'),grid=document.getElementById('grid'),empty=document.getElementById('empty'),more=document.getElementById('more'),cnt=document.getElementById('count');
+var srcSel=ls(SRC)||'*',PAGE=40,limit=PAGE;
+function fillSel(items){
+  var c={};items.forEach(function(x){c[x.pref]=(c[x.pref]||0)+1});
+  var cur=sel.value||ls(SEL)||'*';
+  sel.textContent='';
+  function opt(v,t){var o=document.createElement('option');o.value=v;o.textContent=t;sel.appendChild(o)}
+  opt('*','全国（'+items.length+'）');
+  PREFS.forEach(function(p){opt(p,p+'（'+(c[p]||0)+'）')});
+  if(c['']){opt('','県の指定なし（'+c['']+'）')}
+  sel.value=cur;
+  if(sel.value!==cur)sel.value='*';
+}
+function paintChips(){
+  [].forEach.call(document.querySelectorAll('#chips button'),function(b){b.setAttribute('aria-pressed',String(b.dataset.s===srcSel))});
+}
+function play(th,c){
+  th.onclick=null;th.textContent='';
+  var k=kind(c.url),el;
+  if(k==='yt'){
+    el=document.createElement('iframe');
+    el.src='https://www.youtube-nocookie.com/embed/'+ytId(c.url)+'?autoplay=1&playsinline=1';
+    el.allow='autoplay; encrypted-media; picture-in-picture; fullscreen';el.allowFullscreen=true;
+  }else if(k==='hls'||k==='file'){
+    el=document.createElement('video');el.controls=true;el.autoplay=true;el.muted=true;el.playsInline=true;
+    if(k==='file'||el.canPlayType('application/vnd.apple.mpegurl')){el.src=c.url}
+    else loadHls().then(function(){
+      if(window.Hls&&Hls.isSupported()){var h=new Hls();h.loadSource(c.url);h.attachMedia(el)}
+      else el.src=c.url;
+    }).catch(function(){th.textContent='再生の部品を読み込めませんでした。'});
+  }else{
+    el=document.createElement('iframe');el.src=c.url;
+    el.allow='autoplay; fullscreen; picture-in-picture';el.allowFullscreen=true;
+    el.referrerPolicy='no-referrer';
+  }
+  th.appendChild(el);
+}
+var SRCNAME={yt:'YouTube',wn:'ウェザーニュース',me:'自分で追加'};
+function card(c){
+  var k=kind(c.url);
+  var el=document.createElement('div');el.className='card';
+  var th=document.createElement('div');th.className='thumb';
+  if(k==='yt'){
+    var img=document.createElement('img');img.alt='';img.loading='lazy';
+    var id=ytId(c.url);
+    img.src='https://i.ytimg.com/vi/'+id+'/hqdefault_live.jpg';
+    img.onerror=function(){img.onerror=null;img.src='https://i.ytimg.com/vi/'+id+'/hqdefault.jpg'};
+    th.appendChild(img);
+  }else{
+    var ph=document.createElement('div');ph.className='ph'+(c.src==='me'?' mine':'');
+    ph.textContent=c.src==='wn'?'ソラカメ（空のライブカメラ）':(host(c.url)||'ライブカメラ');
+    th.appendChild(ph);
+  }
+  var pl=document.createElement('div');pl.className='play';pl.textContent='▶';th.appendChild(pl);
+  var sb=document.createElement('div');sb.className='src';sb.textContent=SRCNAME[c.src]||'';th.appendChild(sb);
+  th.onclick=function(){play(th,c)};
+  var meta=document.createElement('div');meta.className='meta';
+  var d=document.createElement('div');
+  var b=document.createElement('b');b.textContent=c.name;
+  var sm=document.createElement('small');sm.textContent=c.pref||'県の指定なし';
+  d.appendChild(b);d.appendChild(sm);
+  var acts=document.createElement('div');acts.className='acts';
+  var a=document.createElement('a');a.href=c.url;a.target='_blank';a.rel='noopener noreferrer';a.textContent='開く';
+  var del=document.createElement('button');del.textContent='削除';
+  del.onclick=function(){
+    if(!confirm('「'+c.name+'」を一覧から消しますか？'))return;
+    if(c.src==='me'){mine.splice(c.mi,1);saveMine()}else{hidden[c.url]=1;saveHidden()}
+    render(true);
+  };
+  acts.appendChild(a);acts.appendChild(del);
+  meta.appendChild(d);meta.appendChild(acts);
+  el.appendChild(th);el.appendChild(meta);
+  return el;
+}
+function render(keep){
+  if(!keep)limit=PAGE;
+  var items=all();
+  fillSel(items);paintChips();
+  var p=sel.value,w=q.value.trim();
+  var fd=document.getElementById('find');
+  fd.textContent='';
+  fd.hidden=PREFS.indexOf(p)<0;
+  if(!fd.hidden){
+    fd.appendChild(document.createTextNode('もっと探す：'));
+    [['YouTube','https://www.youtube.com/results?search_query='+encodeURIComponent(p+' ライブカメラ')+'&sp=EgJAAQ%253D%253D'],['Google','https://www.google.com/search?q='+encodeURIComponent(p+' ライブカメラ')]].forEach(function(l,i){
+      if(i)fd.appendChild(document.createTextNode('　'));
+      var a=document.createElement('a');a.href=l[1];a.target='_blank';a.rel='noopener noreferrer';a.textContent=l[0];fd.appendChild(a);
+    });
+    fd.appendChild(document.createTextNode('　→ 見つけた URL を「＋ 追加」で登録'));
+  }
+  var shown=items.filter(function(c){
+    if(p!=='*'&&c.pref!==p)return false;
+    if(srcSel!=='*'&&c.src!==srcSel)return false;
+    if(w&&(c.name+' '+c.pref).indexOf(w)<0)return false;
+    return true;
+  });
+  grid.textContent='';
+  shown.slice(0,limit).forEach(function(c){grid.appendChild(card(c))});
+  cnt.textContent=shown.length+'件';
+  more.hidden=shown.length<=limit;
+  more.textContent='もっと見る（残り'+(shown.length-limit)+'件）';
+  empty.hidden=shown.length>0;
+  empty.textContent='条件に合うカメラはありません。県や種類を変えるか、「＋ 追加」から登録してください。';
+  document.getElementById('restore').hidden=!Object.keys(hidden).length;
+}
+sel.onchange=function(){lw(SEL,sel.value);render()};
+var qt;q.oninput=function(){clearTimeout(qt);qt=setTimeout(function(){render()},250)};
+document.getElementById('chips').onclick=function(e){
+  var b=e.target.closest('button');if(!b)return;
+  srcSel=b.dataset.s;lw(SRC,srcSel);render();
+};
+more.onclick=function(){limit+=PAGE;render(true)};
+document.getElementById('restore').onclick=function(){
+  if(!confirm('消したカメラ（'+Object.keys(hidden).length+'件）を一覧に戻しますか？'))return;
+  hidden={};saveHidden();render(true);
+};
+
+var dlg=document.getElementById('dlg'),nm=document.getElementById('nm'),url=document.getElementById('url'),fp=document.getElementById('fp'),err=document.getElementById('err');
+PREFS.forEach(function(p){var o=document.createElement('option');o.value=p;o.textContent=p;fp.appendChild(o)});
+document.getElementById('add').onclick=function(){
+  nm.value='';url.value='';err.textContent='';
+  if(PREFS.indexOf(sel.value)>=0)fp.value=sel.value;
+  dlg.showModal();
+};
+document.getElementById('cancel').onclick=function(){dlg.close()};
+document.getElementById('f').addEventListener('submit',function(e){
+  var u=url.value.trim(),name=nm.value.trim();
+  if(u&&!/^https?:\/\//i.test(u)&&/^[\w-]{11}$/.test(u))u='https://www.youtube.com/watch?v='+u;
+  if(!name){e.preventDefault();err.textContent='名前を入れてください。';return}
+  if(!/^https:\/\//i.test(u)){e.preventDefault();err.textContent='https:// で始まる URL を入れてください。';return}
+  mine.unshift({name:name,pref:fp.value,url:u});saveMine();
+  lw(SEL,fp.value);sel.value=fp.value;render();
+});
+render();
+})();
+</script>
+</body>
+</html>
