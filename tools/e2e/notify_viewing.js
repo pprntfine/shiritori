@@ -1,4 +1,5 @@
 // v520: トーク画面を見ている時もメッセージの通知を出す（持ち主）。2台・中継所あり。B がトークを見ている → A が送る → B に通知（tag mtp-chat-live）。B がトップの時は今までどおり mtp-chat。
+// v524: 画面の通知は sw.js の通知と重ならないよう5秒待ってから出すので、6秒待って数える
 const {chromium}=require('playwright');
 const DIR=process.argv[2];const SK=Buffer.alloc(32,9).toString('base64'),TOPIC='gskr3s-'+Date.now().toString(16).padEnd(24,'7');const PS='https://zatsugaku-push.pprnt908.workers.dev';
 async function dev(b,me,peer,host,pre){const ctx=await b.newContext({viewport:{width:390,height:844}});
@@ -13,7 +14,7 @@ async function dev(b,me,peer,host,pre){const ctx=await b.newContext({viewport:{w
  await A.pg.waitForTimeout(1500);
  await B.pg.evaluate(()=>{ window.__notes=[]; try{ Object.defineProperty(Notification,'permission',{get:()=>'granted'}); ServiceWorkerRegistration.prototype.showNotification=function(t,o){ window.__notes.push({t:o&&o.tag,at:Date.now()}); return Promise.resolve(); }; ServiceWorkerRegistration.prototype.getNotifications=function(){ return Promise.resolve([]); }; const N0=window.Notification; window.Notification=function(t,o){ window.__notes.push({t:o&&o.tag,at:Date.now()}); this.close=function(){}; }; Object.defineProperty(window.Notification,'permission',{get:()=>'granted'}); window.Notification.requestPermission=()=>Promise.resolve('granted'); }catch(e){}  });
  const send=async(t)=>{ await A.pg.evaluate((t)=>__t.queueChat(t),t); };
- const wait=async(t)=>{ for(let i=0;i<100;i++){ const ok=await B.pg.evaluate((t)=>__t.S.chat.some(m=>m.text===t),t); if(ok) break; await B.pg.waitForTimeout(300); } await B.pg.waitForTimeout(500); return B.pg.evaluate(()=>window.__notes.map(n=>n.t)); };
+ const wait=async(t)=>{ for(let i=0;i<100;i++){ const ok=await B.pg.evaluate((t)=>__t.S.chat.some(m=>m.text===t),t); if(ok) break; await B.pg.waitForTimeout(300); } await B.pg.waitForTimeout(6000); return B.pg.evaluate(()=>window.__notes.map(n=>n.t)); };
  await send('見ている時'); let n1=await wait('見ている時');
  const ok1=n1.includes('mtp-chat-live'); console.log('①トークを見ている時も通知',JSON.stringify(n1),ok1?'OK':'NG'); all=all&&ok1;
  await B.pg.evaluate(()=>{ window.__notes=[]; __t.show('lobby'); });
