@@ -9,47 +9,58 @@
 @media(prefers-color-scheme:dark){:root{--bg:#12141b;--card:#1d2029;--tx:#eceef5;--sub:#9aa0b2;--ac:#6c95ff;--line:#2d3140}}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.5 system-ui,-apple-system,"Hiragino Sans",sans-serif;padding:0 16px 96px}
-header{position:sticky;top:0;background:var(--bg);padding:14px 0 10px;display:flex;align-items:center;justify-content:space-between;z-index:5}
+header{position:sticky;top:0;background:var(--bg);padding:14px 0 10px;z-index:5}
+.top{display:flex;align-items:center;justify-content:space-between;gap:8px}
 h1{font-size:20px;margin:0}
 button{font:inherit;border:0;border-radius:10px;padding:9px 14px;background:var(--ac);color:#fff;cursor:pointer}
 button.ghost{background:transparent;color:var(--sub);border:1px solid var(--line)}
-#grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+select,input{width:100%;font:inherit;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--tx)}
+#pref{margin-top:10px}
+#grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));margin-top:6px}
 .card{background:var(--card);border-radius:14px;overflow:hidden;border:1px solid var(--line)}
 .thumb{position:relative;aspect-ratio:16/9;background:#000;cursor:pointer}
 .thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.thumb .ph{width:100%;height:100%;display:grid;place-items:center;color:#aab;font-size:14px;padding:8px;text-align:center;background:linear-gradient(135deg,#27304a,#12141b)}
 .thumb .play{position:absolute;inset:0;display:grid;place-items:center;color:#fff;font-size:44px;text-shadow:0 2px 8px #0008}
-.thumb iframe{width:100%;height:100%;border:0;display:block}
+.thumb iframe,.thumb video{width:100%;height:100%;border:0;display:block;background:#000}
 .meta{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;gap:8px}
-.meta b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.del{background:none;color:var(--sub);padding:4px 8px;font-size:14px}
+.meta div{min-width:0}
+.meta b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.meta small{color:var(--sub)}
+.acts{display:flex;gap:2px;flex:none}
+.acts a,.acts button{background:none;color:var(--sub);padding:4px 8px;font-size:14px;text-decoration:none}
 .empty{color:var(--sub);text-align:center;padding:48px 8px}
 dialog{border:0;border-radius:16px;padding:20px;width:min(92vw,420px);background:var(--card);color:var(--tx)}
 dialog::backdrop{background:#0008}
 label{display:block;font-size:14px;color:var(--sub);margin:12px 0 4px}
-input{width:100%;font:inherit;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--tx)}
+dialog select,dialog input{background:var(--bg)}
 .row{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
 #err{color:#d33;font-size:14px;min-height:20px;margin-top:8px}
+.hint{font-size:13px;color:var(--sub);margin-top:6px}
 </style>
 </head>
 <body>
 <header>
-  <h1>ライブカメラ一覧</h1>
-  <button id="add">＋ 追加</button>
+  <div class="top"><h1>ライブカメラ一覧</h1><button id="add">＋ 追加</button></div>
+  <select id="pref" aria-label="県を選ぶ"></select>
 </header>
 <div id="grid"></div>
-<div id="empty" class="empty" hidden>まだカメラがありません。<br>右上の「＋ 追加」から、YouTube ライブの URL を登録してください。</div>
+<div id="empty" class="empty" hidden></div>
 
 <dialog id="dlg">
   <form method="dialog" id="f">
     <b>カメラを追加</b>
     <label for="nm">名前</label>
     <input id="nm" placeholder="例：徳島駅前" maxlength="30">
-    <label for="url">YouTube の URL</label>
-    <input id="url" inputmode="url" placeholder="https://www.youtube.com/watch?v=…">
+    <label for="fp">県</label>
+    <select id="fp"></select>
+    <label for="url">URL</label>
+    <input id="url" inputmode="url" placeholder="https://…">
+    <div class="hint">YouTube、映像ファイル（.mp4・.m3u8）、ライブカメラのサイトなど、ブラウザで見られる URL なら何でも登録できます。</div>
     <div id="err"></div>
     <div class="row">
       <button type="button" class="ghost" id="cancel">やめる</button>
-      <button type="submit" id="ok">追加</button>
+      <button type="submit">追加</button>
     </div>
   </form>
 </dialog>
@@ -57,58 +68,127 @@ input{width:100%;font:inherit;padding:10px;border-radius:10px;border:1px solid v
 <script>
 (function(){
 'use strict';
-var KEY='zg_livecam_list';
+var PREFS=['北海道','青森県','岩手県','宮城県','秋田県','山形県','福島県','茨城県','栃木県','群馬県','埼玉県','千葉県','東京都','神奈川県','新潟県','富山県','石川県','福井県','山梨県','長野県','岐阜県','静岡県','愛知県','三重県','滋賀県','京都府','大阪府','兵庫県','奈良県','和歌山県','鳥取県','島根県','岡山県','広島県','山口県','徳島県','香川県','愛媛県','高知県','福岡県','佐賀県','長崎県','熊本県','大分県','宮崎県','鹿児島県','沖縄県'];
+var KEY='zg_livecam_list2',SEL='zg_livecam_pref';
+function ls(k){try{return localStorage.getItem(k)}catch(e){return null}}
+function lw(k,v){try{localStorage.setItem(k,v)}catch(e){}}
 var list=[];
-try{list=JSON.parse(localStorage.getItem(KEY)||'[]')}catch(e){list=[]}
+try{list=JSON.parse(ls(KEY)||'[]')}catch(e){}
 if(!Array.isArray(list))list=[];
-function save(){try{localStorage.setItem(KEY,JSON.stringify(list))}catch(e){}}
+// 前の版（YouTube の ID だけ）の登録を引き継ぐ
+try{JSON.parse(ls('zg_livecam_list')||'[]').forEach(function(c){
+  if(c&&c.id&&!list.some(function(x){return x.url==='https://www.youtube.com/watch?v='+c.id}))
+    list.push({name:c.name,pref:'',url:'https://www.youtube.com/watch?v='+c.id});
+})}catch(e){}
+function save(){lw(KEY,JSON.stringify(list))}
 
-function videoId(s){
-  s=(s||'').trim();
-  if(/^[\w-]{11}$/.test(s))return s;
-  var m=s.match(/(?:youtu\.be\/|[?&]v=|\/live\/|\/embed\/|\/shorts\/)([\w-]{11})/);
-  return m?m[1]:null;
+function ytId(s){var m=s.match(/(?:youtu\.be\/|[?&]v=|\/live\/|\/embed\/|\/shorts\/)([\w-]{11})/);return m?m[1]:null}
+function kind(u){
+  if(ytId(u))return 'yt';
+  if(/\.m3u8(\?|#|$)/i.test(u))return 'hls';
+  if(/\.(mp4|webm|mov)(\?|#|$)/i.test(u))return 'file';
+  return 'page';
 }
-var grid=document.getElementById('grid'),empty=document.getElementById('empty');
+function host(u){try{return new URL(u).hostname}catch(e){return ''}}
+
+var hlsP=null;
+function loadHls(){
+  if(window.Hls)return Promise.resolve();
+  if(hlsP)return hlsP;
+  hlsP=new Promise(function(ok,ng){
+    var s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.13/hls.min.js';
+    s.onload=ok;s.onerror=ng;document.head.appendChild(s);
+  });
+  return hlsP;
+}
+
+var sel=document.getElementById('pref'),grid=document.getElementById('grid'),empty=document.getElementById('empty');
+function counts(){var c={};list.forEach(function(x){c[x.pref||'']=(c[x.pref||'']||0)+1});return c}
+function fillSel(){
+  var c=counts(),cur=sel.value||ls(SEL)||'';
+  sel.textContent='';
+  function opt(v,t){var o=document.createElement('option');o.value=v;o.textContent=t;sel.appendChild(o)}
+  opt('*','全国（'+list.length+'）');
+  PREFS.forEach(function(p){opt(p,p+(c[p]?'（'+c[p]+'）':''))});
+  if(c['']){opt('','県の指定なし（'+c['']+'）')}
+  sel.value=(cur==='*'||PREFS.indexOf(cur)>=0||(cur===''&&c['']))?cur:'*';
+  if(!sel.value)sel.value='*';
+}
+function play(th,c){
+  th.onclick=null;th.textContent='';
+  var k=kind(c.url),el;
+  if(k==='yt'){
+    el=document.createElement('iframe');
+    el.src='https://www.youtube-nocookie.com/embed/'+ytId(c.url)+'?autoplay=1&playsinline=1';
+    el.allow='autoplay; encrypted-media; picture-in-picture; fullscreen';el.allowFullscreen=true;
+  }else if(k==='hls'||k==='file'){
+    el=document.createElement('video');el.controls=true;el.autoplay=true;el.muted=true;el.playsInline=true;
+    if(k==='file'||el.canPlayType('application/vnd.apple.mpegurl')){el.src=c.url}
+    else loadHls().then(function(){
+      if(window.Hls&&Hls.isSupported()){var h=new Hls();h.loadSource(c.url);h.attachMedia(el)}
+      else el.src=c.url;
+    }).catch(function(){th.textContent='再生の部品を読み込めませんでした。'});
+  }else{
+    el=document.createElement('iframe');el.src=c.url;
+    el.allow='autoplay; fullscreen; picture-in-picture';el.allowFullscreen=true;
+    el.referrerPolicy='no-referrer';
+  }
+  th.appendChild(el);
+}
 function render(){
+  fillSel();
+  var p=sel.value;
   grid.textContent='';
-  empty.hidden=list.length>0;
-  list.forEach(function(c,i){
+  var shown=list.map(function(c,i){return {c:c,i:i}}).filter(function(x){return p==='*'||(x.c.pref||'')===p});
+  empty.hidden=shown.length>0;
+  empty.textContent=list.length?'この県のカメラはまだありません。右上の「＋ 追加」から登録できます。':'まだカメラがありません。右上の「＋ 追加」から、URL を登録してください。';
+  shown.forEach(function(x){
+    var c=x.c,k=kind(c.url);
     var card=document.createElement('div');card.className='card';
     var th=document.createElement('div');th.className='thumb';
-    var img=document.createElement('img');img.alt='';img.loading='lazy';
-    img.src='https://i.ytimg.com/vi/'+c.id+'/hqdefault_live.jpg';
-    img.onerror=function(){img.onerror=null;img.src='https://i.ytimg.com/vi/'+c.id+'/hqdefault.jpg'};
-    var pl=document.createElement('div');pl.className='play';pl.textContent='▶';
-    th.appendChild(img);th.appendChild(pl);
-    th.onclick=function(){
-      th.textContent='';
-      var f=document.createElement('iframe');
-      f.src='https://www.youtube-nocookie.com/embed/'+c.id+'?autoplay=1&playsinline=1';
-      f.allow='autoplay; encrypted-media; picture-in-picture; fullscreen';
-      f.allowFullscreen=true;
-      th.appendChild(f);
-    };
+    if(k==='yt'){
+      var img=document.createElement('img');img.alt='';img.loading='lazy';
+      var id=ytId(c.url);
+      img.src='https://i.ytimg.com/vi/'+id+'/hqdefault_live.jpg';
+      img.onerror=function(){img.onerror=null;img.src='https://i.ytimg.com/vi/'+id+'/hqdefault.jpg'};
+      th.appendChild(img);
+    }else{
+      var ph=document.createElement('div');ph.className='ph';ph.textContent=host(c.url)||'ライブカメラ';th.appendChild(ph);
+    }
+    var pl=document.createElement('div');pl.className='play';pl.textContent='▶';th.appendChild(pl);
+    th.onclick=function(){play(th,c)};
     var meta=document.createElement('div');meta.className='meta';
+    var d=document.createElement('div');
     var b=document.createElement('b');b.textContent=c.name;
-    var d=document.createElement('button');d.className='del';d.textContent='削除';
-    d.onclick=function(){if(confirm('「'+c.name+'」を一覧から消しますか？')){list.splice(i,1);save();render()}};
-    meta.appendChild(b);meta.appendChild(d);
-    card.appendChild(th);card.appendChild(meta);
-    grid.appendChild(card);
+    var sm=document.createElement('small');sm.textContent=c.pref||'県の指定なし';
+    d.appendChild(b);d.appendChild(sm);
+    var acts=document.createElement('div');acts.className='acts';
+    var a=document.createElement('a');a.href=c.url;a.target='_blank';a.rel='noopener noreferrer';a.textContent='開く';
+    var del=document.createElement('button');del.textContent='削除';
+    del.onclick=function(){if(confirm('「'+c.name+'」を一覧から消しますか？')){list.splice(x.i,1);save();render()}};
+    acts.appendChild(a);acts.appendChild(del);
+    meta.appendChild(d);meta.appendChild(acts);
+    card.appendChild(th);card.appendChild(meta);grid.appendChild(card);
   });
 }
-var dlg=document.getElementById('dlg'),nm=document.getElementById('nm'),url=document.getElementById('url'),err=document.getElementById('err');
-document.getElementById('add').onclick=function(){nm.value='';url.value='';err.textContent='';dlg.showModal()};
+sel.onchange=function(){lw(SEL,sel.value);render()};
+
+var dlg=document.getElementById('dlg'),nm=document.getElementById('nm'),url=document.getElementById('url'),fp=document.getElementById('fp'),err=document.getElementById('err');
+PREFS.forEach(function(p){var o=document.createElement('option');o.value=p;o.textContent=p;fp.appendChild(o)});
+document.getElementById('add').onclick=function(){
+  nm.value='';url.value='';err.textContent='';
+  if(PREFS.indexOf(sel.value)>=0)fp.value=sel.value;
+  dlg.showModal();
+};
 document.getElementById('cancel').onclick=function(){dlg.close()};
 document.getElementById('f').addEventListener('submit',function(e){
-  var id=videoId(url.value),name=nm.value.trim();
-  if(!name||!id){
-    e.preventDefault();
-    err.textContent=!name?'名前を入れてください。':'YouTube の動画 URL を入れてください。';
-    return;
-  }
-  list.push({name:name,id:id});save();render();
+  var u=url.value.trim(),name=nm.value.trim();
+  if(u&&!/^https?:\/\//i.test(u)&&/^[\w-]{11}$/.test(u))u='https://www.youtube.com/watch?v='+u;
+  if(!name){e.preventDefault();err.textContent='名前を入れてください。';return}
+  if(!/^https:\/\//i.test(u)){e.preventDefault();err.textContent='https:// で始まる URL を入れてください。';return}
+  list.push({name:name,pref:fp.value,url:u});save();
+  lw(SEL,fp.value);sel.value=fp.value;render();
 });
 render();
 })();
