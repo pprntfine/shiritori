@@ -64,7 +64,7 @@ dialog select,dialog input{background:var(--bg)}
 </head>
 <body>
 <header>
-  <div class="top"><div><h1>ライブカメラ一覧</h1><div id="ver" class="hint" style="margin-top:0">バージョン <b>v4</b>・<span id="total"></span></div></div><button id="add">＋ 追加</button></div>
+  <div class="top"><div><h1>ライブカメラ一覧</h1><div id="ver" class="hint" style="margin-top:0">バージョン <b>v5</b>・<span id="total"></span></div></div><button id="add">＋ 追加</button></div>
   <div class="row2">
     <select id="pref" aria-label="県を選ぶ"></select>
     <input id="q" type="search" placeholder="地名で探す" aria-label="地名で探す">
@@ -127,7 +127,7 @@ try{(JSON.parse(ls(HID)||'[]')||[]).forEach(function(u){hidden[u]=1})}catch(e){}
 function saveHidden(){lw(HID,JSON.stringify(Object.keys(hidden)))}
 
 var preset=[];
-DATA.yt.forEach(function(a){preset.push({pref:PREFS[a[0]],name:a[1],url:'https://www.youtube.com/watch?v='+a[2],src:'yt'})});
+DATA.yt.forEach(function(a){preset.push({pref:PREFS[a[0]],name:a[1],url:'https://www.youtube.com/watch?v='+a[2],src:'yt',ext:a[3]===1})});
 DATA.wn.forEach(function(a){preset.push({pref:PREFS[a[0]],name:a[1],url:'https://weathernews.jp/onebox/livecam/'+a[2]+'/',src:'wn'})});
 
 function ytId(s){var m=s.match(/(?:youtu\.be\/|[?&]v=|\/live\/|\/embed\/|\/shorts\/)([\w-]{11})/);return m?m[1]:null}
@@ -224,7 +224,9 @@ function card(c){
   }
   var pl=document.createElement('div');pl.className='play';pl.textContent='▶';th.appendChild(pl);
   var sb=document.createElement('div');sb.className='src';sb.textContent=SRCNAME[c.src]||'';th.appendChild(sb);
-  th.onclick=function(){openViewer(c)};
+  if(c.ext){var nb=document.createElement('div');nb.className='src';nb.style.left='auto';nb.style.right='8px';nb.textContent='YouTube で開く';th.appendChild(nb);
+    th.onclick=function(){window.open(c.url,'_blank','noopener')};}
+  else th.onclick=function(){openViewer(c)};
   var meta=document.createElement('div');meta.className='meta';
   var d=document.createElement('div');
   var b=document.createElement('b');b.textContent=c.name;
