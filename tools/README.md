@@ -67,6 +67,7 @@ node tools/sw_badge_test.mjs                   # sw.js の通知の小さいア�
 | e2e/story.js | ストーリー: 写真＋文字・スタンプが届く・輪っか・既読・いいね・返信・4.5MBを分けて送る・本物の動画の再生・削除・閉じている間の投稿・24時間で消える（v515） |
 | e2e/story_block.js | 15MBの動画（ストーリー）を受け取っている最中のメッセージがすぐ届くか（中身の受け取りを2秒遅らせる）（v516） |
 | e2e/photo_block.js | 重い写真3枚を受け取っている最中のメッセージ（v516） |
+| e2e/camera_native.js | 上のカメラがカメラアプリ（capture）で開く・その間トップへ戻さない・2MB超の写真も送れる（v517） |
 
 ## Worker の試験（ネットなし）
 `node tools/worker_quote_test.mjs` … 日経平均・ドル円の前日比（Yahoo・stooq は作り物の応答）。
