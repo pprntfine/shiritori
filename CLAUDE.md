@@ -51,6 +51,9 @@
 ## 別のアプリ: ライブカメラ一覧（`livecam/`。とー君ニュースとは無関係）
 - 2026-11-20 に持ち主の依頼で作成。全国47都道府県の YouTube ライブカメラ328件を自動登録（配信中・埋め込み可を確かめた物）。県ごとに選べる。
 - 公開先は**別の Cloudflare Worker `livecam`**（https://livecam.pprnt908.workers.dev）。とー君ニュースと同じ場所の下に置くと、とー君の manifest の scope に入り「すでにインストール済み」になるため。
+- 2026-11-20 追加: ウェザーニュース「ソラカメ」（weathernews.jp/onebox/livecam/ の県ごとの一覧）2,659件＋YouTube を5通りの検索で 776件（oEmbed 200＝埋め込み可）。計3,435件。県・地名検索・種類（YouTube／ウェザーニュース／自分で追加）で絞り、40件ずつ表示。自動の分を消すと localStorage `zg_livecam_hidden` に入る（「元に戻す」あり）。
+- データは `livecam/data.json`（{yt:[[県番号,名前,動画ID]],wn:[[県番号,名前,パス]]}）、画面は `livecam/index.src.html`。`node livecam/build.js` で `index.html` を作る。集めるには YouTube・weathernews.jp に届く環境が要る（環境「shiritori」で許可済み。Cloudflare のトークンは環境「Default」にある）。
+- 公開: `node livecam/make_worker.js 出力先` で worker.js と meta.json を作り、PUT する（下の行）。
 - 更新したら `livecam/` の4ファイル（index.html・manifest.webmanifest・icon-192/512.png）を1つの Worker（ファイルを埋め込んで返すだけ）にまとめ、`PUT /accounts/{id}/workers/scripts/livecam`（metadata は main_module と compatibility_date のみ、bindings なし）。`zatsugaku-push` には触らない。
 
 ## ファイル構成（すべて同じフォルダに置く／静的ホスティング）
