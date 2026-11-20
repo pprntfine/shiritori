@@ -13,8 +13,8 @@ async function push(text){ let p; listeners.push({data:{text:()=>text}, waitUnti
 let ok=true; const chk=(n,c,x)=>{ console.log(n,JSON.stringify(x),c?'OK':'NG'); if(!c) ok=false; };
 store.set('role','h');
 const now=Date.now(), t1=now-40*60000, t2=now-5*60000;
-let n=await push('zgn:1'); chk('メッセージ（ニュース風）は新聞',n.badge==='./badge-news.png'&&n.body==='新しいニュースが更新されました',n);
-n=await push('zgo:'+t1); chk('相手が開いた は目・時刻は開いた時刻',n.badge==='./badge-open.png'&&n.timestamp===t1&&n.body==='相手がアプリを開きました',n);
+let n=await push('zgn:1'); chk('メッセージ（ニュース風）は新聞',/^data:image\/png;base64,/.test(n.badge)&&n.badge.length>1500&&n.badge.length<1700&&n.body==='新しいニュースが更新されました',n);
+n=await push('zgo:'+t1); chk('相手が開いた は目・時刻は開いた時刻',/^data:image\/png;base64,/.test(n.badge)&&n.badge.length>3000&&n.timestamp===t1&&n.body==='相手がアプリを開きました',n);
 n=await push('zgo:'+t2); chk('閉じている間の2回とも残る',store.get('po')===t1+','+t2,store.get('po'));
 n=await push('zgcall:x'); chk('電話は従来どおり（badge なし）',!n.badge&&n.body==='電話がきています',n);
 store.set('role','g'); const before=shown.length; await push('zgo:'+now); chk('ホスト以外は「開いた」を出さない',shown.length===before,{});

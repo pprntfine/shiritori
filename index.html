@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとしてインストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">新しい版に更新する</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンでアプリとして入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v517</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v518</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">相手を待っています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v517</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v518</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">名前</b> さんが入室を求めています</p>
         <p class="jr-fp">合図 <b id="jr-fp">----</b> ／ 相手の画面と同じかくににて確認</p>
@@ -8350,7 +8350,7 @@ function notifyIncoming(){
   var cnt=S.unread||1;
   var body='新しいニュースが更新されました';   /* v145: 件数・名前なし。v488: ニュースアプリらしく（持ち主） */
 
-  var opt=Object.assign({body:body,tag:'mtp-chat',renotify:true,badge:'./badge-news.png',icon:'./icon-paw-192.png',data:{app:'zg',n:cnt}},notifExtra());   /* v512: 小さいアイコンは 新聞（相手が 開いた 通知は 目） */
+  var opt=Object.assign({body:body,tag:'mtp-chat',renotify:true,badge:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AAAEe0lEQVR42u2dvYtcVRjGf++9k038ICGKSTQEGyWmsdMiXSIiFoKthY2VCBaKKBbCWlqICaQSSRNtEvIHRBttFgWLgAYVPwqLEBSj+EHQnbmPxZ6Lx2UmmTt7ztyZOe8PlmFnh5lz3ue873mfO5ez4DiO4ziO4ziO4ziO4ziO4zjZsZRvJsmKCZyZFmIgkkzSoKTgh3nXkqpeM0BSbWaj6Pf9gFJn1iLFPTz+0c57ewzmJoCkyswaSQeAF4AngQdWOPixCNeADeC0mX0pyWYtSbbD4D8BnAXuK3QP3QReBU4D1SyZYLOWHUmPAx+Gp4dAVcDqj7OgCXOugDfNbH2WcmQdg9++/i7gCnAgDKQuNAMUFt8AOGFmn3QVoesuXoVa9yJwEBgVHPx2AbeZvx66IuXOgBr4HHh4itWvjBNftM7ob+Comf3Y7pFJMyDa6fcC90fqTxpU247m+GkWLAsE7AEe7LpABjMqrlv8vR3Ar9EAU010XxB+kt8YZgp0PUVgOy+MQYZ0NOAX4Fng08QCABwG3gMejTqRnHPKSg4BRsAzZvZRpjFfl/QUcBk4tE1cA84BPyQUnpB1z4Xym9TpDxIHvwJ+AzYk1VOUq5lKgZn9JOkKcG8QvN3PXjazdzJd+7kQfM9tKRuBHOlqwG4z+2snFv0mgWhCNzaIhB+E/eaMpN2JV3/bfm9I+gw4mbL9zlUvs16qNTNJUiR4A9wJnDSzS5ky4CBwLMp0FlmAPlrBXcAHkl4Hvk/UrrZt717gjVDyGhdgcod0N/BuZtNVpXzDVREgDlCTwSnrFsbTBdhm1nLsQVWOAa+aAMUbsT5LT/FGrE8aN2L9rn43Yj1vvG7E3Ii5AG7ExgSETOXAJnyGG7Ew2GHGWxUt3JO06UZs/ORvBw6Z2e+SdkkaJQ7+KIh7ZEK2Ff+N2B7gfUlPm9nVDOVnDTgDPBRtiG7EojQV8AhwWdIXCQfbdjWHgaPbNkQ3YmMCdU8wLTmdb5t1tRux8ZnQZBK4ciM2XaDmdduiGzE3YmUL4EZsDMOehSjOiK16di2NEctpiPoimxHr0oZZeNwv6bq2aPR/huG5l1ZtpUo6LulPSaMx8x6FxxPhtXUfGTAPQ9QXS2HE5mKIesyApTBiuQxRn/5iqYzYvAxRn+3tUhixXIaoz8AvlRHL+c1UbxuxGzE3Ym7E3Ii5EXMj5kbMjZgbMTdibsTciPUpgKbIhBLPEerccMyiaKnBzbKgOwkQvMAN4OcVvNSw071vE7jaNROmFiCc+VCZ2Q3g4yXvblLSxuA74NtwPkaTJQMiZd/mv1NKSs+CYViMb5nZZteYdnpxuC+/NrOvgVdCzWuCGCUJ0XZ5/wBrwEXg3CzHVnbeNML9+ZWZnZK0D1gfk46rTntS4hpwHnh+1j1xJ0cXWzg25jHgNeA4cEdBZecr4JSZnY3jMTcBwofW0SHWR9g6O7oErgHfhJJsUZPSQzHcOsa9qKPr47mn6F9TDaa0s6O1MP/EwXEcx3Ecx3Ecx3Ecx3Ecx3Fuzr+U47aohfYQxAAAAABJRU5ErkJggg==',icon:'./icon-paw-192.png',data:{app:'zg',n:cnt}},notifExtra());   /* v512: 小さいアイコンは 新聞（相手が 開いた 通知は 目） */
   /* スマホ(とくに Android)は サービスワーカー 経由で ないと 通知が でない */
   try{
     if(navigator.serviceWorker&&swReg){ swReg.showNotification('とー君ニュース',opt); return; }
