@@ -44,6 +44,7 @@ dialog select,dialog input{background:var(--bg)}
   <div class="top"><h1>ライブカメラ一覧</h1><button id="add">＋ 追加</button></div>
   <select id="pref" aria-label="県を選ぶ"></select>
 </header>
+<div id="find" class="hint" hidden></div>
 <div id="grid"></div>
 <div id="empty" class="empty" hidden></div>
 
@@ -140,6 +141,17 @@ function render(){
   fillSel();
   var p=sel.value;
   grid.textContent='';
+  var fd=document.getElementById('find');
+  fd.textContent='';
+  fd.hidden=PREFS.indexOf(p)<0;
+  if(!fd.hidden){
+    fd.appendChild(document.createTextNode('見つけるには：'));
+    [['YouTube で探す','https://www.youtube.com/results?query=&search_query='+encodeURIComponent(p+' ライブカメラ')+'&sp=EgJAAQ%253D%253D'],['Google で探す','https://www.google.com/search?q='+encodeURIComponent(p+' ライブカメラ')]].forEach(function(l,i){
+      if(i)fd.appendChild(document.createTextNode('　'));
+      var a=document.createElement('a');a.href=l[1];a.target='_blank';a.rel='noopener noreferrer';a.textContent=l[0];fd.appendChild(a);
+    });
+    fd.appendChild(document.createTextNode('　→ 見つけた URL を「＋ 追加」で登録'));
+  }
   var shown=list.map(function(c,i){return {c:c,i:i}}).filter(function(x){return p==='*'||(x.c.pref||'')===p});
   empty.hidden=shown.length>0;
   empty.textContent=list.length?'この県のカメラはまだありません。右上の「＋ 追加」から登録できます。':'まだカメラがありません。右上の「＋ 追加」から、URL を登録してください。';
