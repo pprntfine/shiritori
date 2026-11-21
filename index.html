@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとしてインストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">新しい版に更新する</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンでアプリとして入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v531</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v532</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">相手を待っています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v531</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v532</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">名前</b> さんが入室を求めています</p>
         <p class="jr-fp">合図 <b id="jr-fp">----</b> ／ 相手の画面と同じかくににて確認</p>
@@ -6962,7 +6962,7 @@ async function chatSaveSnapshot(){
     var savedMessages=S.chat.slice();
     var __ps=[];
     var list=S.chat.filter(function(m){ return m&&((m.sys&&m.callLog&&m.text)||(!m.sys&&!messageDeleted(m)&&(m.text||m.data||m.photo||m.file))); }   /* v335: 中身が 欠けても 行は のこす。v491: 電話の 記録も */).map(function(m){
-      if(m.sys) return {mid:m.mid||('cl'+(m.at||0)),f:'',t:m.text,cl:1,a:m.at||0};
+      if(m.sys) return {mid:m.mid||('cl'+(m.at||0)),f:'',t:m.text,cl:1,a:m.at||0,ra:m.rad||0};   /* v532: 電話の記録の「見た時刻」も残す */
       var __pt=!!(m.photo||m.file);
       if(__pt&&m.data){ var __k=photoKeyOf(m); if(__k) __ps.push({k:__k,v:m.data,l:m.data.length,m:m}); }
       return {mid:m.mid||'',f:m.from,t:m.text||'',p:m.photo?1:0,pd:__pt?1:0,d:'',file:m.file?1:0,fn:m.fileName||'',fs:m.fileSize||0,failed:m.failed?1:0,a:m.at||0,n:m.n||0,on:(Array.isArray(m.oldN)&&m.oldN.length)?m.oldN.slice(-20):undefined,s:m.sent===false?0:1,k:m.acked?1:0,r:m.read?1:0,ra:m.rad||0,u:m.pid||''};
@@ -7022,7 +7022,7 @@ async function chatRestore(sk){
       if(!it||!(it.t||it.d||it.p||it.pd||it.file)) return;   /* v335: しゃしん・ファイルを よみこみで 捨てない */
       var key=it.mid ? it.f+':mid:'+it.mid : it.f+':'+(it.n||0)+':'+(it.t||it.u||'');
       if(have[key]) return; have[key]=1;
-      if(it.cl){ S.chat.push({sys:true,callLog:true,text:String(it.t).slice(0,80),at:it.a||Date.now(),mid:it.mid||''}); return; }   /* v491: 電話の 記録 */
+      if(it.cl){ S.chat.push({sys:true,callLog:true,text:String(it.t).slice(0,80),at:it.a||Date.now(),mid:it.mid||'',rad:it.ra||0}); return; }   /* v491: 電話の 記録 */
       var m={mid:it.mid||'',from:it.f,at:it.a||Date.now(),n:it.n||0,sent:!!it.s,acked:!!it.k,read:!!it.r,rad:it.ra||0,uid:String(++UID)};
       if(Array.isArray(it.on)) m.oldN=it.on.filter(Number.isSafeInteger).slice(-20);   /* v523 */
       if(it.p){ m.photo=true; m.data=(ph[key]||it.d||''); if(!m.data) m.lost=1; m.__ps=(typeof phRaw[key]==='string')?0:(m.data?m.data.length:0); m.pid=it.u||''; }
@@ -8099,9 +8099,13 @@ function vanishSweep(){
      見ないまま15分で消えていた（通知は来たのにトークにない）。 */
   var __seen=chatOnScreen();
   S.chat.forEach(function(m){ if(m&&!m.sys&&(m.text||m.data)&&!m.rad&&(m.from===S.me.id?m.read:__seen)){ m.rad=Date.now(); fresh=true; } });
+  /* v532: 電話の記録も、トーク画面で見てから15分で消す（持ち主）。記録はそれぞれの端末だけにあるので、相手へ消す合図は送らない */
+  var clGone=false;
+  S.chat.forEach(function(m){ if(m&&m.sys&&m.callLog&&!m.rad&&__seen){ m.rad=Date.now(); fresh=true; } });
+  if(S.chat.some(function(m){ return m&&m.sys&&m.callLog&&m.rad&&m.rad<=cut; })){ S.chat=S.chat.filter(function(m){ return !(m&&m.sys&&m.callLog&&m.rad&&m.rad<=cut); }); clGone=true; fresh=true; }
   if(fresh){ try{ persistChat(); }catch(e){} }
   S.chat.forEach(function(m){ if(m&&!m.sys&&m.rad&&m.rad<=cut) gone.push(m); });
-  if(!gone.length) return false;
+  if(!gone.length) return clGone;
   var mine=[],theirs=[];
   gone.forEach(function(m){ (m.from===S.me.id?mine:theirs).push(messageId(m)); });
   S.chat=S.chat.filter(function(m){ return m.sys||!m.rad||m.rad>cut; });

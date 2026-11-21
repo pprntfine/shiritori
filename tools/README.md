@@ -31,6 +31,7 @@ node tools/sw_badge_test.mjs                   # sw.js の通知の小さいア�
 | e2e/photo_unconfirmed.js | 相手の中継所の確認が消えていても写真が長辺2000で届く（v503） |
 | e2e/no_flicker.js | 相手が閉じている間に画面の作り直しが起きない（v480） |
 | e2e/call_log.js | 電話の記録（通話時間・拒否・キャンセル・不在着信、開き直しても残る）（v491） |
+| e2e/calllog_vanish.js | 電話の記録も見てから15分で消える（1台。`node tools/e2e/calllog_vanish.js テスト用フォルダ`）（v532） |
 | e2e/call_no_stale_ring.js | 閉じていた間の電話が、あとで開いた時に鳴らない |
 | e2e/push_once.js | 相手が閉じている間、送り直しが続いても通知は1通につき1回（v493） |
 | e2e/vanish_unseen.js | 見ていないメッセージは消えない・見てから15分で消える（v494） |
