@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとしてインストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">新しい版に更新する</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンでアプリとして入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v526</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v527</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">相手を待っています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v526</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v527</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">名前</b> さんが入室を求めています</p>
         <p class="jr-fp">合図 <b id="jr-fp">----</b> ／ 相手の画面と同じかくににて確認</p>
@@ -7981,8 +7981,9 @@ function updateMsgMeta(nsList){
 function metaText(m,mine,at,groupEnd){
   var tm=fmtTime(at);
   if(!mine) return groupEnd?tm:'';
-  if(m.failed) return '送信できませんでした';
-  if(m.sent===false||!m.n) return '送信中…';
+  var __got=!!(m.read||m.peerAck);   /* v527: 相手の受け取り・既読が来ていれば、送信の結果より先にそれを出す（前の版で「送信中」のまま保存された分も直る） */
+  if(m.failed&&!__got) return '送信できませんでした';
+  if((m.sent===false||!m.n)&&!__got) return '送信中…';
   if(m.read){
     var vs='';
     try{ if(m.rad&&vanishOn()){ var lf2=m.rad+VANISH_MS-Date.now(); vs=lf2>0?('・あと'+Math.max(1,Math.ceil(lf2/60000))+'分で消えます'):'・まもなく消えます'; } }catch(e){}
@@ -11264,7 +11265,7 @@ function exactReceipt(ns,read,ids,ps){
     var touched=S.chat.filter(function(m){return m&&!m.sys&&m.from===S.me.id&&(receivedIds.has(m.mid)||set.has(m.n)||(m.pid&&(m.photo||m.file)&&pids.has(m.pid))||(Array.isArray(m.oldN)&&m.oldN.some(function(x){return set.has(x);})));});
     if(!touched.length)return true;
     var old=touched.map(function(m){return {m:m,acked:m.acked,peerAck:m.peerAck,delivered:m.delivered,read:m.read,rad:m.rad};});
-    touched.forEach(function(m){m.acked=true;m.peerAck=true;m.delivered=true;if(read){m.read=true;markReadAt(m);}});
+    touched.forEach(function(m){m.acked=true;m.peerAck=true;m.delivered=true;if(m.sent!==true){m.sent=true;if(!m.sentAt)m.sentAt=Date.now();}if(read){m.read=true;markReadAt(m);}});   /* v527: 相手が受け取った＝送れている。送信の返事だけ遅れて失敗に見えると、送信待ちから消えたのに「送信中…」のまま残っていた */
     try{await chatSaveNow();if(!privateCurrent(scope))throw new Error('ペア変更');}
     catch(e){old.forEach(function(x){Object.keys(x).forEach(function(k){if(k!=='m')x.m[k]=x[k];});});storageWarn('receipt','受領の記録を保存できません。送信待ちと本文を残しています。');return false;}
     // A crash before this point leaves the queue intact; a crash after it has durable history.
