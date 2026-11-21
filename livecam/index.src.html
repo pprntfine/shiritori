@@ -96,7 +96,7 @@ dialog select,dialog input{background:var(--bg)}
 </head>
 <body>
 <header>
-  <div class="top"><div><h1>ライブカメラ一覧</h1><div id="ver" class="hint" style="margin-top:0">バージョン <b>v25</b>・<span id="total"></span></div></div><button id="add">＋ 追加</button></div>
+  <div class="top"><div><h1>ライブカメラ一覧</h1><div id="ver" class="hint" style="margin-top:0">バージョン <b>v26</b>・<span id="total"></span></div></div><button id="add">＋ 追加</button></div>
   <div class="row2">
     <select id="pref" aria-label="県を選ぶ"></select>
     <button id="prefbtn" type="button"><span id="preftxt">全国</span>▾</button>
@@ -396,15 +396,15 @@ function render(keep){
   }
   paintAreas(items,p);
   var shown=items.filter(function(c){
+    if(srcSel!=='*'&&c.src!==srcSel)return false;
+    if(w)return (c.name+' '+c.pref+' '+areaOf(c)).indexOf(w)>=0;
     if(p!=='*'&&c.pref!==p)return false;
     if(areaSel&&p!=='*'&&areaKey(c)!==areaSel)return false;
-    if(srcSel!=='*'&&c.src!==srcSel)return false;
-    if(w&&(c.name+' '+c.pref+' '+areaOf(c)).indexOf(w)<0)return false;
     return true;
   });
   grid.textContent='';
   shown.slice(0,limit).forEach(function(c){grid.appendChild(card(c))});
-  cnt.textContent=shown.length+'件';
+  cnt.textContent=(w?'全国から ':'')+shown.length+'件';
   more.hidden=shown.length<=limit;
   more.textContent='もっと見る（残り'+Math.max(0,shown.length-limit)+'件）';
   empty.hidden=shown.length>0;
