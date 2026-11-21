@@ -81,6 +81,7 @@
 - v19: 名所の名前で検索（scratchpad の spots.json＝県ごとの名所545か所×「ライブ」「ライブカメラ」＋個人カメラ向けの言葉34＋県×4語、計1,312回。ライブ絞り込みの1ページ目だけ）→ 配信中・埋め込み可の +404件、SkylineWebcams の日本153件（中身は全部 YouTube の埋め込み）から新しい +7件。計5,817か所。金閣寺そのもののライブは見つからない（京都市観光協会の銀閣寺・清水坂などは入った）。
   YouTube の内部 API（youtubei、続きのページ）は自動で止められたので使わない。国交省の地方整備局のカメラは多くが数分ごとの静止画（jpg）で対象外。WebcamTaxi・EarthCam は機械の読み取りを断る（403）。Default 環境に skylinewebcams・ipcamlive・webcamtaxi・earthcam・各地方整備局（ktr/thr/hrr/cbr/kkr/cgr/skr/qsr）・www6.kaiho.mlit.go.jp を許可済み。
 - v20: 「アプリでは再生できないのに、YouTube で開くと見える」（持ち主・Brave/Android。石垣島730交差点）。サーバー側の埋め込み情報は playableInEmbed:true で、原因は端末側の埋め込みエラー（番号は未確認）。`ytStart` がエラー（100・2・5 以外）の時に別の形を順に試す: ①www.youtube.com＋origin ②youtube-nocookie.com＋referrer=origin ③enablejsapi・origin なし＋referrer=unsafe-url（監視なし）。エラー表示に番号と「YouTubeで開く」ボタンを追加。**実機で直ったかは未確認**（番号が出たら原因の手がかり）。
+- v21（2026-11-21）: 青い画面（見本の絵が無い「チャンネルの今のライブ」方式 yc）と、アプリで再生できない件（持ち主・Android Brave）への対策。yc 358件を `/channel/ID/streams` の LIVE の印から今のライブの動画IDに置き換え（oEmbed 200 の299チャンネル→重複を除き +167件を data.yt へ。配信なし25・埋め込み不可34は外す）。data.yc は空（コードは残置）。見本の絵が出て、チャンネル方式の埋め込みエラーも避けられる。**直ったかは持ち主の確認待ち**。取得は curl＋パソコンの UA（携帯の UA は m.youtube.com に飛ばされ許可外）。Node の fetch はプロキシで切られるので使わない。
 - 公開: `node livecam/make_worker.js 出力先` で worker.js と meta.json を作り、PUT する（下の行）。
 - 更新したら `livecam/` の4ファイル（index.html・manifest.webmanifest・icon-192/512.png）を1つの Worker（ファイルを埋め込んで返すだけ）にまとめ、`PUT /accounts/{id}/workers/scripts/livecam`（metadata は main_module と compatibility_date のみ、bindings なし）。`zatsugaku-push` には触らない。
 
