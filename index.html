@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとしてインストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">新しい版に更新する</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンでアプリとして入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v528</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v529</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">相手を待っています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v528</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v529</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">名前</b> さんが入室を求めています</p>
         <p class="jr-fp">合図 <b id="jr-fp">----</b> ／ 相手の画面と同じかくににて確認</p>
@@ -7981,7 +7981,7 @@ function updateMsgMeta(nsList){
 function metaText(m,mine,at,groupEnd){
   var tm=fmtTime(at);
   if(!mine) return groupEnd?tm:'';
-  var __got=!!(m.read||m.peerAck);   /* v527: 相手の受け取り・既読が来ていれば、送信の結果より先にそれを出す（前の版で「送信中」のまま保存された分も直る） */
+  var __got=!!(m.read||m.peerAck||m.acked);   /* v529: acked は相手の受領証でしか立たない（読み込み直すと peerAck は消え acked だけ残る） */   /* v527: 相手の受け取り・既読が来ていれば、送信の結果より先にそれを出す（前の版で「送信中」のまま保存された分も直る） */
   if(m.failed&&!__got) return '送信できませんでした';
   if((m.sent===false||!m.n)&&!__got) return '送信中…';
   if(m.read){
@@ -11287,6 +11287,22 @@ async function flushOutbox(){
   if(!await outSave()) return;
   var scope=privateScope(); if(!scope) return;
   S.outbox=(S.outbox||outLoad()).filter(function(it){ return bindPrivateMessage(it)&&!messageDeleted({from:S.me.id,mid:it.mid,text:it.text,at:it.at}); });
+  /* v529: 「送信中」のまま送信待ちに無い自分の文字のメッセージ（前の版の不具合で取り残された分など）を送信待ちに戻す。
+     以前は送り直す物が無く、相手に届かないまま「送信中…」で止まっていた。相手は同じ mid を二重に出さない */
+  try{
+    var __have={}; S.outbox.forEach(function(it){ if(it.mid) __have[it.mid]=1; });
+    var __adopt=0;
+    S.chat.forEach(function(m){
+      if(!m||m.sys||m.from!==S.me.id||m.photo||m.file||m.cancelled||m.failed||!m.text||!m.mid) return;
+      if(m.sent!==false||m.acked||m.read||m.peerAck||__have[m.mid]) return;
+      if(Date.now()-(m.at||0)<5000) return;
+      if(messageDeleted({from:S.me.id,mid:m.mid,text:m.text,at:m.at})) return;
+      var it={text:m.text,at:m.at,mid:m.mid,__privateScope:scope,msg:m};
+      if(!bindPrivateMessage(it)) return;
+      S.outbox.push(it); __have[m.mid]=1; __adopt++;
+    });
+    if(__adopt){ if(!await outSave()) return; }
+  }catch(e){}
   if(!S.outbox.length) return;
   try{ FASTS.forEach(function(f){ if(f.topic&&f.open&&Date.now()-(f.lastRx||0)>6000) f.probe(); else if(f.topic&&!f.open&&!f.ws) f.kick(); }); }catch(e){}
   if(!Net.topic||!Net.key) return;
