@@ -96,7 +96,7 @@ dialog select,dialog input{background:var(--bg)}
 </head>
 <body>
 <header>
-  <div class="top"><div><h1>ライブカメラ一覧</h1><div id="ver" class="hint" style="margin-top:0">バージョン <b>v27</b>・<span id="total"></span></div></div><button id="add">＋ 追加</button></div>
+  <div class="top"><div><h1>ライブカメラ一覧</h1><div id="ver" class="hint" style="margin-top:0">バージョン <b>v28</b>・<span id="total"></span></div></div><button id="add">＋ 追加</button></div>
   <div class="row2">
     <select id="pref" aria-label="県を選ぶ"></select>
     <button id="prefbtn" type="button"><span id="preftxt">全国</span>▾</button>
@@ -258,12 +258,12 @@ function paintChips(){
   [].forEach.call(document.querySelectorAll('#chips button'),function(b){b.setAttribute('aria-pressed',String(b.dataset.s===srcSel))});
 }
 // カテゴリーの列を作る（今選んでいる出どころの中での件数つき）
-function paintCats(items){
+function paintCats(items,hit){
   var box=document.getElementById('cats');box.textContent='';
-  var c={};items.forEach(function(x){if(srcSel!=='*'&&x.src!==srcSel)return;var k=catOf(x);c[k]=(c[k]||0)+1});
+  var c={},all=0;items.forEach(function(x){if(!hit(x,'cat'))return;all++;var k=catOf(x);c[k]=(c[k]||0)+1});
   CATS.forEach(function(C){
-    var k=C[0],n=k==='*'?items.filter(function(x){return srcSel==='*'||x.src===srcSel}).length:(c[k]||0);
-    if(k!=='*'&&!n)return;
+    var k=C[0],n=k==='*'?all:(c[k]||0);
+    if(k!=='*'&&!n&&catSel!==k)return;
     var b=document.createElement('button');b.type='button';b.dataset.c=k;b.textContent=C[1];
     if(k!=='*'){var sm=document.createElement('small');sm.textContent=' '+n;b.appendChild(sm)}
     b.setAttribute('aria-pressed',String(catSel===k));box.appendChild(b);
@@ -413,7 +413,7 @@ function render(keep){
   if(!keep)limit=PAGE;
   var items=all();
   document.getElementById('total').textContent='カメラ'+preset.length.toLocaleString()+'か所';
-  fillSel(items);paintChips();paintCats(items);
+  fillSel(items);paintChips();
   var p=sel.value,w=q.value.trim();
   var fd=document.getElementById('find');
   fd.textContent='';
@@ -426,15 +426,18 @@ function render(keep){
     });
     fd.appendChild(document.createTextNode('　→ 見つけた URL を「＋ 追加」で登録'));
   }
-  paintAreas(items,p);
-  var shown=items.filter(function(c){
+  // skip に入れた条件だけ外して判定（件数の数え直し用）
+  function hit(c,skip){
     if(srcSel!=='*'&&c.src!==srcSel)return false;
-    if(catSel!=='*'&&catOf(c)!==catSel)return false;
+    if(skip!=='cat'&&catSel!=='*'&&catOf(c)!==catSel)return false;
     if(w)return (c.name+' '+c.pref+' '+areaOf(c)).indexOf(w)>=0;
     if(p!=='*'&&c.pref!==p)return false;
-    if(areaSel&&p!=='*'&&areaKey(c)!==areaSel)return false;
+    if(skip!=='area'&&areaSel&&p!=='*'&&areaKey(c)!==areaSel)return false;
     return true;
-  });
+  }
+  paintAreas(items,p,hit);
+  paintCats(items,hit);
+  var shown=items.filter(function(c){return hit(c,'')});
   grid.textContent='';
   shown.slice(0,limit).forEach(function(c){grid.appendChild(card(c))});
   cnt.textContent=(w?'全国から ':'')+shown.length+'件';
@@ -448,7 +451,7 @@ sel.onchange=function(){if(sel.value!==ls(SEL))areaSel='';lw(SEL,sel.value);lw(A
 // 地域（市町村）の欄。少ない所は「その他」にまとめる
 var AREA='zg_livecam_area',areaSel=ls(AREA)||'',areaBig={};
 function areaKey(c){var a=areaOf(c);return a&&areaBig[a]?a:'その他'}
-function paintAreas(items,p){
+function paintAreas(items,p,hit){
   var box=document.getElementById('areas');box.textContent='';areaBig={};
   if(PREFS.indexOf(p)<0){box.hidden=true;return}
   var c={},n=0;items.forEach(function(x){if(x.pref!==p)return;n++;var a=areaOf(x);if(a)c[a]=(c[a]||0)+1});
@@ -458,8 +461,9 @@ function paintAreas(items,p){
   if(!list.length){box.hidden=true;areaSel='';return}
   if(areaSel&&!(areaBig[areaSel]||(areaSel==='その他'&&other)))areaSel='';
   box.hidden=false;
-  function b(v,t,k){var e=document.createElement('button');e.type='button';e.textContent=t;var sm=document.createElement('small');sm.textContent=k;e.appendChild(sm);e.setAttribute('aria-pressed',String(areaSel===v));e.onclick=function(){areaSel=v;lw(AREA,v);render()};box.appendChild(e)}
-  b('','すべて',n);list.forEach(function(a){b(a,a,c[a])});if(other)b('その他','その他',other);
+  var f={},fn=0,fo=0;items.forEach(function(x){if(x.pref!==p||!hit(x,'area'))return;fn++;var k=areaKey(x);if(k==='その他')fo++;else f[k]=(f[k]||0)+1});
+  function b(v,t,k){if(!k&&areaSel!==v&&v!=='')return;var e=document.createElement('button');e.type='button';e.textContent=t;var sm=document.createElement('small');sm.textContent=k;e.appendChild(sm);e.setAttribute('aria-pressed',String(areaSel===v));e.onclick=function(){areaSel=v;lw(AREA,v);render()};box.appendChild(e)}
+  b('','すべて',fn);list.forEach(function(a){b(a,a,f[a]||0)});if(other)b('その他','その他',fo);
 }
 // 都道府県をボタンで選ぶ（地方ごと・よく選ぶ県）
 var REGIONS=[['北海道・東北',0,7],['関東',7,14],['中部',14,23],['近畿',23,30],['中国',30,35],['四国',35,39],['九州・沖縄',39,47]];
