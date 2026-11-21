@@ -96,7 +96,7 @@ dialog select,dialog input{background:var(--bg)}
 </head>
 <body>
 <header>
-  <div class="top"><div><h1>ライブカメラ一覧</h1><div id="ver" class="hint" style="margin-top:0">バージョン <b>v26</b>・<span id="total"></span></div></div><button id="add">＋ 追加</button></div>
+  <div class="top"><div><h1>ライブカメラ一覧</h1><div id="ver" class="hint" style="margin-top:0">バージョン <b>v27</b>・<span id="total"></span></div></div><button id="add">＋ 追加</button></div>
   <div class="row2">
     <select id="pref" aria-label="県を選ぶ"></select>
     <button id="prefbtn" type="button"><span id="preftxt">全国</span>▾</button>
@@ -110,6 +110,7 @@ dialog select,dialog input{background:var(--bg)}
     <button data-s="me" aria-pressed="false">自分で追加</button>
     <button class="trash" id="trashbtn" type="button">🗑 ゴミ箱</button>
   </div>
+  <div class="chips" id="cats"></div>
   <div id="areas" hidden></div>
   <div id="count"></div>
 </header>
@@ -222,6 +223,25 @@ function all(){
 }
 var sel=document.getElementById('pref'),q=document.getElementById('q'),grid=document.getElementById('grid'),empty=document.getElementById('empty'),more=document.getElementById('more'),cnt=document.getElementById('count');
 var srcSel=ls(SRC),PAGE=40,limit=PAGE;if(!srcSel||srcSel==='undefined')srcSel='*';
+// 中身のカテゴリー。名前の言葉から決める（上から順に、最初に当たった物）
+var CAT='zg_livecam_cat',catSel=ls(CAT);if(!catSel||catSel==='undefined')catSel='*';
+var CATS=[['*','すべて'],['kojin','個人・自宅'],['machi','街・道路'],['eki','駅・鉄道'],['umi','海・港'],['kawa','川・湖・ダム'],['yama','山・高原'],['yuki','スキー・雪'],['sora','空港'],['kanko','観光・名所'],['doubutsu','動物'],['tenki','空・天気']];
+var CATRULE=[
+  ['doubutsu',/動物園|水族館|牧場|フクロウ|ふくろう|ペンギン|パンダ|カピバラ|アクアワールド|猫|ネコ|犬|イヌ|鳥|野鳥|馬|牛|羊|ゾウ|象/],
+  ['yuki',/スキー|ゲレンデ|スノー|積雪|雪|snow/i],
+  ['sora',/空港|飛行場|airport|滑走路/i],
+  ['eki',/駅|鉄道|新幹線|電車|ホーム|踏切|線路|市電|路面電車/],
+  ['kojin',/自宅|ベランダ|庭|窓|我が家|自室|部屋|定点|お散歩|散歩|街歩き|街ブラ|まちブラ|個人/],
+  ['umi',/海|港|漁港|ビーチ|浜|岬|灯台|湾|マリン|サーフ|波|クルーズ|ふ頭|埠頭|海岸|フェリー/],
+  ['kawa',/川|河口|河川|湖|ダム|滝|渓谷|水位|池|沼|用水|運河/],
+  ['yama',/山|岳|高原|峠|富士|連峰|高地|渓/],
+  ['kanko',/神社|神宮|大社|寺|城|タワー|温泉|観光|祭|宮|庭園|遺跡|公園|大仏|鳥居/],
+  ['machi',/交差点|駅前|商店街|通り|街|道路|ドライブ|交通|国道|県道|信号|バイパス|市内|ロータリー/],
+  ['tenki',/夜景|星空|星|天気|お天気|夕日|朝日|サンセット|sky|空/i]
+];
+function calcCat(n){for(var i=0;i<CATRULE.length;i++)if(CATRULE[i][1].test(n))return CATRULE[i][0];
+  if(/ライブカメラ/.test(n)&&/(市|区|町|村)/.test(n)&&/(都|道|府|県)/.test(n))return 'kojin';return 'other'}
+function catOf(c){return c._cat||(c._cat=(c.src==='wn'?'tenki':calcCat(c.name||'')))}
 function fillSel(items){
   var c={};items.forEach(function(x){c[x.pref]=(c[x.pref]||0)+1});
   var cur=sel.value||ls(SEL)||'*';
@@ -236,6 +256,18 @@ function fillSel(items){
 }
 function paintChips(){
   [].forEach.call(document.querySelectorAll('#chips button'),function(b){b.setAttribute('aria-pressed',String(b.dataset.s===srcSel))});
+}
+// カテゴリーの列を作る（今選んでいる出どころの中での件数つき）
+function paintCats(items){
+  var box=document.getElementById('cats');box.textContent='';
+  var c={};items.forEach(function(x){if(srcSel!=='*'&&x.src!==srcSel)return;var k=catOf(x);c[k]=(c[k]||0)+1});
+  CATS.forEach(function(C){
+    var k=C[0],n=k==='*'?items.filter(function(x){return srcSel==='*'||x.src===srcSel}).length:(c[k]||0);
+    if(k!=='*'&&!n)return;
+    var b=document.createElement('button');b.type='button';b.dataset.c=k;b.textContent=C[1];
+    if(k!=='*'){var sm=document.createElement('small');sm.textContent=' '+n;b.appendChild(sm)}
+    b.setAttribute('aria-pressed',String(catSel===k));box.appendChild(b);
+  });
 }
 var viewer=document.getElementById('viewer'),vbody=document.getElementById('vbody');
 function openViewer(c){
@@ -381,7 +413,7 @@ function render(keep){
   if(!keep)limit=PAGE;
   var items=all();
   document.getElementById('total').textContent='カメラ'+preset.length.toLocaleString()+'か所';
-  fillSel(items);paintChips();
+  fillSel(items);paintChips();paintCats(items);
   var p=sel.value,w=q.value.trim();
   var fd=document.getElementById('find');
   fd.textContent='';
@@ -397,6 +429,7 @@ function render(keep){
   paintAreas(items,p);
   var shown=items.filter(function(c){
     if(srcSel!=='*'&&c.src!==srcSel)return false;
+    if(catSel!=='*'&&catOf(c)!==catSel)return false;
     if(w)return (c.name+' '+c.pref+' '+areaOf(c)).indexOf(w)>=0;
     if(p!=='*'&&c.pref!==p)return false;
     if(areaSel&&p!=='*'&&areaKey(c)!==areaSel)return false;
@@ -459,6 +492,10 @@ var qt;q.oninput=function(){clearTimeout(qt);qt=setTimeout(function(){render()},
 document.getElementById('chips').onclick=function(e){
   var b=e.target.closest('button');if(!b||!b.dataset.s)return;
   srcSel=b.dataset.s;lw(SRC,srcSel);render();
+};
+document.getElementById('cats').onclick=function(e){
+  var b=e.target.closest('button');if(!b||!b.dataset.c)return;
+  catSel=b.dataset.c;lw(CAT,catSel);render();
 };
 more.onclick=function(){limit+=PAGE;render(true)};
 // ゴミ箱の画面
