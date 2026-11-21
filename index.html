@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとしてインストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">新しい版に更新する</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンでアプリとして入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v529</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v530</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">相手を待っています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v529</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v530</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">名前</b> さんが入室を求めています</p>
         <p class="jr-fp">合図 <b id="jr-fp">----</b> ／ 相手の画面と同じかくににて確認</p>
@@ -11381,6 +11381,41 @@ function sendAgain(msg){
   resendUnacked(true);
 }
 
+/* v530: 手で送り直す・受け取り直す（持ち主: 送信中を手で更新できない）。
+   自分の吹き出しの「送信中…」「相手の受信待ち」の文字を押す → その場で送り直す。
+   上の相手の名前を押す → 中継所に残っているメッセージを取りに行き、つながりも作り直す（受け取る側用） */
+function zgManualRefresh(quiet){
+  try{ if(!privateReady()) return; }catch(e){ return; }
+  try{ Relay.badUntil=0; }catch(e){}   /* 一度失敗した直後の「中継所を10秒使わない」を解く（手で押した時はすぐ試す） */
+  try{ Fast.probe(); }catch(e){}
+  try{ if(Net.topic&&!Net.open) Net.openStream(); }catch(e){}
+  try{ Net.poll(); }catch(e){}
+  try{ if(Relay.topic) Relay.poll(); }catch(e){}
+  try{ (S.outbox||[]).forEach(function(it){ it.lastTry=0; }); }catch(e){}
+  try{ resendUnacked(true); }catch(e){}
+  try{ photoAutoRetry(true); }catch(e){}
+  if(!quiet){ try{ toast('メッセージを確かめています'); }catch(e){} }
+}
+document.addEventListener('click',function(e){
+  try{
+    var t=e.target; if(!t||!t.closest) return;
+    var meta=t.closest('#chat-log .msg .meta');
+    if(meta){
+      var tx=meta.textContent||'';
+      if(!/送信中|受信待ち|未確認/.test(tx)) return;
+      var row=meta.closest('.msg'); var uid=row&&row.dataset.uid;
+      var m=uid&&S.chat.find(function(c){ return c&&String(c.uid)===String(uid); });
+      if(!m||m.from!==S.me.id) return;
+      e.preventDefault(); e.stopPropagation();
+      zgManualRefresh(true);
+      if(m.photo||m.file){ if(!m.sent&&m.photo){ try{ retryPhoto(m); }catch(_){} } }
+      else { m.tries=0; S.inflight=(S.inflight||[]).filter(function(it){ return it.mid!==m.mid; }); sendAgain(m); }
+      try{ toast('もう一度送っています'); }catch(_){}
+      return;
+    }
+    if(t.closest('header.bar .brand .zb-peer')&&document.body.classList.contains('in-play')){ zgManualRefresh(false); }
+  }catch(_){}
+},true);
 function resendUnacked(all){
   if(!privateReady()) return;
   flushOutbox();
@@ -15275,6 +15310,7 @@ html body #pane-chat .lhead{display:none!important}
 html body.in-play header.bar #btn-quit,html body.in-play header.bar #net,html body header.bar .brand #lh-dot{display:none!important}
 html body #pane-chat .chat-composer-actions #btn-live,html body #pane-chat .chat-composer-actions #btn-call{display:none!important}
 html body header.bar .brand .zb-peer{padding-left:3px!important}
+html body #chat-log .msg .meta{cursor:pointer}
 html body header.bar .brand #zb-dot{display:block;flex:none;width:9px;height:9px;border-radius:50%;background:#B7AEE6;box-shadow:0 0 0 2px rgba(255,255,255,.28)}
 html body header.bar .brand #zb-dot.on,html body header.bar .brand #zb-dot.ping{background:#3BE07A}
 html body header.bar .brand #zb-dot.ping{animation:lhping 1.15s ease-out 7}
