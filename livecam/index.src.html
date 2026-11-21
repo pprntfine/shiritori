@@ -98,7 +98,7 @@ dialog select,dialog input{background:var(--bg)}
 </head>
 <body>
 <header>
-  <div class="top"><div><h1>ライブカメラ一覧</h1><div id="ver" class="hint" style="margin-top:0">バージョン <b>v29</b>・<span id="total"></span></div></div><button id="add">＋ 追加</button></div>
+  <div class="top"><div><h1>ライブカメラ一覧</h1><div id="ver" class="hint" style="margin-top:0">バージョン <b>v30</b>・<span id="total"></span></div></div><button id="add">＋ 追加</button></div>
   <div class="row2">
     <select id="pref" aria-label="県を選ぶ"></select>
     <button id="prefbtn" type="button"><span id="preftxt">全国</span>▾</button>
@@ -106,7 +106,6 @@ dialog select,dialog input{background:var(--bg)}
   </div>
   <div class="chips" id="chips">
     <button data-s="*" aria-pressed="true">すべて</button>
-    <button data-s="now" aria-pressed="false" class="now">🔴 今配信中（お散歩・外配信）</button>
     <button data-s="yt" aria-pressed="false">YouTube</button>
     <button data-s="wn" aria-pressed="false">ウェザーニュース</button>
     <button data-s="ot" aria-pressed="false">道路・河川・観光など</button>
@@ -225,7 +224,7 @@ function all(){
   return a.concat(preset.filter(function(c){return !hidden[c.url]}));
 }
 var sel=document.getElementById('pref'),q=document.getElementById('q'),grid=document.getElementById('grid'),empty=document.getElementById('empty'),more=document.getElementById('more'),cnt=document.getElementById('count');
-var srcSel=ls(SRC),PAGE=40,limit=PAGE;if(!srcSel||srcSel==='undefined')srcSel='*';
+var srcSel=ls(SRC),PAGE=40,limit=PAGE;if(!srcSel||srcSel==='undefined'||srcSel==='now')srcSel='*';
 // 中身のカテゴリー。名前の言葉から決める（上から順に、最初に当たった物）
 var CAT='zg_livecam_cat',catSel=ls(CAT);if(!catSel||catSel==='undefined')catSel='*';
 var CATS=[['*','すべて'],['kojin','個人・自宅'],['machi','街・道路'],['eki','駅・鉄道'],['umi','海・港'],['kawa','川・湖・ダム'],['yama','山・高原'],['yuki','スキー・雪'],['sora','空港'],['kanko','観光・名所'],['doubutsu','動物'],['tenki','空・天気']];
