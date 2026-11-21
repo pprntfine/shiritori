@@ -80,6 +80,8 @@ dialog select,dialog input{background:var(--bg)}
 #err{color:#d33;font-size:14px;min-height:20px;margin-top:8px}
 .hint{font-size:13px;color:var(--sub);margin-top:6px}
 #restore{background:none;color:var(--sub);font-size:13px;padding:4px 0;text-decoration:underline}
+#cats[hidden],#find[hidden]{display:none}
+.chips button.now{background:#ffe3e3;color:#c0262d;font-weight:700}.chips button.now[aria-pressed="true"]{background:#e0353d;color:#fff}
 .chips button.trash{background:transparent;border:1px solid var(--line);color:var(--sub)}
 #toast{position:fixed;left:16px;right:16px;bottom:calc(16px + env(safe-area-inset-bottom));background:#222;color:#fff;border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10px;z-index:60;font-size:15px}
 #toast[hidden]{display:none}
@@ -96,7 +98,7 @@ dialog select,dialog input{background:var(--bg)}
 </head>
 <body>
 <header>
-  <div class="top"><div><h1>ライブカメラ一覧</h1><div id="ver" class="hint" style="margin-top:0">バージョン <b>v28</b>・<span id="total"></span></div></div><button id="add">＋ 追加</button></div>
+  <div class="top"><div><h1>ライブカメラ一覧</h1><div id="ver" class="hint" style="margin-top:0">バージョン <b>v29</b>・<span id="total"></span></div></div><button id="add">＋ 追加</button></div>
   <div class="row2">
     <select id="pref" aria-label="県を選ぶ"></select>
     <button id="prefbtn" type="button"><span id="preftxt">全国</span>▾</button>
@@ -104,6 +106,7 @@ dialog select,dialog input{background:var(--bg)}
   </div>
   <div class="chips" id="chips">
     <button data-s="*" aria-pressed="true">すべて</button>
+    <button data-s="now" aria-pressed="false" class="now">🔴 今配信中（お散歩・外配信）</button>
     <button data-s="yt" aria-pressed="false">YouTube</button>
     <button data-s="wn" aria-pressed="false">ウェザーニュース</button>
     <button data-s="ot" aria-pressed="false">道路・河川・観光など</button>
@@ -358,6 +361,10 @@ function ytStart(th,c,k,n){
 }
 function play(th,c){
   var k=kind(c.url),el;
+  if(c.src==='tc'){
+    el=document.createElement('iframe');el.src='https://twitcasting.tv/'+encodeURIComponent(c.id)+'/embeddedplayer/live?auto_play=true&default_mute=true';
+    el.allow='autoplay; fullscreen';el.allowFullscreen=true;th.appendChild(el);return;
+  }
   if(k==='yt'||k==='ytc'){
     ytStart(th,c,k,0);return;
   }else if(k==='hls'||k==='file'){
@@ -374,12 +381,14 @@ function play(th,c){
   }
   th.appendChild(el);
 }
-var SRCNAME={yt:'YouTube',wn:'ウェザーニュース',me:'自分で追加',ot:'ライブカメラ'};
+var SRCNAME={yt:'YouTube',wn:'ウェザーニュース',me:'自分で追加',ot:'ライブカメラ',tc:'ツイキャス',nico:'ニコ生'};
 function card(c){
   var k=kind(c.url);
   var el=document.createElement('div');el.className='card';
   var th=document.createElement('div');th.className='thumb';
-  if(k==='yt'){
+  if(c.th){
+    var im2=document.createElement('img');im2.alt='';im2.loading='lazy';im2.src=c.th;im2.referrerPolicy='no-referrer';th.appendChild(im2);
+  }else if(k==='yt'){
     var img=document.createElement('img');img.alt='';img.loading='lazy';
     var id=ytId(c.url);
     img.src='https://i.ytimg.com/vi/'+id+'/hqdefault_live.jpg';
@@ -392,11 +401,11 @@ function card(c){
   }
   var pl=document.createElement('div');pl.className='play';pl.textContent='▶';th.appendChild(pl);
   var sb=document.createElement('div');sb.className='src';sb.textContent=SRCNAME[c.src]||'';th.appendChild(sb);
-  th.onclick=function(){openViewer(c)};
+  th.onclick=function(){if(c.src==='nico'){window.open(c.url,'_blank','noopener');return}openViewer(c)};
   var meta=document.createElement('div');meta.className='meta';
   var d=document.createElement('div');
   var b=document.createElement('b');b.textContent=c.name;
-  var sm=document.createElement('small');sm.textContent=(c.pref||'県の指定なし')+(areaOf(c)?'・'+areaOf(c):'');
+  var sm=document.createElement('small');sm.textContent=c.now?([SRCNAME[c.src],c.user,c.pref].filter(Boolean).join('・')+(c.src==='nico'?'（押すとニコ生で開きます）':'')):((c.pref||'県の指定なし')+(areaOf(c)?'・'+areaOf(c):''));
   d.appendChild(b);d.appendChild(sm);
   var acts=document.createElement('div');acts.className='acts';
   var a=document.createElement('a');a.href=c.url;a.target='_blank';a.rel='noopener noreferrer';a.textContent='開く';
@@ -409,12 +418,39 @@ function card(c){
   el.appendChild(th);el.appendChild(meta);
   return el;
 }
+// 今配信中（ツイキャスの外配信・ニコ生のお散歩・YouTube のお散歩ライブ）。開いた時に自分のサーバーの /live.json から取る
+var NOW={at:0,items:null,loading:false,err:''};
+function prefGuess(t){for(var i=0;i<PREFS.length;i++){var f=PREFS[i],s2=f==='北海道'?f:f.replace(/[都府県]$/,'');if(t.indexOf(f)>=0||t.indexOf(s2)>=0)return f}return ''}
+function loadNow(force){
+  if(NOW.loading)return;if(!force&&NOW.items&&Date.now()-NOW.at<120000)return;
+  NOW.loading=true;
+  fetch('/live.json',{cache:'no-store'}).then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(j){
+    NOW.items=(j.items||[]).map(function(x){return {name:x.t||x.u||'配信中',pref:prefGuess((x.t||'')+' '+(x.u||'')),url:x.url,src:x.s,th:x.th,id:x.id,user:x.u||'',now:1}});
+    NOW.at=Date.now();NOW.err='';
+  }).catch(function(){NOW.err='今配信中の一覧を取れませんでした。少したってから開き直してください。'}).then(function(){NOW.loading=false;if(srcSel==='now')render(true)});
+}
+function renderNow(w,p){
+  document.getElementById('cats').hidden=true;document.getElementById('areas').hidden=true;document.getElementById('find').hidden=true;
+  loadNow(false);
+  var list=(NOW.items||[]).filter(function(c){return !w||(c.name+' '+c.user+' '+c.pref).indexOf(w)>=0});
+  list=list.filter(function(c){return c.pref}).concat(list.filter(function(c){return !c.pref}));
+  if(PREFS.indexOf(p)>=0)list=list.filter(function(c){return c.pref===p}).concat(list.filter(function(c){return c.pref!==p}));
+  grid.textContent='';
+  list.slice(0,limit).forEach(function(c){grid.appendChild(card(c))});
+  cnt.textContent=NOW.items?('今配信中 '+list.length+'件（開いた時に集めています。終わった配信は出ません）'):(NOW.err||'今配信中の配信を集めています…');
+  more.hidden=list.length<=limit;more.textContent='もっと見る（残り'+Math.max(0,list.length-limit)+'件）';
+  empty.hidden=!NOW.items||list.length>0;empty.textContent='今は条件に合う配信がありません。';
+}
+setInterval(function(){if(srcSel==='now'&&viewer.hidden&&!document.hidden){loadNow(true)}},180000);
+document.addEventListener('visibilitychange',function(){if(!document.hidden&&srcSel==='now')loadNow(false)});
 function render(keep){
   if(!keep)limit=PAGE;
   var items=all();
   document.getElementById('total').textContent='カメラ'+preset.length.toLocaleString()+'か所';
   fillSel(items);paintChips();
   var p=sel.value,w=q.value.trim();
+  if(srcSel==='now'){renderNow(w,p);return}
+  document.getElementById('cats').hidden=false;
   var fd=document.getElementById('find');
   fd.textContent='';
   fd.hidden=PREFS.indexOf(p)<0;
