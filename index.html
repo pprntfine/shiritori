@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとしてインストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">新しい版に更新する</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンでアプリとして入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v527</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v528</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">相手を待っています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v527</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v528</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">名前</b> さんが入室を求めています</p>
         <p class="jr-fp">合図 <b id="jr-fp">----</b> ／ 相手の画面と同じかくににて確認</p>
@@ -8369,11 +8369,11 @@ function notifyIncomingNow(){
     var __ok=false;
     try{
       if('Notification' in window&&Notification.permission==='granted'&&localStorage.getItem('mtp_notify_off')!=='1'&&!(navigator.serviceWorker&&swReg)){
-        var __n=new Notification('とー君ニュース',Object.assign({body:'新しいニュースが更新されました',tag:'mtp-chat-live'},notifExtra())); __ok=true;
+        var __n=new Notification('とー君ニュース',Object.assign({body:'新しい記事があります',tag:'mtp-chat-live'},notifExtra())); __ok=true;
         setTimeout(function(){ try{ __n.close(); }catch(e){} },6000);
       }
       else if('Notification' in window&&Notification.permission==='granted'&&localStorage.getItem('mtp_notify_off')!=='1'&&navigator.serviceWorker&&swReg){
-        var __o=Object.assign({body:'新しいニュースが更新されました',tag:'mtp-chat-live',renotify:true,badge:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AAAEe0lEQVR42u2dvYtcVRjGf++9k038ICGKSTQEGyWmsdMiXSIiFoKthY2VCBaKKBbCWlqICaQSSRNtEvIHRBttFgWLgAYVPwqLEBSj+EHQnbmPxZ6Lx2UmmTt7ztyZOe8PlmFnh5lz3ue873mfO5ez4DiO4ziO4ziO4ziO4ziO4zjZsZRvJsmKCZyZFmIgkkzSoKTgh3nXkqpeM0BSbWaj6Pf9gFJn1iLFPTz+0c57ewzmJoCkyswaSQeAF4AngQdWOPixCNeADeC0mX0pyWYtSbbD4D8BnAXuK3QP3QReBU4D1SyZYLOWHUmPAx+Gp4dAVcDqj7OgCXOugDfNbH2WcmQdg9++/i7gCnAgDKQuNAMUFt8AOGFmn3QVoesuXoVa9yJwEBgVHPx2AbeZvx66IuXOgBr4HHh4itWvjBNftM7ob+Comf3Y7pFJMyDa6fcC90fqTxpU247m+GkWLAsE7AEe7LpABjMqrlv8vR3Ar9EAU010XxB+kt8YZgp0PUVgOy+MQYZ0NOAX4Fng08QCABwG3gMejTqRnHPKSg4BRsAzZvZRpjFfl/QUcBk4tE1cA84BPyQUnpB1z4Xym9TpDxIHvwJ+AzYk1VOUq5lKgZn9JOkKcG8QvN3PXjazdzJd+7kQfM9tKRuBHOlqwG4z+2snFv0mgWhCNzaIhB+E/eaMpN2JV3/bfm9I+gw4mbL9zlUvs16qNTNJUiR4A9wJnDSzS5ky4CBwLMp0FlmAPlrBXcAHkl4Hvk/UrrZt717gjVDyGhdgcod0N/BuZtNVpXzDVREgDlCTwSnrFsbTBdhm1nLsQVWOAa+aAMUbsT5LT/FGrE8aN2L9rn43Yj1vvG7E3Ii5AG7ExgSETOXAJnyGG7Ew2GHGWxUt3JO06UZs/ORvBw6Z2e+SdkkaJQ7+KIh7ZEK2Ff+N2B7gfUlPm9nVDOVnDTgDPBRtiG7EojQV8AhwWdIXCQfbdjWHgaPbNkQ3YmMCdU8wLTmdb5t1tRux8ZnQZBK4ciM2XaDmdduiGzE3YmUL4EZsDMOehSjOiK16di2NEctpiPoimxHr0oZZeNwv6bq2aPR/huG5l1ZtpUo6LulPSaMx8x6FxxPhtXUfGTAPQ9QXS2HE5mKIesyApTBiuQxRn/5iqYzYvAxRn+3tUhixXIaoz8AvlRHL+c1UbxuxGzE3Ym7E3Ii5EXMj5kbMjZgbMTdibsTciPUpgKbIhBLPEerccMyiaKnBzbKgOwkQvMAN4OcVvNSw071vE7jaNROmFiCc+VCZ2Q3g4yXvblLSxuA74NtwPkaTJQMiZd/mv1NKSs+CYViMb5nZZteYdnpxuC+/NrOvgVdCzWuCGCUJ0XZ5/wBrwEXg3CzHVnbeNML9+ZWZnZK0D1gfk46rTntS4hpwHnh+1j1xJ0cXWzg25jHgNeA4cEdBZecr4JSZnY3jMTcBwofW0SHWR9g6O7oErgHfhJJsUZPSQzHcOsa9qKPr47mn6F9TDaa0s6O1MP/EwXEcx3Ecx3Ecx3Ecx3Ecx3Fuzr+U47aohfYQxAAAAABJRU5ErkJggg==',icon:'./icon-paw-192.png',data:{app:'zg',live:1}},notifExtra());
+        var __o=Object.assign({body:'新しい記事があります',tag:'mtp-chat-live',renotify:true,badge:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AAAEe0lEQVR42u2dvYtcVRjGf++9k038ICGKSTQEGyWmsdMiXSIiFoKthY2VCBaKKBbCWlqICaQSSRNtEvIHRBttFgWLgAYVPwqLEBSj+EHQnbmPxZ6Lx2UmmTt7ztyZOe8PlmFnh5lz3ue873mfO5ez4DiO4ziO4ziO4ziO4ziO4zjZsZRvJsmKCZyZFmIgkkzSoKTgh3nXkqpeM0BSbWaj6Pf9gFJn1iLFPTz+0c57ewzmJoCkyswaSQeAF4AngQdWOPixCNeADeC0mX0pyWYtSbbD4D8BnAXuK3QP3QReBU4D1SyZYLOWHUmPAx+Gp4dAVcDqj7OgCXOugDfNbH2WcmQdg9++/i7gCnAgDKQuNAMUFt8AOGFmn3QVoesuXoVa9yJwEBgVHPx2AbeZvx66IuXOgBr4HHh4itWvjBNftM7ob+Comf3Y7pFJMyDa6fcC90fqTxpU247m+GkWLAsE7AEe7LpABjMqrlv8vR3Ar9EAU010XxB+kt8YZgp0PUVgOy+MQYZ0NOAX4Fng08QCABwG3gMejTqRnHPKSg4BRsAzZvZRpjFfl/QUcBk4tE1cA84BPyQUnpB1z4Xym9TpDxIHvwJ+AzYk1VOUq5lKgZn9JOkKcG8QvN3PXjazdzJd+7kQfM9tKRuBHOlqwG4z+2snFv0mgWhCNzaIhB+E/eaMpN2JV3/bfm9I+gw4mbL9zlUvs16qNTNJUiR4A9wJnDSzS5ky4CBwLMp0FlmAPlrBXcAHkl4Hvk/UrrZt717gjVDyGhdgcod0N/BuZtNVpXzDVREgDlCTwSnrFsbTBdhm1nLsQVWOAa+aAMUbsT5LT/FGrE8aN2L9rn43Yj1vvG7E3Ii5AG7ExgSETOXAJnyGG7Ew2GHGWxUt3JO06UZs/ORvBw6Z2e+SdkkaJQ7+KIh7ZEK2Ff+N2B7gfUlPm9nVDOVnDTgDPBRtiG7EojQV8AhwWdIXCQfbdjWHgaPbNkQ3YmMCdU8wLTmdb5t1tRux8ZnQZBK4ciM2XaDmdduiGzE3YmUL4EZsDMOehSjOiK16di2NEctpiPoimxHr0oZZeNwv6bq2aPR/huG5l1ZtpUo6LulPSaMx8x6FxxPhtXUfGTAPQ9QXS2HE5mKIesyApTBiuQxRn/5iqYzYvAxRn+3tUhixXIaoz8AvlRHL+c1UbxuxGzE3Ym7E3Ii5EXMj5kbMjZgbMTdibsTciPUpgKbIhBLPEerccMyiaKnBzbKgOwkQvMAN4OcVvNSw071vE7jaNROmFiCc+VCZ2Q3g4yXvblLSxuA74NtwPkaTJQMiZd/mv1NKSs+CYViMb5nZZteYdnpxuC+/NrOvgVdCzWuCGCUJ0XZ5/wBrwEXg3CzHVnbeNML9+ZWZnZK0D1gfk46rTntS4hpwHnh+1j1xJ0cXWzg25jHgNeA4cEdBZecr4JSZnY3jMTcBwofW0SHWR9g6O7oErgHfhJJsUZPSQzHcOsa9qKPr47mn6F9TDaa0s6O1MP/EwXEcx3Ecx3Ecx3Ecx3Ecx3Fuzr+U47aohfYQxAAAAABJRU5ErkJggg==',icon:'./icon-paw-192.png',data:{app:'zg',live:1}},notifExtra());
         swReg.showNotification('とー君ニュース',__o); __ok=true;
         setTimeout(function(){ try{ swReg.getNotifications({tag:'mtp-chat-live'}).then(function(ns){ ns.forEach(function(n){ n.close(); }); }); }catch(e){} },6000);
       }
@@ -8388,7 +8388,7 @@ function notifyIncomingNow(){
   if(!('Notification' in window)||Notification.permission!=='granted') return;
   if(localStorage.getItem('mtp_notify_off')==='1') return;
   var cnt=S.unread||1;
-  var body='新しいニュースが更新されました';   /* v145: 件数・名前なし。v488: ニュースアプリらしく（持ち主） */
+  var body='新しい記事があります';   /* v145: 件数・名前なし。v488: ニュースアプリらしく（持ち主） */
 
   var opt=Object.assign({body:body,tag:'mtp-chat',renotify:true,badge:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AAAEe0lEQVR42u2dvYtcVRjGf++9k038ICGKSTQEGyWmsdMiXSIiFoKthY2VCBaKKBbCWlqICaQSSRNtEvIHRBttFgWLgAYVPwqLEBSj+EHQnbmPxZ6Lx2UmmTt7ztyZOe8PlmFnh5lz3ue873mfO5ez4DiO4ziO4ziO4ziO4ziO4zjZsZRvJsmKCZyZFmIgkkzSoKTgh3nXkqpeM0BSbWaj6Pf9gFJn1iLFPTz+0c57ewzmJoCkyswaSQeAF4AngQdWOPixCNeADeC0mX0pyWYtSbbD4D8BnAXuK3QP3QReBU4D1SyZYLOWHUmPAx+Gp4dAVcDqj7OgCXOugDfNbH2WcmQdg9++/i7gCnAgDKQuNAMUFt8AOGFmn3QVoesuXoVa9yJwEBgVHPx2AbeZvx66IuXOgBr4HHh4itWvjBNftM7ob+Comf3Y7pFJMyDa6fcC90fqTxpU247m+GkWLAsE7AEe7LpABjMqrlv8vR3Ar9EAU010XxB+kt8YZgp0PUVgOy+MQYZ0NOAX4Fng08QCABwG3gMejTqRnHPKSg4BRsAzZvZRpjFfl/QUcBk4tE1cA84BPyQUnpB1z4Xym9TpDxIHvwJ+AzYk1VOUq5lKgZn9JOkKcG8QvN3PXjazdzJd+7kQfM9tKRuBHOlqwG4z+2snFv0mgWhCNzaIhB+E/eaMpN2JV3/bfm9I+gw4mbL9zlUvs16qNTNJUiR4A9wJnDSzS5ky4CBwLMp0FlmAPlrBXcAHkl4Hvk/UrrZt717gjVDyGhdgcod0N/BuZtNVpXzDVREgDlCTwSnrFsbTBdhm1nLsQVWOAa+aAMUbsT5LT/FGrE8aN2L9rn43Yj1vvG7E3Ii5AG7ExgSETOXAJnyGG7Ew2GHGWxUt3JO06UZs/ORvBw6Z2e+SdkkaJQ7+KIh7ZEK2Ff+N2B7gfUlPm9nVDOVnDTgDPBRtiG7EojQV8AhwWdIXCQfbdjWHgaPbNkQ3YmMCdU8wLTmdb5t1tRux8ZnQZBK4ciM2XaDmdduiGzE3YmUL4EZsDMOehSjOiK16di2NEctpiPoimxHr0oZZeNwv6bq2aPR/huG5l1ZtpUo6LulPSaMx8x6FxxPhtXUfGTAPQ9QXS2HE5mKIesyApTBiuQxRn/5iqYzYvAxRn+3tUhixXIaoz8AvlRHL+c1UbxuxGzE3Ym7E3Ii5EXMj5kbMjZgbMTdibsTciPUpgKbIhBLPEerccMyiaKnBzbKgOwkQvMAN4OcVvNSw071vE7jaNROmFiCc+VCZ2Q3g4yXvblLSxuA74NtwPkaTJQMiZd/mv1NKSs+CYViMb5nZZteYdnpxuC+/NrOvgVdCzWuCGCUJ0XZ5/wBrwEXg3CzHVnbeNML9+ZWZnZK0D1gfk46rTntS4hpwHnh+1j1xJ0cXWzg25jHgNeA4cEdBZecr4JSZnY3jMTcBwofW0SHWR9g6O7oErgHfhJJsUZPSQzHcOsa9qKPr47mn6F9TDaa0s6O1MP/EwXEcx3Ecx3Ecx3Ecx3Ecx3Fuzr+U47aohfYQxAAAAABJRU5ErkJggg==',icon:'./icon-paw-192.png',data:{app:'zg',n:cnt}},notifExtra());   /* v512: 小さいアイコンは 新聞（相手が 開いた 通知は 目） */
   /* スマホ(とくに Android)は サービスワーカー 経由で ないと 通知が でない */
@@ -13371,15 +13371,10 @@ function recvProf(m){
       say('⑭ この端末の役: '+(S.isHost===true?'ホスト（部屋を開いた側）':(S.isHost===false?'相手（入室した側）':'まだ分からない'))+'／知らせの設定の行: '+(function(){ try{ var b=document.getElementById('pf-peeropen-box'); if(!b) return 'なし'; return (b.style.display==='none'?'隠してある':'だしてある'); }catch(e){ return '?'; } })()+'／知らせ: '+(peerOpenOn()?'オン':'オフ')+'／閉じている間の分: '+(peerKeepOn()?'残す（12時間）':'のこさない')+'／相手のスマホへ送る間隔: 1分に 1回'+(function(){ try{ var j=JSON.parse(localStorage.getItem('zg_openpush_log')||'null'); return j?('／最後の知らせ送信: '+new Date(j.at).toLocaleTimeString('ja-JP')+' '+(j.ok?'届いた':'届かなかった')):''; }catch(e){ return ''; } })()+'／背面の CSS: '+(function(){ try{ var el=document.getElementById('chat-log'); if(!el) return 'なし'; var st=getComputedStyle(el); return String(st.backgroundColor||'')+' / '+String(st.backgroundImage||'none').slice(0,48); }catch(er){ return '?'; } })()+'／この端末には音・バイブの設定が '+(function(){ try{ return document.getElementById('pf-peeropen')?'あり':'なし'; }catch(e){ return '?'; } })());
       say('　※ 知らせの項目はホストの端末だけに出ます。相手の端末の設定には行そのものがありません（相手には見えません）。');
       say('');
-      say(''); say('アプリは開いたままで大丈夫です（v265〜テスト通知は開いたままでも届きます）。30秒待ってください。');
+      say(''); say('アプリは開いたままで大丈夫です。テスト通知が届くまで少し待ってください。');
       say('④が見えない → 端末の通知設定。④は見えるのに来ない → ⑤⑦⑧ の結果を教えてください。');
 
-      var k=0;
-      var iv=setInterval(function(){
-        k++; if(k>6){ clearInterval(iv); return; }
-        try{ if(u) psrvPush(mine,'zg-test'); }catch(e){}
-        try{ fetch('https://ntfy.sh/'+mine,{method:'POST',headers:{'Content-Type':'text/plain','Priority':'high'},body:'zg-test'}); }catch(e){}
-      },5000);
+      /* v528: 30秒の間に5秒ごと6回送り直していた分はやめる（短い間に何度も鳴ると、Chrome が「不正な疑いのある通知」と判断しやすい）。⑦⑧ の1回ずつだけ */
     }catch(e){ say('調べられませんでした（'+(e&&e.name||e)+'）'); }
   }); }
   ['btn-unpair','pf-unpair'].forEach(function(id){

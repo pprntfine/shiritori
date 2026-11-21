@@ -13,7 +13,7 @@ async function push(text){ let p; listeners.push({data:{text:()=>text}, waitUnti
 let ok=true; const chk=(n,c,x)=>{ console.log(n,JSON.stringify(x),c?'OK':'NG'); if(!c) ok=false; };
 store.set('role','h');
 const now=Date.now(), t1=now-40*60000, t2=now-5*60000;
-let n=await push('zgn:1'); chk('メッセージ（ニュース風）は新聞・短く2回震える',JSON.stringify(n.vibrate)==='[160,100,160]'&&/^data:image\/png;base64,/.test(n.badge)&&n.badge.length>1500&&n.badge.length<1700&&n.body==='新しいニュースが更新されました',n);
+let n=await push('zgn:1'); chk('メッセージ（ニュース風）は新聞・短く2回震える',JSON.stringify(n.vibrate)==='[160,100,160]'&&/^data:image\/png;base64,/.test(n.badge)&&n.badge.length>1500&&n.badge.length<1700&&n.body==='新しい記事があります',n);
 n=await push('zgo:'+t1); chk('相手が開いた は目・時刻は開いた時刻・長く1回震える',JSON.stringify(n.vibrate)==='[350]'&&/^data:image\/png;base64,/.test(n.badge)&&n.badge.length>3000&&n.timestamp===t1&&n.body==='相手がアプリを開きました',n);
 n=await push('zgo:'+t2); chk('閉じている間の2回とも残る',store.get('po')===t1+','+t2,store.get('po'));
 n=await push('zgcall:x'); chk('電話は従来どおり（badge なし）',!n.badge&&n.body==='電話がきています',n);
