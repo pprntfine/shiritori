@@ -1,0 +1,20 @@
+// v533: 下の段の「削除」でトークを全部消すと、電話の記録も消える（以前は残っていた）。読み込み直しても戻らない（1台）。
+const {chromium}=require('playwright');
+const DIR=process.argv[2];const SK=Buffer.alloc(32,9).toString('base64'),TOPIC='gskr3s-'+'c'.repeat(24);
+(async()=>{const b=await chromium.launch();const ctx=await b.newContext({viewport:{width:390,height:844}});
+ await ctx.addInitScript(({SK,TOPIC})=>{ if(sessionStorage.getItem('i'))return; sessionStorage.setItem('i','1'); localStorage.setItem('mtp_id_v1','aaaaaaaa11'); localStorage.setItem('mtp_pair_v1',JSON.stringify({sid:'p',h:1,peer:'bbbbbbbb22',peerName:'あいて',topic:TOPIC,rk:SK,sk:SK,at:Date.now(),exp:Date.now()+9e9})); },{SK,TOPIC});
+ await ctx.route('**/*',async r=>{const u=r.request().url(); if(u.startsWith('https://zg.test/'))return r.fulfill({path:DIR+'/'+(u.split('/').pop().split('?')[0]||'index.html')}); return r.abort();});
+ const pg=await ctx.newPage(); const errs=[]; pg.on('pageerror',e=>{ if(!/ServiceWorker/.test(e.message)) errs.push(e.message); }); await pg.goto('https://zg.test/index.html'); await pg.waitForTimeout(3500);
+ const show=()=>pg.evaluate(()=>{ const w=document.getElementById('storage-warning'); if(w) w.hidden=true; __t.show('play'); __t.setTab('chat'); });
+ await show();
+ await pg.evaluate(async()=>{ __t.callLogAdd('発信・応答なし'); __t.callLogAdd('着信・通話 0:12'); __t.S.chat.push({uid:'t1',mid:'Mt1',from:'bbbbbbbb22',text:'こんにちは',at:Date.now(),sent:true,n:5}); await __t.chatSaveNow(); });
+ await pg.waitForTimeout(800);
+ const before=await pg.evaluate(()=>__t.S.chat.filter(m=>m.callLog).length);
+ await pg.evaluate(()=>{ document.getElementById('btn-delchat').click(); }); await pg.waitForTimeout(300);
+ await pg.click('#del-yes'); await pg.waitForTimeout(1500);
+ const after=await pg.evaluate(()=>({cl:__t.S.chat.filter(m=>m.callLog).length,txt:__t.S.chat.filter(m=>!m.sys).length,row:document.querySelectorAll('#chat-log .zg-call').length}));
+ await pg.reload(); await pg.waitForTimeout(4000); await show(); await pg.waitForTimeout(800);
+ const rel=await pg.evaluate(()=>__t.S.chat.filter(m=>m.callLog).length);
+ console.log('消す前の電話の記録',before,'件 → 消した後',after.cl,'件（画面',after.row,'行・メッセージ',after.txt,'件）→ 読み込み直した後',rel,'件','エラー',errs.length?errs:'なし');
+ const ok=before===2&&after.cl===0&&after.row===0&&after.txt===0&&rel===0&&!errs.length;
+ console.log(ok?'OK: 削除で電話の記録も消える':'NG'); await b.close(); process.exit(ok?0:1);})();
