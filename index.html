@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとしてインストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">新しい版に更新する</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンでアプリとして入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v533</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v534</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">相手を待っています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v533</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v534</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">名前</b> さんが入室を求めています</p>
         <p class="jr-fp">合図 <b id="jr-fp">----</b> ／ 相手の画面と同じかくににて確認</p>
@@ -6826,6 +6826,7 @@ function askDelChat(){
 }
 function delChatAll(){
   S.chat=S.chat.filter(function(m){ return m&&m.sys&&!m.callLog; });   /* v533: 電話の記録も一緒に消す（以前は残っていた） */
+  try{ clClearAsk(Date.now()); }catch(e){}   /* v534: 相手の端末の電話の記録も消してもらう */
   S.chatRendered=-1; S.unread=0;
   unreadClear(); chatClearStore();
   try{ swClearNotifs(); }catch(e){}
@@ -8792,6 +8793,41 @@ async function receiveDeletion(m){
     removeDeletedMessages(); await chatSaveNow();
     if(deletionScope()===d.scope) Net.send({t:'recall-ack',ids:m.ids});
   }catch(e){ /* 保存できなければ受領を返さず、送信側の再試行に任せる。 */ }
+}
+/* v534: 電話の記録を相手の端末からも消す合図（持ち主: 相手からも消してほしい）。
+   「削除」を押した時刻 at を覚え、相手の「受け取った」が来るまで送る（相手は at までの電話の記録だけ消す。メッセージは消さない）。
+   相手が閉じていても、中継所に12時間残る分で届く。相手が古い版なら何も起きない（無視される）。3日たったらあきらめる */
+var CLC_KEY='zg.clclear1';
+function clcLoad(){ try{ var o=JSON.parse(localStorage.getItem(CLC_KEY)||'null'); if(o&&typeof o.at==='number'&&Date.now()-o.at<3*24*3600*1000) return o; }catch(e){} return null; }
+function clcStore(o){ try{ if(o) localStorage.setItem(CLC_KEY,JSON.stringify(o)); else localStorage.removeItem(CLC_KEY); }catch(e){} }
+function clClearAsk(at){
+  if(!S.linked) return;
+  var o=clcLoad(); if(o&&o.at>at) at=o.at;
+  clcStore({at:at,last:0,tries:0}); clClearFlush(true);
+}
+function clClearFlush(force){
+  try{
+    if(!S.linked||!S.sealed||!Net.topic||!Net.key||navigator.onLine===false) return;
+    var o=clcLoad(); if(!o){ clcStore(null); return; }
+    if(!force&&Date.now()-(o.last||0)<10*60*1000) return;
+    o.last=Date.now(); o.tries=(o.tries||0)+1; clcStore(o);
+    Net.send({t:'cl-clear',at:o.at});
+  }catch(e){}
+}
+setInterval(function(){ try{ if(document.visibilityState==='visible') clClearFlush(false); }catch(e){} },60000);
+/* v534: この版を入れて最初に開いた時に1回だけ、いま相手に残っている電話の記録を消してもらう（持ち主: すでに自分の分は消したので、相手の分も消したい） */
+(function(){ var n=0, iv=setInterval(function(){ try{
+  if(localStorage.getItem('zg.clclear_boot')==='1'||++n>40){ clearInterval(iv); return; }
+  if(!S.linked||!S.sealed||!Net.topic||!Net.key) return;   /* つながるまで待つ（最大約3分） */
+  localStorage.setItem('zg.clclear_boot','1'); clearInterval(iv); clClearAsk(Date.now());
+}catch(e){} },5000); })();
+async function receiveClClear(m){
+  if(!S.sealed||m.__legacy||!S.opp||m.from!==S.opp.id||m.from===S.me.id) return;
+  var at=+m.at; if(!(at>0)||at>Date.now()+10*60*1000) return;
+  Net.send({t:'cl-clear-ack',at:at,__noStore:1});
+  var n=S.chat.length;
+  S.chat=S.chat.filter(function(x){ return !(x&&x.sys&&x.callLog&&(x.at||0)<=at); });
+  if(S.chat.length!==n){ try{ persistChat(); }catch(e){} if(S.tab==='chat') renderChat(true); }
 }
 /* v250: あいてが 出した メッセージを、あいての 画面からも 消す 合図 */
 var PURGE_KEY='zg.purge1', purgeTries=Object.create(null);
@@ -11917,6 +11953,13 @@ Net.onMsg=async function(m){
     case 'purge':
       if(m.from===S.me.id) break;
       receivePurge(m);
+      break;
+    case 'cl-clear':   /* v534 */
+      if(m.from===S.me.id) break;
+      receiveClClear(m);
+      break;
+    case 'cl-clear-ack':   /* v534 */
+      if(m.from===S.opp.id){ var __o=clcLoad(); if(__o&&+m.at>=__o.at) clcStore(null); }
       break;
 
     /* 既読 */

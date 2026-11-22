@@ -33,6 +33,7 @@ node tools/sw_badge_test.mjs                   # sw.js の通知の小さいア�
 | e2e/call_log.js | 電話の記録（通話時間・拒否・キャンセル・不在着信、開き直しても残る）（v491） |
 | e2e/calllog_vanish.js | 電話の記録も見てから15分で消える（1台。`node tools/e2e/calllog_vanish.js テスト用フォルダ`）（v532） |
 | e2e/delchat_calllog.js | 下の段の「削除」で電話の記録も消える（1台）（v533） |
+| e2e/calllog_clear_peer.js | 片方の「削除」で相手の電話の記録も消える・メッセージは残る（2台。`OLD_DIR=古い版のテスト用フォルダ` で相手が古い版の場合、`BOOT=1` で最初に開いた時の1回）（v534） |
 | e2e/call_no_stale_ring.js | 閉じていた間の電話が、あとで開いた時に鳴らない |
 | e2e/push_once.js | 相手が閉じている間、送り直しが続いても通知は1通につき1回（v493） |
 | e2e/vanish_unseen.js | 見ていないメッセージは消えない・見てから15分で消える（v494） |

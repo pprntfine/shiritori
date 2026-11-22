@@ -1,4 +1,4 @@
-# とー君ニュース（旧 雑学王 / zatsugakuou）引き継ぎメモ  ― 現在 v533
+# とー君ニュース（旧 雑学王 / zatsugakuou）引き継ぎメモ  ― 現在 v534
 
 ## これは何か
 見た目は「とー君ニュース」（ニュースアプリ。v460 までは「雑学クイズ」アプリ）。中身は **2人専用の暗号化チャット**（メッセージ・写真・ライブ映像・電話）。
@@ -136,6 +136,11 @@
   試験 `tools/e2e/calllog_vanish.js`（1台）: v531 は時計が始まらず残る → v532 は見た後に時計・読み込み直しても同じ・16分前で消え文字は残る。call_log・relay_basic・send_status・orphan_resend も通過。
 - v533 「今残っている電話の記録が消せない」（持ち主）。原因: 下の段の「削除」（`#btn-delchat` → `delChatAll`）が sys 行をすべて残すため、電話の記録（`callLog`）だけ消えずに残り、保存し直されていた。
   → `delChatAll` は `callLog` も消す（ほかの sys 行は従来どおり）。試験 `tools/e2e/delchat_calllog.js`（1台）: v532 は2件残る → v533 は0件・読み込み直しても0件。calllog_vanish・call_log・relay_basic も通過。
+- v534 「電話の記録を相手からも消して。自分の分はもう消してしまったので、こちらから消してあげたい」（持ち主）。新しい合図 `cl-clear`（`{at}`）・`cl-clear-ack`（`clClearAsk`/`clClearFlush`/`receiveClClear`、`purgeSend` の前）:
+  ・「削除」（`delChatAll`）を押すと、その時刻 `at` を localStorage `zg.clclear1` に覚え、相手の `cl-clear-ack` が来るまで10分ごと（開いている間）に送る（最大3日。相手が閉じていても中継所に12時間残る分で届く）。
+  ・受け取った側は `at` までの電話の記録（`callLog`）だけ消す。メッセージは消さない。`at` が未来すぎる合図は無視。相手が古い版なら無視される（壊れない・こちらは送り続ける）。
+  ・この版を入れて最初に開いた時に1回だけ（`zg.clclear_boot`、つながるまで最大約3分待つ）自動で送る＝すでに自分の分を消した持ち主の代わり。
+  試験 `tools/e2e/calllog_clear_peer.js`（2台。普通・`BOOT=1`・`OLD_DIR=` の3通り）。delchat_calllog・calllog_vanish・call_log・relay_basic・send_status・notify_dup・orphan_resend も通過。**相手の分は相手も v534 に上げると消える**（v532 の見てから15分でも消える）。
 - Worker に「1日に保存する数のブレーキ」`SOFT_STORE`（既定8000件/日、`env.SOFT_STORE` で変えられる）を作成済み・**未公開。2026-11-19 持ち主「いったんはブレーキはいらない」→ 既定は `SOFT_STORE = 0`（無効）にした**。使う時は 8000 などにして Worker を書き込む（説明済みのデメリット: かかった日は、相手が閉じている間のメッセージが通知か2人同時に開いた時の送り直し〈最大約10分〉で届く。送った側には送信済みと出る）。超えた分は保存せず流すだけ（中継所ごと止まるより良い）。数は kv `cnt:日付` に「総数|保存数」。手元の wrangler で上限3 → 6通中3通だけ保存を確認。
 
 ## 構造のメモ（行番号は目安。検索で探すこと）
