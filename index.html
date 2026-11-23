@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとしてインストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">新しい版に更新する</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンでアプリとして入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v534</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v535</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">相手を待っています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v534</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v535</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">名前</b> さんが入室を求めています</p>
         <p class="jr-fp">合図 <b id="jr-fp">----</b> ／ 相手の画面と同じかくににて確認</p>
@@ -8055,6 +8055,9 @@ setInterval(function(){ try{ if(document.visibilityState==='visible') guestClose
    しかも この 数字を おくる すべての 封筒に のせる ので、1回 とんでも つぎの 送信で なおる */
 function applyPeerRead(upTo){ /* v436: 累積既読は欠落を既読にするため使わない。ns のみ。 */ }
 
+/* v535: 相手がアプリを閉じている間に届いたメッセージは、開いた時はトップ画面なので既読を送らず、その後トーク画面を開いても送っていなかった
+   （送った側は「送信済み（未確認）」のまま。持ち主）。トーク画面が見えている間は数秒ごとに、まだ伝えていない既読があれば送る */
+setInterval(function(){ try{ if(chatOnScreen()&&S.lastPeerN&&S.lastPeerN>(S.readSent||0)) maybeSendRead(); }catch(e){} },3000);
 function maybeSendRead(force){   /* v232: force=立て直し。相手に届かず なくなった 既読を 水位を 気にせず もう一度 伝える */
   if(!chatOnScreen()) return;   /* v146: トップ画面・クイズ中は 既読に しない */
   if(!force&&(!S.lastPeerN||S.lastPeerN<=S.readSent)) return;   /* v232: 既読の 記録は 相手に 届いた あとで 進める（送る前に 進めない） */
@@ -8078,7 +8081,12 @@ function maybeSendRead(force){   /* v232: force=立て直し。相手に届か�
     }
     var ids=S.chat.filter(function(c){return c&&!c.sys&&c.from===S.opp.id&&ns.indexOf(c.n)>=0&&validDeletionId(c.mid);}).map(function(c){return c.mid;});
     var ps=S.chat.filter(function(c){return c&&!c.sys&&c.from===S.opp.id&&(c.photo||c.file)&&c.pid&&ns.indexOf(c.n)>=0;}).map(function(c){return String(c.pid);});   /* v523 */
-    Net.send({t:'read',ns:ns,ids:ids,ps:ps,exp:exp,at:Date.now()},function(ok){ if(ok){ if(!force) S.readSent=up; } else { S.readSent=0; setTimeout(maybeSendRead,4000); } });   /* v232: 届いてから 記録を進める・force は 記録を 動かさない */
+    /* v535: 中継所も即時路も使えない時（開いた直後など）の既読は、中継所に残らず届かないのに「送れた」扱いになり、二度と送られなかった。
+       確かな道が無い時は送れた印を付けず、少し後にもう一度送る */
+    var __via=false; try{ __via=!!(relayAnyBase()||(Fast.open&&(FastH.subOk||FastE.subOk))); }catch(e){}
+    Net.send({t:'read',ns:ns,ids:ids,ps:ps,exp:exp,at:Date.now()},function(ok){
+      if(!__via&&ok){ if(S.__rdUp!==up){ S.__rdUp=up; S.__rdTry=0; } S.__rdTry=(S.__rdTry||0)+1; if(S.__rdTry>=12) __via=true; }   /* 同じ既読は最大12回まで送り直す（送りすぎない） */
+      if(ok&&__via){ if(!force) S.readSent=up; } else { if(!force) S.readSent=Math.min(S.readSent||0,up-1); setTimeout(maybeSendRead,4000); } });   /* v232: 届いてから 記録を進める・force は 記録を 動かさない */
   },700);
 }
 /* v237: 既読から 15分で きえる（じぶんの スマホからも あいての スマホからも 消す。もどせない） */
