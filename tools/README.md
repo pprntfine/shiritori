@@ -36,6 +36,8 @@ node tools/sw_badge_test.mjs                   # sw.js の通知の小さいア�
 | e2e/calllog_clear_peer.js | 片方の「削除」で相手の電話の記録も消える・メッセージは残る（2台。`OLD_DIR=古い版のテスト用フォルダ` で相手が古い版の場合、`BOOT=1` で最初に開いた時の1回）（v534） |
 | e2e/read_on_open.js | 閉じている間に届いたメッセージを、あとでトーク画面で見たら既読が付く（2台。`CLOSED=1` で相手がアプリを閉じていた形）（v535） |
 | e2e/read_resend.js | 最初の既読が途中で消えても、相手がトーク画面を見ている間に既読を返しなおす（2台）（v536） |
+| e2e/send_then_close.js | 送ってすぐアプリを閉じても（pagehide・凍結）、相手への通知とメッセージがすぐ出る（2台。`WAIT=ミリ秒` で閉じるまでの時間）（v537） |
+| sw_dup_test.mjs | 同じメッセージの通知が2回届いても2回目は鳴らさない（`node tools/sw_dup_test.mjs`）（v537） |
 | e2e/call_no_stale_ring.js | 閉じていた間の電話が、あとで開いた時に鳴らない |
 | e2e/push_once.js | 相手が閉じている間、送り直しが続いても通知は1通につき1回（v493） |
 | e2e/vanish_unseen.js | 見ていないメッセージは消えない・見てから15分で消える（v494） |

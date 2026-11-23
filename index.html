@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとしてインストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">新しい版に更新する</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンでアプリとして入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v536</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v537</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">相手を待っています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v536</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v537</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">名前</b> さんが入室を求めています</p>
         <p class="jr-fp">合図 <b id="jr-fp">----</b> ／ 相手の画面と同じかくににて確認</p>
@@ -13018,6 +13018,7 @@ async function pushToPeer(body){
     var __pb=0; try{ __pb=new TextEncoder().encode(payload).length; }catch(e){ __pb=payload.length*3; }
     if(__pb>20000) payload='zgm:'+bellCount+':!'+Date.now().toString(36);
     var first=null, firstP=new Promise(function(r){ first=r; });
+    window.__zgPushPend=(+(window.__zgPushPend||0))+1; firstP.then(function(){ window.__zgPushPend=Math.max(0,(+(window.__zgPushPend||0))-1); });   /* v537: 送りかけの通知（pagehide で切らない） */
     /* v131: 回数制限などで 失敗したら 20秒・60秒・3分後に やりなおす（通知を とりこぼさない） */
     var tryPush=function(k){
       var done=function(ok){ if(k===0) first(!!ok); if(!ok&&k<3) setTimeout(function(){ tryPush(k+1); },[20000,60000,180000][k]); };
@@ -13632,7 +13633,18 @@ if(isLocalFile()){
     document.body.appendChild(d);
   }catch(e){}
 })();
-window.addEventListener('pagehide',function(){ Net.close(); });
+/* v537: 送ってすぐアプリを閉じると（iPhone はここで pagehide が来る）、ここで通信を全部切っていたため、送りかけのメッセージと相手への通知が止まり、
+   次にアプリを開くまで（20分後など）届かなかった（持ち主）。送りかけの物がある間は切らない（ページが本当に消える時はブラウザが切る） */
+function zgSendPending(){
+  try{
+    if((S.inflight||[]).length) return true;
+    if((S.outbox||[]).some(function(it){ return !(it.msg&&it.msg.sent); })) return true;
+    if((+(window.__zgPushPend||0))>0) return true;
+    if(Net.qBusy&&Date.now()-Net.qBusy<15000) return true;
+  }catch(e){}
+  return false;
+}
+window.addEventListener('pagehide',function(){ if(zgSendPending()) return; Net.close(); });
 /* --- アプリとして つかう(PWA) --- */
 (function(){
   var bi=document.getElementById('btn-install'), hi=document.getElementById('install-hint');
