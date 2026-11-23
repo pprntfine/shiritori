@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとしてインストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">新しい版に更新する</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンでアプリとして入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v535</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v536</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">相手を待っています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v535</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v536</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">名前</b> さんが入室を求めています</p>
         <p class="jr-fp">合図 <b id="jr-fp">----</b> ／ 相手の画面と同じかくににて確認</p>
@@ -7555,7 +7555,7 @@ function plogAdd(kind,at,proof,meta){
 function plogReadLog(){ try{ return JSON.parse(localStorage.getItem('zg_read_log')||'[]')||[]; }catch(e){ return []; } }
 function plogMarkRead(at){
   try{
-    var l=plogReadLog(); l.push(at||Date.now()); if(l.length>60) l=l.slice(-60);
+    var l=plogReadLog(); var __a=at||Date.now(); if(l.indexOf(__a)>=0) return; l.push(__a); if(l.length>60) l=l.slice(-60);   /* v536: 同じ既読の返しなおしは記録しない */
     localStorage.setItem('zg_read_log',JSON.stringify(l));
   }catch(e){}
 }
@@ -11498,6 +11498,16 @@ setInterval(function(){
     if(Date.now()-(S.__ackLoopAt||0)<10000) return;
     S.__ackLoopAt=Date.now();
     var ns=Array.from(new Set(S.chat.filter(function(c){return c&&!c.sys&&c.__durable&&c.from===S.opp.id&&c.n;}).map(function(c){return c.n;}))).slice(-60);
+    /* v536: 読んだ（この端末で既読の時計 rad が入った）分は、受領証ではなく既読を返しなおす。最初の既読が途中で消えても、
+       相手がつながった時に「既読」が付く（持ち主: 既読したらきちんと既読と表示してほしい）。時刻は読んだ時刻なので、相手の記録は増えない */
+    var rdNs=[], rdAt=0;
+    S.chat.forEach(function(c){ if(c&&!c.sys&&c.__durable&&c.from===S.opp.id&&c.n&&c.rad&&ns.indexOf(c.n)>=0){ rdNs.push(c.n); if(c.rad>rdAt) rdAt=c.rad; } });
+    if(rdNs.length){
+      var rIds=S.chat.filter(function(c){return c&&!c.sys&&c.from===S.opp.id&&rdNs.indexOf(c.n)>=0&&validDeletionId(c.mid);}).map(function(c){return c.mid;});
+      var rPs=S.chat.filter(function(c){return c&&!c.sys&&c.from===S.opp.id&&(c.photo||c.file)&&c.pid&&rdNs.indexOf(c.n)>=0;}).map(function(c){return String(c.pid);});
+      Net.send({t:'read',ns:rdNs,ids:rIds,ps:rPs,exp:0,at:rdAt,__noStore:1});
+      ns=ns.filter(function(n){ return rdNs.indexOf(n)<0; });
+    }
     if(ns.length){ var ids=S.chat.filter(function(c){return c&&!c.sys&&c.from===S.opp.id&&ns.indexOf(c.n)>=0&&validDeletionId(c.mid);}).map(function(c){return c.mid;}); Net.send({t:'ack',ns:ns,ids:ids,__noStore:1}); }   /* v504: 10秒ごとの送り直しは保存させない（最初の受領証は保存する） */
   }catch(e){}
 },10000);
