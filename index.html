@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとしてインストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">新しい版に更新する</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンでアプリとして入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v540</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v541</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">相手を待っています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v540</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v541</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">名前</b> さんが入室を求めています</p>
         <p class="jr-fp">合図 <b id="jr-fp">----</b> ／ 相手の画面と同じかくににて確認</p>
@@ -13227,7 +13227,10 @@ function zgColsCalc(){
     var tw=ta.getBoundingClientRect().width, lw0=log.clientWidth; if(!tw||!lw0) return;
     var cs=getComputedStyle(ta), fs=parseFloat(cs.fontSize)||16;
     var padL=parseFloat(cs.paddingLeft)||0, bdr=(parseFloat(cs.borderLeftWidth)||0)+(parseFloat(cs.borderRightWidth)||0);
-    var micEl=document.getElementById('btn-mic'), RES=(micEl&&micEl.offsetWidth)?(micEl.offsetWidth+7):padL;   /* v513: 右端のマイクの分をあける */
+    var micEl=document.getElementById('btn-mic'), emoEl=document.getElementById('btn-emo');
+    /* v541: マイクは左端、絵文字ボタンは右端（持ち主）。両方の分をあける */
+    if(micEl&&micEl.offsetWidth){ padL=micEl.offsetWidth+10; ta.style.setProperty('padding-left',padL+'px','important'); }
+    var RES=(emoEl&&emoEl.offsetWidth)?(emoEl.offsetWidth+10):padL;
     var inner=tw-bdr-padL-RES;
     var lcs=getComputedStyle(log), lw=lw0-(parseFloat(lcs.paddingLeft)||0)-(parseFloat(lcs.paddingRight)||0);
     var cIn=Math.floor((inner-ZG_COL_SLACK)/fs);
@@ -13876,6 +13879,52 @@ window.addEventListener('pagehide',function(){ closeCam(); stopCall(false); });
     var mic=document.createElement('button'); mic.type='button'; mic.id='btn-mic'; mic.setAttribute('aria-label','音声で入力する'); mic.title='音声入力';
     mic.innerHTML='<svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11.5" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0"/><path d="M12 17.5V21"/></svg>';
     if(send) form.insertBefore(mic,send); else form.appendChild(mic);
+    /* v541: 入力欄の右端に絵文字ボタン。押すと絵文字を選ぶ画面が出て、押した絵文字を入力欄のカーソルの所に入れる（送るのは送信ボタン） */
+    (function(){
+      var eb=document.createElement('button'); eb.type='button'; eb.id='btn-emo'; eb.setAttribute('aria-label','絵文字を入れる'); eb.title='絵文字'; eb.textContent='😊';
+      if(send) form.insertBefore(eb,send); else form.appendChild(eb);
+      var RK='zg_emo_recent', pan=null, cur=0;
+      function recent(){ try{ var a=JSON.parse(localStorage.getItem(RK)||'[]'); return Array.isArray(a)?a.filter(function(x){ return typeof x==='string'&&x.length<16; }).slice(0,24):[]; }catch(e){ return []; } }
+      function addRecent(e){ try{ var a=recent().filter(function(x){ return x!==e; }); a.unshift(e); localStorage.setItem(RK,JSON.stringify(a.slice(0,24))); }catch(_){} }
+      function cats(){
+        var out=[{name:'よく使う',items:recent()}];
+        try{ STICKER_CATEGORIES.forEach(function(c){ var it=c.items.map(function(x){ return String(x[0]); }).filter(function(x){ return !/^🐶/.test(x)&&x.length<16; }); if(it.length) out.push({name:c.name,items:it}); }); }catch(e){}
+        out.push({name:'いろいろ',items:['😄','😁','😅','😇','🙂','🙃','😋','😜','🤪','🤗','🤔','🤭','😏','😬','😪','🤤','😷','🤒','🥳','🥺','😭','😤','😩','🫶','💕','💖','💗','💓','💞','💘','✨','⭐','🌟','💤','💯','👌','✌️','🤞','👆','👉','👀','🙈','🎂','🍰','🍙','🍣','🍜','🍺','☕','🍓','🌸','🌈','☀️','🌙','⛄','☔','🐱','🐶','🐻','🐰','🚗','✈️','🏠','🎁','🎶','📷','📞','💤']});
+        return out;
+      }
+      function place(){ try{ var r=form.getBoundingClientRect(); pan.style.bottom=(window.innerHeight-r.top+8)+'px'; }catch(e){} }
+      function insert(e){
+        var v=String(ta.value||''), a=(typeof ta.selectionStart==='number')?ta.selectionStart:v.length, z=(typeof ta.selectionEnd==='number')?ta.selectionEnd:v.length;
+        var nv=v.slice(0,a)+e+v.slice(z); var mx=+(ta.getAttribute('maxlength')||0)||0; if(mx&&nv.length>mx) return;
+        ta.value=nv; try{ ta.setSelectionRange(a+e.length,a+e.length); }catch(_){}
+        try{ ta.dispatchEvent(new Event('input',{bubbles:true})); }catch(_){}
+        addRecent(e);
+      }
+      function draw(){
+        var cs=cats(); if(cur>=cs.length) cur=0;
+        var h='<div class="ze-top"><div class="ze-tabs">'+cs.map(function(c,i){ return '<button type="button" class="ze-tab'+(i===cur?' on':'')+'" data-i="'+i+'">'+c.name+'</button>'; }).join('')+'</div><button type="button" class="ze-x" aria-label="閉じる">✕</button></div>';
+        var items=cs[cur].items;
+        h+='<div class="ze-grid">'+(items.length?items.map(function(e){ return '<button type="button" class="ze-e" data-e="'+e.replace(/"/g,'&quot;')+'">'+e+'</button>'; }).join(''):'<div class="ze-none">まだありません。絵文字を入れると、ここに出ます。</div>')+'</div>';
+        pan.innerHTML=h;
+      }
+      function open(){
+        if(!pan){ pan=document.createElement('div'); pan.id='zg-emo'; document.body.appendChild(pan);
+          pan.addEventListener('pointerdown',function(ev){ ev.preventDefault(); });   /* 押してもキーボードを閉じない・入力欄から外れない */
+          pan.addEventListener('click',function(ev){ var t=ev.target; if(!t||!t.closest) return;
+            var tb=t.closest('.ze-tab'); if(tb){ cur=+tb.dataset.i||0; draw(); return; }
+            if(t.closest('.ze-x')){ close(); return; }
+            var eb2=t.closest('.ze-e'); if(eb2){ insert(eb2.dataset.e||eb2.textContent); } }); }
+        cur=recent().length?0:1; draw(); place(); pan.classList.add('on'); eb.classList.add('on');
+      }
+      function close(){ if(pan) pan.classList.remove('on'); eb.classList.remove('on'); }
+      window.__zgEmoClose=close;
+      eb.addEventListener('pointerdown',function(ev){ ev.preventDefault(); });   /* 押しても入力欄のカーソルをそのままに */
+      eb.addEventListener('click',function(){ if(pan&&pan.classList.contains('on')) close(); else open(); });
+      document.addEventListener('pointerdown',function(ev){ try{ if(!pan||!pan.classList.contains('on')) return; var t=ev.target; if(t===eb||(t.closest&&(t.closest('#zg-emo')||t.closest('#form-chat')))) return; close(); }catch(e){} },true);
+      window.addEventListener('resize',function(){ if(pan&&pan.classList.contains('on')) place(); });
+      document.addEventListener('visibilitychange',function(){ if(document.hidden) close(); });
+      form.addEventListener('submit',function(){ close(); });
+    })();
     var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
     var rec=null, on=false, base='', err='';
     function paint(){ mic.classList.toggle('zg-rec',on); mic.setAttribute('aria-label',on?'音声入力を止める':'音声で入力する'); }
@@ -15434,10 +15483,25 @@ html body #pane-chat #chat-log .msg .meta:empty{display:none!important}
 html body #pane-chat #chat-log .msg.out{flex-wrap:wrap-reverse!important;align-items:flex-start!important;row-gap:2px!important}
 html body #pane-chat #chat-log .msg.out>*{align-self:flex-start!important}
 /* 音声入力（v513: 入力欄の右端・送信ボタンの横に、いつでも押せるマイク） */
-html body #pane-chat #form-chat #btn-mic{grid-area:input!important;justify-self:end!important;align-self:end!important;position:relative!important;z-index:2!important;width:34px!important;height:34px!important;min-width:34px!important;min-height:34px!important;margin:0 6px 7px 0!important;padding:0!important;border:0!important;border-radius:50%!important;display:grid!important;place-items:center!important;background:#EFEAFE!important;color:#5B3FE0!important;box-shadow:none!important;-webkit-tap-highlight-color:transparent}
+html body #pane-chat #form-chat #btn-mic{grid-area:input!important;justify-self:start!important;align-self:end!important;position:relative!important;z-index:2!important;width:34px!important;height:34px!important;min-width:34px!important;min-height:34px!important;margin:0 0 7px 6px!important;padding:0!important;border:0!important;border-radius:50%!important;display:grid!important;place-items:center!important;background:#EFEAFE!important;color:#5B3FE0!important;box-shadow:none!important;-webkit-tap-highlight-color:transparent}
 html body #pane-chat #form-chat #btn-mic:active{background:#DCD2FD!important}
 html body #pane-chat #form-chat #btn-mic.zg-rec{background:#E53935!important;color:#fff!important;animation:zgRec 1.1s ease-in-out infinite}
 @keyframes zgRec{50%{box-shadow:0 0 0 7px rgba(229,57,53,.22)}}
+/* v541: 入力欄の右端の絵文字ボタンと、絵文字を選ぶ画面（持ち主: 左にマイク・右に絵文字） */
+html body #pane-chat #form-chat #btn-emo{grid-area:input!important;justify-self:end!important;align-self:end!important;position:relative!important;z-index:2!important;width:34px!important;height:34px!important;min-width:34px!important;min-height:34px!important;margin:0 6px 7px 0!important;padding:0!important;border:0!important;border-radius:50%!important;display:grid!important;place-items:center!important;background:#EFEAFE!important;color:#5B3FE0!important;font-size:19px!important;line-height:1!important;box-shadow:none!important;-webkit-tap-highlight-color:transparent}
+html body #pane-chat #form-chat #btn-emo:active,html body #pane-chat #form-chat #btn-emo.on{background:#DCD2FD!important}
+#zg-emo{position:fixed;left:8px;right:8px;z-index:9000;background:#fff;border-radius:18px;box-shadow:0 8px 28px rgba(40,20,90,.28);padding:8px 8px 10px;display:none;max-width:520px;margin:0 auto}
+#zg-emo.on{display:block}
+#zg-emo .ze-top{display:flex;align-items:flex-start;gap:6px}
+#zg-emo .ze-tabs{flex:1;min-width:0;display:flex;gap:6px;overflow-x:auto;padding:2px 2px 8px;scrollbar-width:none}
+#zg-emo .ze-tabs::-webkit-scrollbar{display:none}
+#zg-emo .ze-tab{flex:none;border:0;border-radius:999px;padding:6px 12px;font-size:.82rem;font-weight:800;background:#F1EDFF;color:#5B3FE0}
+#zg-emo .ze-tab.on{background:#5B3FE0;color:#fff}
+#zg-emo .ze-x{flex:none;border:0;border-radius:999px;width:32px;height:32px;background:#F1EDFF;color:#5B3FE0;font-size:1rem;font-weight:900}
+#zg-emo .ze-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:2px;max-height:200px;overflow-y:auto}
+#zg-emo .ze-e{border:0;background:transparent;font-size:26px;line-height:1;padding:6px 0;border-radius:10px}
+#zg-emo .ze-e:active{background:#F1EDFF}
+#zg-emo .ze-none{grid-column:1/-1;text-align:center;color:#8a8199;font-size:.84rem;padding:18px 0}
 html body #pane-chat #form-chat{grid-template-columns:minmax(0,1fr) 52px!important}
 html body #pane-chat .line-composer #btn-chat-send{width:52px!important;min-width:52px!important}
 /* ===== v515: ストーリー（インスタと同じ形） ===== */

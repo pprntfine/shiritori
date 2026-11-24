@@ -1,5 +1,5 @@
 // v513: 音声入力（持ち主: 送信の横にマイク。声で文字を打つ・声は送らない。声の文に内容に合う絵文字を自動で付ける）。1台・偽の音声認識。
-//  ① マイクは入力欄の右端にいつもある。送信ボタンはいつも送信
+//  ① マイクは入力欄の左端にいつもある（v541: 右端は絵文字ボタン）。送信ボタンはいつも送信
 //  ② マイクを押す → 初回だけ確認 → 聞き取り中は赤 → 話した言葉が入力欄に入る（途中の結果も）→ 終わると「明日は晴れるかな☀️」（絵文字が付く）
 //  ③ 送信ボタンで送る（声は送らない）
 //  ④ 2回目は確認なし・文字がある時に押すと続きに足す・もう一度押すと止まる
@@ -34,11 +34,11 @@ async function open(b,withSR,mode){
  return {ctx,pg};
 }
 const st=(pg)=>pg.evaluate(()=>{ const m=document.getElementById('btn-mic'), b=document.getElementById('btn-chat-send'), r=m&&m.getBoundingClientRect(), t=document.getElementById('in-chat').getBoundingClientRect(), sr=b.getBoundingClientRect();
-  return {mic:!!m&&r.width>0,rec:!!m&&m.classList.contains('zg-rec'),inside:!!m&&r.right<=t.right+1&&r.left>t.left&&r.bottom<=t.bottom+1,besideSend:!!m&&sr.left-r.right<30,sendIsSend:!b.classList.contains('zg-mic')&&getComputedStyle(b.querySelector('.v439-send-label')).display!=='none',val:document.getElementById('in-chat').value,starts:window.__srStarts}; });
+  return {mic:!!m&&r.width>0,rec:!!m&&m.classList.contains('zg-rec'),inside:!!m&&r.right<=t.right+1&&r.left>t.left&&r.bottom<=t.bottom+1,besideSend:!!m&&r.left-t.left<30&&(function(){ const e=document.getElementById('btn-emo'); if(!e) return false; const er=e.getBoundingClientRect(); return er.right<=t.right+1&&sr.left-er.right<30&&er.left>r.right; })(),sendIsSend:!b.classList.contains('zg-mic')&&getComputedStyle(b.querySelector('.v439-send-label')).display!=='none',val:document.getElementById('in-chat').value,starts:window.__srStarts}; });
 (async()=>{const b=await chromium.launch(); let all=true; const chk=(n,ok,x)=>{ console.log(n,JSON.stringify(x),ok?'OK':'NG'); if(!ok) all=false; };
  let {ctx,pg}=await open(b,true,'ok');
  let a=await st(pg); await pg.fill('#in-chat','こんにちは'); let c=await st(pg); await pg.fill('#in-chat','');
- chk('①マイクは入力欄の右端（送信の横）にいつもある・送信はいつも送信',a.mic&&a.inside&&a.besideSend&&a.sendIsSend&&c.mic&&c.sendIsSend,{empty:a,typed:c});
+ chk('①マイクは入力欄の左端・右端は絵文字ボタン（v541）・送信はいつも送信',a.mic&&a.inside&&a.besideSend&&a.sendIsSend&&c.mic&&c.sendIsSend,{empty:a,typed:c});
  await pg.click('#btn-mic'); await pg.waitForTimeout(100); a=await st(pg); await pg.waitForTimeout(400); c=await st(pg);
  chk('②話した言葉が入り、絵文字が付く',pg.__dialogs===1&&a.rec&&c.val==='明日は晴れるかな☀️'&&!c.rec,{listening:a,done:c,dialogs:pg.__dialogs});
  const before=await pg.evaluate(()=>__t.S.chat.length);
