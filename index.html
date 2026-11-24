@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとしてインストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">新しい版に更新する</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンでアプリとして入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v539</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v540</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">相手を待っています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v539</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v540</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">名前</b> さんが入室を求めています</p>
         <p class="jr-fp">合図 <b id="jr-fp">----</b> ／ 相手の画面と同じかくににて確認</p>
@@ -2843,6 +2843,10 @@ var Net={
     /* v219: 削除の合図は通知を出すベルに載せない。本文だけ従来の通知経路を使う。 */
     /* v493: 受領待ちの送り直し（約20秒ごと）のたびに新しい暗号文で通知していた（2通で通知6件）。同じメッセージ(mid)の通知は1回だけ */
     if(env&&(env.t==='chats'||env.t==='chat')&&!env.__pushOk&&!pushMidsAllDone(env)&&!(function(){try{return (Date.now()-(+(window.__zgsPeerLive||0)||0))<70000;}catch(e){return false;}})()){ try{ pushP=pushToPeer(body).then(function(ok){ if(ok){ env.__pushOk=1; pushMidsMark(env); if(env.t==='chats') markPushAcked(env); } return ok; }); }catch(e){} }
+    /* v540: 相手に通知を送る時は、中継所に置く時にも相手の通知の とおりみち（bell）を添える。中継所がメッセージを受け取った時点で
+       中継所からも通知を出すので、このスマホの /push が途中で止まっても（アプリを閉じた・電波が切れた）通知は出る。同じ暗号文なので2回は鳴らない */
+    if(env) env.__bellQ='';   /* 送り直し（通知しない時）には添えない */
+    if(pushP){ try{ if(!window.__zgBellT) await bellTopic(); if(window.__zgBellT) env.__bellQ='bell='+window.__zgBellT; }catch(e){} }
     /* v505: 相手が「いま開いている」と見えて通知を送らなかった時、受領（peerAck）が来なければ、閉じたと見なしてすぐ通知する。
        v506: 8秒 → 3秒。さらに、待っている間に自分が画面を消す／アプリを閉じると、止まったタイマーは動かず通知が出なかった。
        待ち一覧(pushWaitList)に入れておき、画面を消す瞬間（pushWaitFlush）に まだ受領が無いものを先に通知する */
@@ -2863,7 +2867,7 @@ var Net={
     var NO_STORE={'photo-chunk':1,'photo-miss':1};
     /* v539: 既読（最初の1回）は即時路（MQTT）だけで済ませず、中継所にも残す。相手がアプリを閉じている間に読まれると、
        既読は MQTT で流れて消え、相手が開いても既読が付かなかった（「消して」の合図は残るので、既読が付かないまま消えていた。持ち主） */
-    var __keep=!!(env&&(ntfyKeep(env.t)||((env.t==='read'||env.t==='ack')&&!env.__noStore)));   /* 受領証（最初の1回）も同じ */
+    var __keep=!!(env&&(ntfyKeep(env.t)||((env.t==='read'||env.t==='ack'||env.t==='chat-open')&&!env.__noStore)));   /* 受領証（最初の1回）も同じ。v540: 「開いた」の詳しい合図も残す（相手の記録＝アクセス履歴が抜けない） */
     if(!__keep&&fastOk) return true;
     /* v152: 受領証・ping は 即時路が きれて いる ときも 行列を 待たせない（うしろで 保存路へ）。
        以前は 1通ごとに 最大7秒 待って いたので、うしろの トークが「送信中」の まま つまっていた */
@@ -2929,13 +2933,13 @@ var Net={
     }
     try{
       /* トーク・既読・受領証は中継サーバーに保存させない（接続中の相手へ直接届くのみ） */
-      var noCache=(env&&env.__noStore)?'?cache=no':'';   /* v509: 中継所に保存済みの送り直しは流すだけ */   /* v105: 中継所に のこす（暗号文のみ・最長12時間）。ポーリングで 取りもどせる ようにする */   /* 中継サーバーに 一切 保存させない(記録を のこさない) */  /* メッセージ・写真・ライブは中継に保存させない */
+      var noCache=(env&&env.__noStore)?'?cache=no':''; var __q=zgQ(noCache?'cache=no':'',(env&&env.__bellQ)||'');   /* v509: 中継所に保存済みの送り直しは流すだけ */   /* v105: 中継所に のこす（暗号文のみ・最長12時間）。ポーリングで 取りもどせる ようにする */   /* 中継サーバーに 一切 保存させない(記録を のこさない) */  /* メッセージ・写真・ライブは中継に保存させない */
       var ac=(typeof AbortController!=='undefined')?new AbortController():null;
       var tmo=setTimeout(function(){ try{ if(ac) ac.abort(); }catch(e){} },7000);
       var r;
       if(!outboundCurrent(scope)){ clearTimeout(tmo); return false; }
       if(ac) privateAborts.add(ac);
-      try{ r=await this.storeFetch(scope.topic,{method:'POST',headers:{'Content-Type':'text/plain'},body:body,signal:ac?ac.signal:undefined},noCache); }
+      try{ r=await this.storeFetch(scope.topic,{method:'POST',headers:{'Content-Type':'text/plain'},body:body,signal:ac?ac.signal:undefined},__q); }
       finally{ clearTimeout(tmo); if(ac) privateAborts.delete(ac); }
       if(!outboundCurrent(scope)) return false;
       this.lastPostStatus=r.status;
@@ -2978,7 +2982,7 @@ var Net={
     var cooling=this.coolUntil&&Date.now()<this.coolUntil, nr=null;
     if(!cooling||!any){
       try{
-        nr=await fetch('https://ntfy.sh/'+topic+(query||''),kaInit(init));
+        nr=await fetch('https://ntfy.sh/'+topic+zgQnoBell(query),kaInit(init));   /* v540: bell は自分の中継所だけに渡す */
         if(nr.ok){ this.lastVia='ntfy'; return nr; }
         if(nr.status===429||nr.status===503){ var ra=0; try{ ra=parseInt(nr.headers.get('retry-after')||'0',10); }catch(e){} this.hit429(ra>0?ra*1000:45000); }
       }catch(e){ if(init&&init.signal&&init.signal.aborted) throw e; if(!any||conf) throw e; }
@@ -2997,7 +3001,7 @@ var Net={
     if(!relayAnyBase()&&this.coolUntil&&Date.now()<this.coolUntil) return;
     try{
       var ac=typeof AbortController!=='undefined'?new AbortController():null; if(ac) privateAborts.add(ac);
-      this.storeFetch(scope.topic,{method:'POST',headers:{'Content-Type':'text/plain'},body:body,signal:ac?ac.signal:undefined},noStore?'?cache=no':undefined)   /* v504: noStore＝中継所に保存させず、いまつながっている相手へ流すだけ */
+      this.storeFetch(scope.topic,{method:'POST',headers:{'Content-Type':'text/plain'},body:body,signal:ac?ac.signal:undefined},zgQ(noStore?'cache=no':'',(env&&env.__bellQ)||''))   /* v504: noStore＝中継所に保存させず、いまつながっている相手へ流すだけ */
         .then(function(r){ if(outboundCurrent(scope)&&(r.status===429||r.status===503)) self.hit429(45000); if(r&&r.ok&&!noStore) storedMark(env); }).catch(function(){})
         .finally(function(){ if(ac) privateAborts.delete(ac); });
     }catch(e){}
@@ -7229,6 +7233,9 @@ function openProofLabel(p){
     :p==='guess'?'通信のようすからの推定です'
     :'古い版からの合図です';
 }
+/* v540: 保留した「開いた」合図は、どれかの道がつながった時点で送る（ntfy の線を待たない） */
+setInterval(function(){ try{ var op=window.__openPending; if(!op) return; if(Date.now()-op.at>=300000){ window.__openPending=null; return; }
+  if(Net.open||!!relayAnyBase()||(Relay&&Relay.up)||(Fast.open&&(FastH.subOk||FastE.subOk))){ window.__openPending=null; sendAppOpen(op.r); } }catch(e){} },3000);
 function sendAppOpen(reason){
   if(!(S.paired||S.linked)) return;
   /* v271: 「ひらいた」合図は あいて→ホスト の 1方向だけ。
@@ -7240,7 +7247,9 @@ function sendAppOpen(reason){
   var __r=reason;
   /* v284: まだ つながって いない あいだに 送ると 消えて いた（起動して 1.2秒の 合図が とどかない 原因）。
      つながった ときに 送りなおす ため、いったん あずける */
-  try{ if(!Net.open){ if(__r!=='conn') window.__openPending={at:Date.now(),r:__r}; return; } }catch(e){}
+  /* v540: 予備の ntfy の線（Net.open）だけを見ていたため、ntfy がつながらない回線では「開いた」合図が保留のまま送られず、相手の記録が抜けていた。
+     自分の中継所か即時路が使えれば送る（どれも無い時だけ保留して、つながったら送る） */
+  try{ var __anyRoute=Net.open||!!relayAnyBase()||(Relay&&Relay.up)||(Fast.open&&(FastH.subOk||FastE.subOk)); if(!__anyRoute){ if(__r!=='conn') window.__openPending={at:Date.now(),r:__r}; return; } }catch(e){}
   var t=Date.now();
   /* v268: 理由ごとに 間引く。「起動」「もどった」は 本物の 開封なので 消さない */
   var __lr=window.__lcR||(window.__lcR={});
@@ -7399,6 +7408,9 @@ function peerOpenOn(){ try{ return localStorage.getItem(PEEROPEN_KEY)!=='1'; }ca
 var PEERKEEP_KEY='mtp_peerkeep_off';
 function peerKeepOn(){ try{ return localStorage.getItem(PEERKEEP_KEY)!=='1'; }catch(e){ return true; } }
 function paintPeerKeepBtn(){ try{ var b=document.getElementById('pf-peerkeep'); if(b) b.textContent=peerKeepOn()?'オン':'オフ'; }catch(e){} }
+/* v540: 中継所へのクエリをつなぐ（'?a&b'）・ntfy には bell を渡さない */
+function zgQ(){ var a=[]; for(var i=0;i<arguments.length;i++){ var x=String(arguments[i]||'').replace(/^\?/,''); if(x) a.push(x); } return a.length?('?'+a.join('&')):''; }
+function zgQnoBell(q){ var x=String(q||'').replace(/^\?/,'').split('&').filter(function(p){ return p&&!/^bell=/.test(p); }); return x.length?('?'+x.join('&')):''; }
 function ntfyKeep(t){
   if(!t) return false;
   if(t==='chat-open') return false;   /* v265: 「ひらいた」は スマホの 控え('po')に のこるので 中継所には のこさない（1日250通を 節約） */
@@ -12540,7 +12552,7 @@ async function bellTopic(){
   try{
     var p=pairLoad(); if(!p||!p.sk) return null;
     var h=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('bell|'+p.sk+'|'+(p.h?'guest':'host')));
-    return 'gskb-'+toHex(h).slice(0,28);
+    var t='gskb-'+toHex(h).slice(0,28); window.__zgBellT=t; return t;   /* v540: 中継所に置く時に添えるため覚える */
   }catch(e){ return null; }
 }
 async function myBellTopic(){

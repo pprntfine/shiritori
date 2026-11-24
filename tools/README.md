@@ -39,6 +39,9 @@ node tools/sw_badge_test.mjs                   # sw.js の通知の小さいア�
 | e2e/send_then_close.js | 送ってすぐアプリを閉じても（pagehide・凍結）、相手への通知とメッセージがすぐ出る（2台。`WAIT=ミリ秒` で閉じるまでの時間）（v537） |
 | e2e/notify_on_open.js | 閉じている間に届いてスマホの通知が出た分を、あとでアプリを開いた時にもう一度通知しない（2台。`AGE=分` で開くまでの時間）（v538） |
 | e2e/read_while_closed.js | 送った側が閉じている間に相手が読んでも（相手は MQTT が使える）、開いたら既読が付く（2台）（v539） |
+| e2e/relay_bell.js | 中継所に置く時、相手に通知する最初の1回だけ bell を添える・送り直しには添えない（2台）（v540） |
+| e2e/log_while_closed.js | ホストが閉じている間に相手がトーク画面を開いて読んでも、アクセス履歴と既読が残る（2台）（v540） |
+| worker_relay_push_test.mjs | Worker: bell 付きで中継所に置くと Worker からも Web Push が出る（`node tools/worker_relay_push_test.mjs`）（v540） |
 | sw_dup_test.mjs | 同じメッセージの通知が2回届いても2回目は鳴らさない（`node tools/sw_dup_test.mjs`）（v537） |
 | e2e/call_no_stale_ring.js | 閉じていた間の電話が、あとで開いた時に鳴らない |
 | e2e/push_once.js | 相手が閉じている間、送り直しが続いても通知は1通につき1回（v493） |

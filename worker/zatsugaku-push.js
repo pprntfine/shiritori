@@ -202,11 +202,15 @@ async function handlePush(req, env, ctx) {
   const topic = j && j.topic, raw = j && j.msg;
   if (!TOPIC_RE.test(topic || '')) return json({ ok: false, err: 'bad topic' }, 400);
   if (typeof raw !== 'string' || !raw || raw.length > MAX_MSG) return json({ ok: false, err: 'bad msg' }, 400);
+  return json(await pushTopic(env, ctx, topic, raw, new URL(req.url).origin));
+}
+
+/* v540: 通知を送る本体（/push と、中継所にメッセージが置かれた時の両方から使う） */
+async function pushTopic(env, ctx, topic, raw, subject) {
   const list = await loadSubs(env, topic);
-  if (!list.length) return json({ ok: false, err: 'no subscriber', sent: 0 });
+  if (!list.length) return { ok: false, err: 'no subscriber', sent: 0 };
   const msg = shrink(raw);
   const isCall = /^zgcall:/.test(msg);
-  const subject = new URL(req.url).origin;
   const gone = [];
   const why = [];
   let sent = 0;
@@ -239,13 +243,13 @@ async function handlePush(req, env, ctx) {
   }
   if (!sent) {
     const left = list.length - gone.length;
-    return json({ ok: false, sent: 0, err: left ? 'push failed ' + why.join(',') : 'no subscriber' });
+    return { ok: false, sent: 0, err: left ? 'push failed ' + why.join(',') : 'no subscriber' };
   }
-  return json({ ok: true, sent, send: sent, small: msg !== raw ? 1 : 0 });
+  return { ok: true, sent, send: sent, small: msg !== raw ? 1 : 0 };
 }
 
 /* ---------- 中継所 ---------- */
-async function handleRelay(req, env, parts) {
+async function handleRelay(req, env, parts, ctx) {
   const topic = parts[0];
   if (!RELAY_TOPIC_RE.test(topic || '')) return json({ error: 'bad topic' }, 400);
   const stub = env.RELAY.get(env.RELAY.idFromName('r:' + topic));
@@ -254,7 +258,22 @@ async function handleRelay(req, env, parts) {
   const inner = new URL('https://do/' + (rest || 'pub') + url.search);
   inner.searchParams.set('topic', topic);
   inner.searchParams.set('origin', url.origin);
-  const r = await stub.fetch(new Request(inner.toString(), req));
+  // v540: メッセージを置く時に、送り主が相手の通知の とおりみち（bell）を添えていたら、ここからも相手に通知を送る。
+  // 送り主のスマホが別に頼む通知（/push）が途中で失敗しても、メッセージが中継所に届けば通知は必ず出る（同じ暗号文なので、
+  // 2つ届いても受け取る側の sw.js が2回目を鳴らさない）。
+  const bell = url.searchParams.get('bell') || '';
+  inner.searchParams.delete('bell');
+  let r, text = null;
+  if (req.method === 'POST' && !rest && TOPIC_RE.test(bell) && !url.searchParams.get('filename')) {
+    text = await req.text();
+    r = await stub.fetch(new Request(inner.toString(), { method: 'POST', headers: req.headers, body: text }));
+    if (r.ok && text && text.length <= MAX_MSG) {
+      const p = pushTopic(env, ctx, bell, 'zgm:0:' + text, url.origin).catch(() => {});
+      if (ctx && ctx.waitUntil) ctx.waitUntil(p); else await p;
+    }
+  } else {
+    r = await stub.fetch(new Request(inner.toString(), req));
+  }
   if (r.status === 101) return r;
   const h = new Headers(r.headers);
   Object.entries(CORS).forEach(([k, v]) => h.set(k, v));
@@ -560,7 +579,7 @@ export default {
     if (!env.RELAY) return json({ ok: false, err: 'Durable Object RELAY is not bound' }, 500);
     const path = new URL(req.url).pathname.replace(/\/+$/, '') || '/';
     try {
-      if (path.startsWith('/r/')) return await handleRelay(req, env, path.slice(3).split('/'));
+      if (path.startsWith('/r/')) return await handleRelay(req, env, path.slice(3).split('/'), ctx);
       if (path === '/key' && req.method === 'GET') return json({ key: (await vapid(env)).pub, relay: 1 });
       if (path === '/news' && req.method === 'GET') return await handleNews(req, env, ctx);
       if (path === '/sub' && req.method === 'POST') return await handleSub(req, env);
