@@ -6,7 +6,7 @@
 import sys, os, shutil
 src, out = sys.argv[1], sys.argv[2]
 os.makedirs(out, exist_ok=True)
-NAMES = ['S','Net','Relay','Fast','renderChat','setTab','show','queueChat','relaySendBase','relayHas','relayAnyBase',
+NAMES = ['S','Net','Relay','Fast','FastH','FastE','renderChat','setTab','show','queueChat','relaySendBase','relayHas','relayAnyBase',
  'privateReady','privateScope','outSave','flushOutbox','newChatId','sasLabel','psrvRaw','metaText','sendPhoto',
  'chatSaveNow','maybeSendRead','chatOnScreen','privateReady','vanishSweep','callLogAdd','Caster','News','appNav','plogAdd','peerChatOpen','plogNoteMsg','plogMarkRead','unseal',
  'deletionRemember','deletionLoad','syncDeletions','purgeSend','purgePending']
