@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとしてインストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">新しい版に更新する</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンでアプリとして入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v545</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v546</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">相手を待っています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v545</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v546</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">名前</b> さんが入室を求めています</p>
         <p class="jr-fp">合図 <b id="jr-fp">----</b> ／ 相手の画面と同じかくににて確認</p>
@@ -13939,7 +13939,9 @@ window.addEventListener('pagehide',function(){ closeCam(); stopCall(false); });
       /* 開いている時にもう一度押す → キーボードに戻る（LINE と同じ） */
       eb.addEventListener('click',function(){ if(isOpen()){ close(); try{ ta.focus(); }catch(e){} } else open(); });
       /* 入力欄を押す → 絵文字からキーボードに切り替え */
-      ta.addEventListener('pointerdown',function(){ if(isOpen()) close(); });
+      /* v546: 押した瞬間（pointerdown）に閉じると入力欄が下へ動き、指を離した所が入力欄でなくなってキーボードが出なかった（持ち主）。
+         閉じるのは focus の時（キーボードが出る時）。念のため click でも閉じて focus する */
+      ta.addEventListener('click',function(){ if(isOpen()){ close(); try{ ta.focus(); }catch(e){} } });
       ta.addEventListener('focus',function(){ if(isOpen()) close(); });
       try{ var sb=document.getElementById('btn-stickers'); if(sb) sb.addEventListener('click',function(){ if(isOpen()) close(); },true); }catch(e){}
       document.addEventListener('pointerdown',function(ev){ try{ if(!isOpen()) return; var t=ev.target; if(t===eb||(t.closest&&t.closest('#form-chat'))) return; close(); }catch(e){} },true);
