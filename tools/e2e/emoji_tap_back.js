@@ -1,4 +1,5 @@
 // v546: 絵文字を入れた後に入力欄を指で押すと、絵文字が閉じて入力欄にカーソルが入る（キーボードが出る）。v545 は閉じるだけで入力欄から外れていた。1台。
+// v547: ✕を押した時も入力欄に戻る。
 // 使い方: node tools/e2e/emoji_tap_back.js テスト用フォルダ
 const {chromium}=require('playwright');
 const DIR=process.argv[2];const SK=Buffer.alloc(32,9).toString('base64'),TOPIC='gskr3s-'+'c'.repeat(24);
@@ -14,4 +15,6 @@ const DIR=process.argv[2];const SK=Buffer.alloc(32,9).toString('base64'),TOPIC='
  const bb=await pg.evaluate(()=>{const r=document.getElementById('in-chat').getBoundingClientRect();return [r.left+60,r.top+r.height/2];});
  await pg.touchscreen.tap(bb[0],bb[1]); await pg.waitForTimeout(300);
  const st=await pg.evaluate(()=>({open:document.getElementById('zg-emo').classList.contains('on'),focus:document.activeElement&&document.activeElement.id,v:document.getElementById('in-chat').value}));
+ await pg.tap('#btn-emo'); await pg.waitForTimeout(300); await pg.tap('#zg-emo .ze-x'); await pg.waitForTimeout(300);
+ const x=await pg.evaluate(()=>({open:document.getElementById('zg-emo').classList.contains('on'),focus:document.activeElement&&document.activeElement.id})); console.log('✕',JSON.stringify(x)); if(x.open||x.focus!=='in-chat') st.focus='x-NG';
  console.log(JSON.stringify(st)); console.log(st.focus==='in-chat'&&!st.open?'OK':'NG'); await b.close(); process.exit(st.focus==='in-chat'&&!st.open?0:1);})();

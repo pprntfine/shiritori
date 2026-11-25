@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとしてインストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">新しい版に更新する</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンでアプリとして入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v546</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v547</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">相手を待っています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v546</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v547</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">名前</b> さんが入室を求めています</p>
         <p class="jr-fp">合図 <b id="jr-fp">----</b> ／ 相手の画面と同じかくににて確認</p>
@@ -13924,7 +13924,7 @@ window.addEventListener('pagehide',function(){ closeCam(); stopCall(false); });
           pan.addEventListener('pointerdown',function(ev){ ev.preventDefault(); });   /* 押しても入力欄にカーソルを移さない（キーボードを出さない） */
           pan.addEventListener('click',function(ev){ var t=ev.target; if(!t||!t.closest) return;
             var tb=t.closest('.ze-tab'); if(tb){ cur=+tb.dataset.i||0; draw(); return; }
-            if(t.closest('.ze-x')){ close(); return; }
+            if(t.closest('.ze-x')){ close(); try{ ta.focus(); }catch(e){} return; }   /* v547: ✕でも文字入力（キーボード）に戻る */
             var eb2=t.closest('.ze-e'); if(eb2){ insert(eb2.dataset.e||eb2.textContent); } }); }
         measureKb();
         try{ if(typeof closeStickerPicker==='function') closeStickerPicker(false); }catch(e){}
