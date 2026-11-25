@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとしてインストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">新しい版に更新する</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンでアプリとして入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v542</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v543</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">相手を待っています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v542</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v543</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">名前</b> さんが入室を求めています</p>
         <p class="jr-fp">合図 <b id="jr-fp">----</b> ／ 相手の画面と同じかくににて確認</p>
@@ -13893,7 +13893,19 @@ window.addEventListener('pagehide',function(){ closeCam(); stopCall(false); });
         ZG_EMO_GROUPS.forEach(function(g){ out.push({name:g.name,items:g.items}); });
         return out;
       }
-      function place(){ try{ var r=form.getBoundingClientRect(); pan.style.bottom=(window.innerHeight-r.top+8)+'px'; }catch(e){} }
+      /* v543: 絵文字が1行しか見えないことがあった（持ち主）。入力欄の上の空き（キーボードが出ている時も）に合わせて、
+         一覧の高さを決める（最低3行・最大で約9行）。上から位置を決めるので、画面の上にはみ出さない */
+      function place(){ try{
+        var vv=window.visualViewport, offTop=vv?vv.offsetTop:0, r=form.getBoundingClientRect();
+        var grid=pan.querySelector('.ze-grid'), top0=pan.querySelector('.ze-top');
+        var head=(top0?top0.offsetHeight:44)+22;   /* タブの段＋上下の余白 */
+        var room=r.top-(offTop+8)-8-head;
+        var gh=Math.max(150,Math.min(400,Math.floor(room)));
+        if(grid){ grid.style.maxHeight=gh+'px'; grid.style.height=gh+'px'; }
+        var ph=head+gh;
+        pan.style.bottom='auto';
+        pan.style.top=Math.max(offTop+8,r.top-8-ph)+'px';
+      }catch(e){} }
       function insert(e){
         var v=String(ta.value||''), a=(typeof ta.selectionStart==='number')?ta.selectionStart:v.length, z=(typeof ta.selectionEnd==='number')?ta.selectionEnd:v.length;
         var nv=v.slice(0,a)+e+v.slice(z); var mx=+(ta.getAttribute('maxlength')||0)||0; if(mx&&nv.length>mx) return;
@@ -13907,6 +13919,7 @@ window.addEventListener('pagehide',function(){ closeCam(); stopCall(false); });
         var items=cs[cur].items;
         h+='<div class="ze-grid">'+(items.length?items.map(function(e){ return '<button type="button" class="ze-e" data-e="'+e.replace(/"/g,'&quot;')+'">'+e+'</button>'; }).join(''):'<div class="ze-none">まだありません。絵文字を入れると、ここに出ます。</div>')+'</div>';
         pan.innerHTML=h;
+        if(pan.classList.contains('on')) place();
       }
       function open(){
         if(!pan){ pan=document.createElement('div'); pan.id='zg-emo'; document.body.appendChild(pan);
@@ -13915,7 +13928,7 @@ window.addEventListener('pagehide',function(){ closeCam(); stopCall(false); });
             var tb=t.closest('.ze-tab'); if(tb){ cur=+tb.dataset.i||0; draw(); return; }
             if(t.closest('.ze-x')){ close(); return; }
             var eb2=t.closest('.ze-e'); if(eb2){ insert(eb2.dataset.e||eb2.textContent); } }); }
-        cur=recent().length?0:1; draw(); place(); pan.classList.add('on'); eb.classList.add('on');
+        cur=recent().length?0:1; pan.classList.add('on'); draw(); place(); eb.classList.add('on');
       }
       function close(){ if(pan) pan.classList.remove('on'); eb.classList.remove('on'); }
       window.__zgEmoClose=close;
@@ -13923,6 +13936,7 @@ window.addEventListener('pagehide',function(){ closeCam(); stopCall(false); });
       eb.addEventListener('click',function(){ if(pan&&pan.classList.contains('on')) close(); else open(); });
       document.addEventListener('pointerdown',function(ev){ try{ if(!pan||!pan.classList.contains('on')) return; var t=ev.target; if(t===eb||(t.closest&&(t.closest('#zg-emo')||t.closest('#form-chat')))) return; close(); }catch(e){} },true);
       window.addEventListener('resize',function(){ if(pan&&pan.classList.contains('on')) place(); });
+      try{ if(window.visualViewport){ visualViewport.addEventListener('resize',function(){ if(pan&&pan.classList.contains('on')) place(); }); visualViewport.addEventListener('scroll',function(){ if(pan&&pan.classList.contains('on')) place(); }); } }catch(e){}
       document.addEventListener('visibilitychange',function(){ if(document.hidden) close(); });
       form.addEventListener('submit',function(){ close(); });
     })();
@@ -15499,7 +15513,7 @@ html body #pane-chat #form-chat #btn-emo:active,html body #pane-chat #form-chat 
 #zg-emo .ze-tab{flex:none;border:0;border-radius:999px;padding:6px 12px;font-size:.82rem;font-weight:800;background:#F1EDFF;color:#5B3FE0}
 #zg-emo .ze-tab.on{background:#5B3FE0;color:#fff}
 #zg-emo .ze-x{flex:none;border:0;border-radius:999px;width:32px;height:32px;background:#F1EDFF;color:#5B3FE0;font-size:1rem;font-weight:900}
-#zg-emo .ze-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:2px;max-height:240px;overflow-y:auto;overscroll-behavior:contain}
+#zg-emo .ze-grid{display:grid;grid-template-columns:repeat(8,1fr);grid-auto-rows:44px;align-content:start;gap:2px;max-height:240px;overflow-y:auto;overscroll-behavior:contain}
 #zg-emo .ze-e{border:0;background:transparent;font-size:26px;line-height:1;padding:6px 0;border-radius:10px}
 #zg-emo .ze-e:active{background:#F1EDFF}
 #zg-emo .ze-none{grid-column:1/-1;text-align:center;color:#8a8199;font-size:.84rem;padding:18px 0}
