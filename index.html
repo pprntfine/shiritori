@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとしてインストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">新しい版に更新する</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンでアプリとして入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v543</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v544</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">相手を待っています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v543</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v544</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">名前</b> さんが入室を求めています</p>
         <p class="jr-fp">合図 <b id="jr-fp">----</b> ／ 相手の画面と同じかくににて確認</p>
@@ -13900,7 +13900,7 @@ window.addEventListener('pagehide',function(){ closeCam(); stopCall(false); });
         var grid=pan.querySelector('.ze-grid'), top0=pan.querySelector('.ze-top');
         var head=(top0?top0.offsetHeight:44)+22;   /* タブの段＋上下の余白 */
         var room=r.top-(offTop+8)-8-head;
-        var gh=Math.max(150,Math.min(400,Math.floor(room)));
+        var gh=Math.max(138,Math.min(184,Math.floor(room)));   /* v544: 大きすぎた（持ち主）→ 3〜4行 */
         if(grid){ grid.style.maxHeight=gh+'px'; grid.style.height=gh+'px'; }
         var ph=head+gh;
         pan.style.bottom='auto';
