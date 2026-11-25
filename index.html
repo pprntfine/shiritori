@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとしてインストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">新しい版に更新する</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンでアプリとして入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v541</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v542</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">相手を待っています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v541</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v542</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">名前</b> さんが入室を求めています</p>
         <p class="jr-fp">合図 <b id="jr-fp">----</b> ／ 相手の画面と同じかくににて確認</p>
@@ -13884,12 +13884,13 @@ window.addEventListener('pagehide',function(){ closeCam(); stopCall(false); });
       var eb=document.createElement('button'); eb.type='button'; eb.id='btn-emo'; eb.setAttribute('aria-label','絵文字を入れる'); eb.title='絵文字'; eb.textContent='😊';
       if(send) form.insertBefore(eb,send); else form.appendChild(eb);
       var RK='zg_emo_recent', pan=null, cur=0;
-      function recent(){ try{ var a=JSON.parse(localStorage.getItem(RK)||'[]'); return Array.isArray(a)?a.filter(function(x){ return typeof x==='string'&&x.length<16; }).slice(0,24):[]; }catch(e){ return []; } }
-      function addRecent(e){ try{ var a=recent().filter(function(x){ return x!==e; }); a.unshift(e); localStorage.setItem(RK,JSON.stringify(a.slice(0,24))); }catch(_){} }
+      function recent(){ try{ var a=JSON.parse(localStorage.getItem(RK)||'[]'); return Array.isArray(a)?a.filter(function(x){ return typeof x==='string'&&x.length<16; }).slice(0,32):[]; }catch(e){ return []; } }
+      function addRecent(e){ try{ var a=recent().filter(function(x){ return x!==e; }); a.unshift(e); localStorage.setItem(RK,JSON.stringify(a.slice(0,32))); }catch(_){} }
+      /* v542: 絵文字を大きく増やした（持ち主: 少ない。💦💧などが無い）。分類ごとに約700個 */
+      var ZG_EMO_GROUPS=[{"name": "顔", "items": ["😀", "😃", "😄", "😁", "😆", "😅", "🤣", "😂", "🙂", "🙃", "😉", "😊", "😇", "🥰", "😍", "🤩", "😘", "😗", "😚", "😙", "🥲", "😋", "😛", "😜", "🤪", "😝", "🤑", "🤗", "🤭", "🫢", "🤫", "🤔", "🫡", "🤐", "🤨", "😐", "😑", "😶", "🫥", "😏", "😒", "🙄", "😬", "😮‍💨", "🤥", "😌", "😔", "😪", "🤤", "😴", "😷", "🤒", "🤕", "🤢", "🤮", "🤧", "🥵", "🥶", "🥴", "😵", "😵‍💫", "🤯", "🤠", "🥳", "🥸", "😎", "🤓", "🧐", "😕", "🫤", "😟", "🙁", "☹️", "😮", "😯", "😲", "😳", "🥺", "🥹", "😦", "😧", "😨", "😰", "😥", "😢", "😭", "😱", "😖", "😣", "😞", "😓", "😩", "😫", "🥱", "😤", "😡", "😠", "🤬", "😈", "👿", "💀", "💩", "🤡", "👻", "👽", "🤖", "😺", "😸", "😹", "😻", "😼", "😽", "🙀", "😿", "😾"]}, {"name": "手・人", "items": ["👍", "👎", "👌", "🤌", "🤏", "✌️", "🤞", "🫰", "🤟", "🤘", "🤙", "👈", "👉", "👆", "👇", "☝️", "👋", "🤚", "🖐️", "✋", "🖖", "👏", "🙌", "🫶", "👐", "🤲", "🤝", "🙏", "✍️", "💪", "🦵", "🦶", "👂", "👃", "👀", "👁️", "👅", "👄", "💋", "🫦", "🧠", "🫀", "👶", "🧒", "👦", "👧", "🧑", "👨", "👩", "🧓", "👴", "👵", "🙋", "🙆", "🙅", "🤷", "🤦", "🙇", "💁", "🙎", "🙍", "💆", "💇", "🚶", "🏃", "💃", "🕺", "👫", "💑", "💏", "👪", "🤰", "🤱"]}, {"name": "ハート・記号", "items": ["❤️", "🧡", "💛", "💚", "💙", "🩵", "💜", "🤎", "🖤", "🩶", "🤍", "🩷", "💔", "❤️‍🔥", "❤️‍🩹", "💕", "💞", "💓", "💗", "💖", "💘", "💝", "💟", "❣️", "💌", "💋", "💯", "💢", "💥", "💫", "💦", "💧", "💨", "🕳️", "💬", "💭", "🗯️", "💤", "✨", "⭐", "🌟", "🔥", "⚡", "🎵", "🎶", "❗", "❕", "❓", "❔", "‼️", "⁉️", "⭕", "❌", "✅", "☑️", "✔️", "➕", "➖", "✖️", "🆗", "🆕", "🆒", "🆙", "🔴", "🟠", "🟡", "🟢", "🔵", "🟣", "⚫", "⚪", "🔺", "🔻", "➡️", "⬅️", "⬆️", "⬇️", "🔁", "🔄", "⏰", "⌛", "⏳", "♨️", "🚫", "⚠️", "💲", "🉐", "㊗️"]}, {"name": "食べ物", "items": ["🍎", "🍏", "🍐", "🍊", "🍋", "🍌", "🍉", "🍇", "🍓", "🫐", "🍈", "🍒", "🍑", "🥭", "🍍", "🥥", "🥝", "🍅", "🍆", "🥑", "🥦", "🥬", "🥒", "🌶️", "🌽", "🥕", "🧄", "🧅", "🥔", "🍠", "🍞", "🥐", "🥖", "🥨", "🧀", "🥚", "🍳", "🥓", "🥩", "🍗", "🍖", "🌭", "🍔", "🍟", "🍕", "🥪", "🌮", "🌯", "🥗", "🍝", "🍜", "🍲", "🍛", "🍣", "🍱", "🥟", "🍤", "🍙", "🍚", "🍘", "🍥", "🍢", "🍡", "🍧", "🍨", "🍦", "🥧", "🧁", "🍰", "🎂", "🍮", "🍭", "🍬", "🍫", "🍿", "🍩", "🍪", "🥜", "🍯", "🥛", "☕", "🍵", "🧃", "🥤", "🧋", "🍶", "🍺", "🍻", "🥂", "🍷", "🥃", "🍸", "🍹", "🍾", "🧊"]}, {"name": "動物・自然", "items": ["🐶", "🐱", "🐭", "🐹", "🐰", "🦊", "🐻", "🐼", "🐨", "🐯", "🦁", "🐮", "🐷", "🐸", "🐵", "🙈", "🙉", "🙊", "🐔", "🐧", "🐦", "🐤", "🦆", "🦉", "🐺", "🐗", "🐴", "🦄", "🐝", "🐛", "🦋", "🐌", "🐞", "🐢", "🐍", "🐙", "🦑", "🦀", "🐠", "🐟", "🐡", "🐬", "🐳", "🐋", "🦈", "🐊", "🐘", "🦒", "🐕", "🐈", "🐇", "🐿️", "🦔", "🐾", "🌵", "🎄", "🌲", "🌳", "🌴", "🌱", "🌿", "☘️", "🍀", "🍁", "🍂", "🍃", "🍄", "🌷", "🌹", "🥀", "🌺", "🌸", "🌼", "🌻", "💐"]}, {"name": "天気・季節", "items": ["☀️", "🌤️", "⛅", "🌥️", "☁️", "🌦️", "🌧️", "⛈️", "🌩️", "🌨️", "❄️", "☃️", "⛄", "🌬️", "🌪️", "🌫️", "🌈", "☔", "☂️", "🌂", "💧", "💦", "🌊", "🌙", "🌛", "🌜", "🌝", "🌚", "🌕", "🌑", "⭐", "🌟", "🌠", "🌌", "🔥", "🌋", "🌅", "🌄", "🌇", "🌆", "🎑", "🎍", "🎎", "🎏", "🎐", "🎃", "🎄", "🎆", "🎇", "🧨", "🎉", "🎊", "🎈", "🎁", "🎀", "🧧"]}, {"name": "乗り物・場所", "items": ["🚗", "🚕", "🚙", "🚌", "🚎", "🏎️", "🚓", "🚑", "🚒", "🚐", "🛻", "🚚", "🚛", "🚜", "🏍️", "🛵", "🚲", "🛴", "🚨", "🚃", "🚋", "🚞", "🚝", "🚄", "🚅", "🚈", "🚂", "🚆", "🚇", "🚊", "🚉", "✈️", "🛫", "🛬", "🚁", "🚀", "🛸", "⛵", "🚤", "🛳️", "⛴️", "🚢", "⚓", "⛽", "🚏", "🚦", "🗺️", "🗾", "🏔️", "⛰️", "🗻", "🏕️", "🏖️", "🏝️", "🏠", "🏡", "🏢", "🏥", "🏦", "🏨", "🏪", "🏫", "🏬", "🏯", "🏰", "💒", "🗼", "🗽", "⛩️", "🛕", "⛲", "🎡", "🎢", "🎠", "🌉", "🗿"]}, {"name": "もの・遊び", "items": ["⚽", "⚾", "🥎", "🏀", "🏐", "🏈", "🎾", "🏸", "🏓", "🏒", "⛳", "🎣", "🎽", "🎿", "⛸️", "🏆", "🥇", "🥈", "🥉", "🏅", "🎮", "🕹️", "🎲", "🧩", "🎯", "🎳", "🎤", "🎧", "🎸", "🎹", "🥁", "🎷", "🎺", "🎻", "🎬", "🎨", "📷", "📸", "📹", "📺", "📱", "💻", "⌨️", "🖥️", "🖨️", "☎️", "📞", "🔋", "🔌", "💡", "🔦", "🕯️", "💸", "💴", "💰", "💳", "💎", "⚖️", "🔧", "🔨", "⚙️", "🧲", "💊", "💉", "🩹", "🌡️", "🧸", "🎈", "🪄", "🧹", "🧺", "🧻", "🛁", "🚿", "🧼", "🛏️", "🛋️", "🪑", "🚪", "🔑", "🗝️", "🎒", "👜", "👛", "👓", "🕶️", "👔", "👕", "👖", "👗", "👘", "👙", "👠", "👟", "👑", "💍", "✏️", "📝", "📚", "📖", "📅", "📌", "📎", "✂️", "📦", "📮", "✉️", "📩"]}];
       function cats(){
         var out=[{name:'よく使う',items:recent()}];
-        try{ STICKER_CATEGORIES.forEach(function(c){ var it=c.items.map(function(x){ return String(x[0]); }).filter(function(x){ return !/^🐶/.test(x)&&x.length<16; }); if(it.length) out.push({name:c.name,items:it}); }); }catch(e){}
-        out.push({name:'いろいろ',items:['😄','😁','😅','😇','🙂','🙃','😋','😜','🤪','🤗','🤔','🤭','😏','😬','😪','🤤','😷','🤒','🥳','🥺','😭','😤','😩','🫶','💕','💖','💗','💓','💞','💘','✨','⭐','🌟','💤','💯','👌','✌️','🤞','👆','👉','👀','🙈','🎂','🍰','🍙','🍣','🍜','🍺','☕','🍓','🌸','🌈','☀️','🌙','⛄','☔','🐱','🐶','🐻','🐰','🚗','✈️','🏠','🎁','🎶','📷','📞','💤']});
+        ZG_EMO_GROUPS.forEach(function(g){ out.push({name:g.name,items:g.items}); });
         return out;
       }
       function place(){ try{ var r=form.getBoundingClientRect(); pan.style.bottom=(window.innerHeight-r.top+8)+'px'; }catch(e){} }
@@ -15498,7 +15499,7 @@ html body #pane-chat #form-chat #btn-emo:active,html body #pane-chat #form-chat 
 #zg-emo .ze-tab{flex:none;border:0;border-radius:999px;padding:6px 12px;font-size:.82rem;font-weight:800;background:#F1EDFF;color:#5B3FE0}
 #zg-emo .ze-tab.on{background:#5B3FE0;color:#fff}
 #zg-emo .ze-x{flex:none;border:0;border-radius:999px;width:32px;height:32px;background:#F1EDFF;color:#5B3FE0;font-size:1rem;font-weight:900}
-#zg-emo .ze-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:2px;max-height:200px;overflow-y:auto}
+#zg-emo .ze-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:2px;max-height:240px;overflow-y:auto;overscroll-behavior:contain}
 #zg-emo .ze-e{border:0;background:transparent;font-size:26px;line-height:1;padding:6px 0;border-radius:10px}
 #zg-emo .ze-e:active{background:#F1EDFF}
 #zg-emo .ze-none{grid-column:1/-1;text-align:center;color:#8a8199;font-size:.84rem;padding:18px 0}
