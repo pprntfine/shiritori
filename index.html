@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとしてインストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">新しい版に更新する</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンでアプリとして入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v544</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v545</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">相手を待っています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v544</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v545</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">名前</b> さんが入室を求めています</p>
         <p class="jr-fp">合図 <b id="jr-fp">----</b> ／ 相手の画面と同じかくににて確認</p>
@@ -13893,18 +13893,16 @@ window.addEventListener('pagehide',function(){ closeCam(); stopCall(false); });
         ZG_EMO_GROUPS.forEach(function(g){ out.push({name:g.name,items:g.items}); });
         return out;
       }
-      /* v543: 絵文字が1行しか見えないことがあった（持ち主）。入力欄の上の空き（キーボードが出ている時も）に合わせて、
-         一覧の高さを決める（最低3行・最大で約9行）。上から位置を決めるので、画面の上にはみ出さない */
+      /* v545: LINE と同じく、絵文字の一覧はキーボードの場所（入力欄の下）に出す。開くとキーボードを閉じ、
+         入力欄を押すとキーボードに戻る。高さは前に出たキーボードの高さ（なければ260px、200〜300px） */
+      var kbH=0;
+      function measureKb(){ try{ var vv=window.visualViewport; if(!vv) return; var d=window.innerHeight-vv.height-vv.offsetTop; if(d>150&&d<600) kbH=Math.round(d); }catch(e){} }
       function place(){ try{
-        var vv=window.visualViewport, offTop=vv?vv.offsetTop:0, r=form.getBoundingClientRect();
         var grid=pan.querySelector('.ze-grid'), top0=pan.querySelector('.ze-top');
-        var head=(top0?top0.offsetHeight:44)+22;   /* タブの段＋上下の余白 */
-        var room=r.top-(offTop+8)-8-head;
-        var gh=Math.max(138,Math.min(184,Math.floor(room)));   /* v544: 大きすぎた（持ち主）→ 3〜4行 */
+        var head=(top0?top0.offsetHeight:44)+18;
+        var tot=Math.max(200,Math.min(300,kbH||260));
+        var gh=Math.max(132,tot-head);
         if(grid){ grid.style.maxHeight=gh+'px'; grid.style.height=gh+'px'; }
-        var ph=head+gh;
-        pan.style.bottom='auto';
-        pan.style.top=Math.max(offTop+8,r.top-8-ph)+'px';
       }catch(e){} }
       function insert(e){
         var v=String(ta.value||''), a=(typeof ta.selectionStart==='number')?ta.selectionStart:v.length, z=(typeof ta.selectionEnd==='number')?ta.selectionEnd:v.length;
@@ -13922,23 +13920,31 @@ window.addEventListener('pagehide',function(){ closeCam(); stopCall(false); });
         if(pan.classList.contains('on')) place();
       }
       function open(){
-        if(!pan){ pan=document.createElement('div'); pan.id='zg-emo'; document.body.appendChild(pan);
-          pan.addEventListener('pointerdown',function(ev){ ev.preventDefault(); });   /* 押してもキーボードを閉じない・入力欄から外れない */
+        if(!pan){ pan=document.createElement('div'); pan.id='zg-emo'; form.appendChild(pan);
+          pan.addEventListener('pointerdown',function(ev){ ev.preventDefault(); });   /* 押しても入力欄にカーソルを移さない（キーボードを出さない） */
           pan.addEventListener('click',function(ev){ var t=ev.target; if(!t||!t.closest) return;
             var tb=t.closest('.ze-tab'); if(tb){ cur=+tb.dataset.i||0; draw(); return; }
             if(t.closest('.ze-x')){ close(); return; }
             var eb2=t.closest('.ze-e'); if(eb2){ insert(eb2.dataset.e||eb2.textContent); } }); }
-        cur=recent().length?0:1; pan.classList.add('on'); draw(); place(); eb.classList.add('on');
+        measureKb();
+        try{ if(typeof closeStickerPicker==='function') closeStickerPicker(false); }catch(e){}
+        try{ ta.blur(); }catch(e){}   /* キーボードを閉じる（カーソルの位置は ta.selectionStart に残る） */
+        cur=recent().length?0:1; pan.classList.add('on'); form.classList.add('emo-open'); draw(); place(); eb.classList.add('on');
+        try{ var lst=document.getElementById('chat-log'); setTimeout(function(){ try{ if(lst) lst.scrollTop=lst.scrollHeight; }catch(e){} },60); }catch(e){}
       }
-      function close(){ if(pan) pan.classList.remove('on'); eb.classList.remove('on'); }
+      function close(){ if(pan) pan.classList.remove('on'); form.classList.remove('emo-open'); eb.classList.remove('on'); }
+      function isOpen(){ return !!(pan&&pan.classList.contains('on')); }
       window.__zgEmoClose=close;
-      eb.addEventListener('pointerdown',function(ev){ ev.preventDefault(); });   /* 押しても入力欄のカーソルをそのままに */
-      eb.addEventListener('click',function(){ if(pan&&pan.classList.contains('on')) close(); else open(); });
-      document.addEventListener('pointerdown',function(ev){ try{ if(!pan||!pan.classList.contains('on')) return; var t=ev.target; if(t===eb||(t.closest&&(t.closest('#zg-emo')||t.closest('#form-chat')))) return; close(); }catch(e){} },true);
-      window.addEventListener('resize',function(){ if(pan&&pan.classList.contains('on')) place(); });
-      try{ if(window.visualViewport){ visualViewport.addEventListener('resize',function(){ if(pan&&pan.classList.contains('on')) place(); }); visualViewport.addEventListener('scroll',function(){ if(pan&&pan.classList.contains('on')) place(); }); } }catch(e){}
+      eb.addEventListener('pointerdown',function(ev){ ev.preventDefault(); });
+      /* 開いている時にもう一度押す → キーボードに戻る（LINE と同じ） */
+      eb.addEventListener('click',function(){ if(isOpen()){ close(); try{ ta.focus(); }catch(e){} } else open(); });
+      /* 入力欄を押す → 絵文字からキーボードに切り替え */
+      ta.addEventListener('pointerdown',function(){ if(isOpen()) close(); });
+      ta.addEventListener('focus',function(){ if(isOpen()) close(); });
+      try{ var sb=document.getElementById('btn-stickers'); if(sb) sb.addEventListener('click',function(){ if(isOpen()) close(); },true); }catch(e){}
+      document.addEventListener('pointerdown',function(ev){ try{ if(!isOpen()) return; var t=ev.target; if(t===eb||(t.closest&&t.closest('#form-chat'))) return; close(); }catch(e){} },true);
+      try{ if(window.visualViewport) visualViewport.addEventListener('resize',measureKb); }catch(e){}
       document.addEventListener('visibilitychange',function(){ if(document.hidden) close(); });
-      form.addEventListener('submit',function(){ close(); });
     })();
     var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
     var rec=null, on=false, base='', err='';
@@ -15505,8 +15511,10 @@ html body #pane-chat #form-chat #btn-mic.zg-rec{background:#E53935!important;col
 /* v541: 入力欄の右端の絵文字ボタンと、絵文字を選ぶ画面（持ち主: 左にマイク・右に絵文字） */
 html body #pane-chat #form-chat #btn-emo{grid-area:input!important;justify-self:end!important;align-self:end!important;position:relative!important;z-index:2!important;width:34px!important;height:34px!important;min-width:34px!important;min-height:34px!important;margin:0 6px 7px 0!important;padding:0!important;border:0!important;border-radius:50%!important;display:grid!important;place-items:center!important;background:#EFEAFE!important;color:#5B3FE0!important;font-size:19px!important;line-height:1!important;box-shadow:none!important;-webkit-tap-highlight-color:transparent}
 html body #pane-chat #form-chat #btn-emo:active,html body #pane-chat #form-chat #btn-emo.on{background:#DCD2FD!important}
-#zg-emo{position:fixed;left:8px;right:8px;z-index:9000;background:#fff;border-radius:18px;box-shadow:0 8px 28px rgba(40,20,90,.28);padding:8px 8px 10px;display:none;max-width:520px;margin:0 auto}
-#zg-emo.on{display:block}
+html body #pane-chat #form-chat #zg-emo{grid-area:emo!important;position:static;background:#fff;border-radius:14px;border:1px solid #E3DCF7;padding:8px 6px 8px;display:none;min-width:0;margin:0 -4px}
+html body #pane-chat #form-chat.emo-open{grid-template-areas:"tools tools" "input send" "emo emo"!important}
+html body #pane-chat #form-chat.emo-open.stickers-open{grid-template-areas:"tools tools" "stickers stickers" "input send" "emo emo"!important}
+html body #pane-chat #form-chat #zg-emo.on{display:block}
 #zg-emo .ze-top{display:flex;align-items:flex-start;gap:6px}
 #zg-emo .ze-tabs{flex:1;min-width:0;display:flex;gap:6px;overflow-x:auto;padding:2px 2px 8px;scrollbar-width:none}
 #zg-emo .ze-tabs::-webkit-scrollbar{display:none}
