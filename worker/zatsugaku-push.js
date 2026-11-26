@@ -206,13 +206,26 @@ async function handlePush(req, env, ctx) {
 }
 
 /* v540: 通知を送る本体（/push と、中継所にメッセージが置かれた時の両方から使う） */
-async function pushTopic(env, ctx, topic, raw, subject) {
+// 2026-11-27: 通知の結果を1行だけログに残す（Cloudflare の Workers Logs。持ち主だけが見られる）。中身・暗号文・宛先の全体は残さない。
+//   src: push（送ったスマホから）／bell（中継所から）、kind: msg/stub/call/open/test、to: 渡した先（apple=iPhone・fcm=Android）と結果
+function pushKind(m) {
+  if (/^zgcall:/.test(m)) return 'call';
+  if (/^zgo:/.test(m)) return 'open';
+  if (m === 'zg-test') return 'test';
+  if (/^zgm:\d+:!/.test(m) || m === '💬' || /^zgn:/.test(m)) return 'stub';
+  if (/^zgm:/.test(m)) return 'msg';
+  return 'other';
+}
+function pushHost(u) { try { const h = new URL(u).hostname; return /apple/.test(h) ? 'apple' : /fcm|google/.test(h) ? 'fcm' : /mozilla/.test(h) ? 'moz' : 'other'; } catch (e) { return 'other'; } }
+async function pushTopic(env, ctx, topic, raw, subject, src) {
+  const t0 = Date.now();
   const list = await loadSubs(env, topic);
-  if (!list.length) return { ok: false, err: 'no subscriber', sent: 0 };
+  if (!list.length) { try { console.log(JSON.stringify({ ev: 'notify', src: src || 'push', kind: pushKind(String(raw)), box: String(topic).slice(-3), subs: 0, sent: 0, err: 'no subscriber' })); } catch (e) {} return { ok: false, err: 'no subscriber', sent: 0 }; }
   const msg = shrink(raw);
   const isCall = /^zgcall:/.test(msg);
   const gone = [];
   const why = [];
+  const res = [];
   let sent = 0;
   await Promise.all(list.map(async s => {
     try {
@@ -228,13 +241,15 @@ async function pushTopic(env, ctx, topic, raw, subject) {
         },
         body,
       });
+      res.push(pushHost(s.endpoint) + ':' + r.status);
       if (r.status >= 200 && r.status < 300) sent++;
       else {
         why.push(r.status);
         if (r.status === 404 || r.status === 410) gone.push(s.endpoint);   // もう つかわれて いない 端末
       }
-    } catch (e) { why.push('net'); }
+    } catch (e) { why.push('net'); res.push(pushHost(s.endpoint) + ':net'); }
   }));
+  try { console.log(JSON.stringify({ ev: 'notify', src: src || 'push', kind: pushKind(msg), box: String(topic).slice(-3), subs: list.length, sent, to: res, gone: gone.length, ms: Date.now() - t0 })); } catch (e) {}
   if (gone.length) {
     const keep = list.filter(s => !gone.includes(s.endpoint));
     const b = box(env, 'b:' + topic);
@@ -268,7 +283,7 @@ async function handleRelay(req, env, parts, ctx) {
     text = await req.text();
     r = await stub.fetch(new Request(inner.toString(), { method: 'POST', headers: req.headers, body: text }));
     if (r.ok && text && text.length <= MAX_MSG) {
-      const p = pushTopic(env, ctx, bell, 'zgm:0:' + text, url.origin).catch(() => {});
+      const p = pushTopic(env, ctx, bell, 'zgm:0:' + text, url.origin, 'bell').catch(() => {});
       if (ctx && ctx.waitUntil) ctx.waitUntil(p); else await p;
     }
   } else {

@@ -215,6 +215,11 @@
   画面の `drainInbox`（裏でも1.2秒ごと）がそれを取り込んで `n.close()` していた。→ 閉じるのは `chatOnScreen()` の時だけ（取り込みは今までどおり）。見ている時は重複（取り込み済み）でも閉じる（`saveFailed` の物は除く）。
   再現 `tools/e2e/notify_vanish.js`（sw.js の通知を偽物で置く。`ServiceWorkerRegistration.prototype.getNotifications` を差し替え、中継所を5秒遅らせて通知を先に届ける。make_test に `drainInbox`・`consumeInbox` を出した）: v550 は裏で閉じる → v551 は残り、トークを開いたら閉じる。
   relay_basic・send_status・notify_dup・notify_on_open・notify_viewing・hero_badge・read_on_open 通過。**受け取る側（持ち主）が上げれば効く**。
+- 2026-11-27 「iPhone・Android とも送った時に相手へ通知できているか、昨日の記録を追って」（持ち主）。GraphQL `workersSubrequestsAdaptiveGroups`（分ごと・hostname・状態）で 11/26 を確認:
+  Apple（iPhone 宛）201×438・Google（Android 宛）201×173、失敗0、Worker のエラー0（約4,300回）。22:04 JST に iPhone の古い登録2つが 410 で自動的に外れた（残り1つは 201）。iPhone 宛ては1通で 3登録×2経路＝6 が普通。
+  **送ったメッセージの数は GraphQL では分からない**（中継所の DO は受け取りの見回りと区別できない）→ 持ち主の了承で **Workers Logs をオン**（`metadata.observability={enabled:true,head_sampling_rate:1}` を付けて PUT。`/tmp/claude-0/meta2.json` の形）。
+  あわせて Worker の `pushTopic` に1行ログ `{"ev":"notify","src":"push|bell","kind":"msg|stub|call|open|test","box":宛先の末尾3文字,"subs","sent","to":["apple:201",...],"gone","ms"}` を追加（中身・暗号文は残さない）。2026-11-26 21:52Z に本番へ書き込み済み（アプリの版は変えていない）。
+  ログの読み方: `POST /accounts/{id}/workers/observability/telemetry/query`（`view:"events"`、`timeframe` はミリ秒、filter `$metadata.service = zatsugaku-push`）。保存は3日ほど。書き込んだ直後は通信が無く、ログが入るかは持ち主が使った後に確かめる。
 - Worker に「1日に保存する数のブレーキ」`SOFT_STORE`（既定8000件/日、`env.SOFT_STORE` で変えられる）を作成済み・**未公開。2026-11-19 持ち主「いったんはブレーキはいらない」→ 既定は `SOFT_STORE = 0`（無効）にした**。使う時は 8000 などにして Worker を書き込む（説明済みのデメリット: かかった日は、相手が閉じている間のメッセージが通知か2人同時に開いた時の送り直し〈最大約10分〉で届く。送った側には送信済みと出る）。超えた分は保存せず流すだけ（中継所ごと止まるより良い）。数は kv `cnt:日付` に「総数|保存数」。手元の wrangler で上限3 → 6通中3通だけ保存を確認。
 
 ## 構造のメモ（行番号は目安。検索で探すこと）
