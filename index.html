@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとしてインストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">新しい版に更新する</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンでアプリとして入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v547</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v548</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">相手を待っています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v547</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v548</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">名前</b> さんが入室を求めています</p>
         <p class="jr-fp">合図 <b id="jr-fp">----</b> ／ 相手の画面と同じかくににて確認</p>
@@ -2852,6 +2852,7 @@ var Net={
        待ち一覧(pushWaitList)に入れておき、画面を消す瞬間（pushWaitFlush）に まだ受領が無いものを先に通知する */
     if(!pushP&&env&&(env.t==='chats'||env.t==='chat')&&!env.__pushOk&&!env.__pushLater&&!pushMidsAllDone(env)){
       env.__pushLater=1;
+      try{ pushMidsOf(env).forEach(function(id){ window.__zgLiveSkip=window.__zgLiveSkip||{}; window.__zgLiveSkip[id]=Date.now(); }); }catch(e){}   /* v548: 相手が「今いる」と見て通知を送らなかった分 */
       var __ent={env:env,body:body,scope:scope,done:false};
       pushWaitList.push(__ent); if(pushWaitList.length>20) pushWaitList.shift();
       setTimeout(function(){ try{ pushWaitOne(__ent); }catch(e){} },3000);
@@ -12214,6 +12215,7 @@ Net.onMsg=async function(m){
 
 case 'ack':
       if(m.from===S.me.id) break;
+      try{ if(m.bg) bgAckPush(m); }catch(e){}   /* v548 */
       return await exactReceipt(m.n1?[m.n1]:m.ns,false,m.ids,m.ps);
 
       break;
@@ -12302,7 +12304,9 @@ case 'ack':
         }
         try{ await chatSaveNow(); }catch(e){ return false; }
         if(!privateIncoming(m)) return false;
-        if(m.n) Net.send({t:'ack',n1:m.n,ids:list.map(function(it){return it.mid;}).filter(validDeletionId)});
+        /* v548: 裏に回っている時に受け取った新しいメッセージは、受領に bg を付ける（iPhone は裏に回った直後も少し動いて受領を返し、
+           自分の通知を出す前に止められる。送った側は bg を見て通知を送る）。持ち主: iPhone に通知が行っていない */
+        if(m.n) Net.send(Object.assign({t:'ack',n1:m.n,ids:list.map(function(it){return it.mid;}).filter(validDeletionId)},(added&&document.visibilityState!=='visible')?{bg:1}:{}));
         if(!added) return true;
         try{ persistChat(); }catch(e){}
          try{ var cbI=$('#call-box'); if(cbI&&!cbI.hidden){ for(var j=0;j<list.length&&j<16;j++){ var ci=list[j]||{},tj=String(ci.text||'').slice(0,MAX_CHAT),cm={from:m.from,mid:validDeletionId(ci.mid)?ci.mid:'',text:tj,at:ci.at,n:m.n}; if(tj&&!messageDeleted(cm)) igComment(peerName(),tj,false,cm); } } }catch(e){}
@@ -13063,6 +13067,17 @@ async function pushToPeer(body){
   }catch(e){ return false; }
 }
 var bellPushed=0;
+/* v548: 相手が裏に回っている時に受け取った（受領に bg）。相手が「今いる」と見えて通知を送っていなかった分は、ここで通知を送る。
+   本文は送らず短いしるし（zgm:N:!…、sw.js が「新しい記事があります」を出す）。同じメッセージ（mid）は1回だけ */
+function bgAckPush(m){
+  var sk=window.__zgLiveSkip||{}, now=Date.now();
+  var ids=(Array.isArray(m.ids)?m.ids:[]).filter(validDeletionId).filter(function(id){ return sk[id]&&now-sk[id]<10*60000; }).slice(0,20); if(!ids.length) return;
+  ids.forEach(function(id){ delete sk[id]; });
+  var fake={items:ids.map(function(id){ return {mid:id}; })};
+  if(pushMidsAllDone(fake)) return;
+  pushMidsMark(fake);
+  pushToPeer('!'+Date.now().toString(36)).catch(function(){});
+}
 /* v493: 通知を送り終えたメッセージの mid（中身ではなく乱数の番号）を覚える。開き直しても同じ通知を出さない */
 var PUSHED_MIDS_KEY='zg_pushed_mids', pushedMids=null;
 function pushMidsLoad(){
