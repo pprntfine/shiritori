@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとしてインストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">新しい版に更新する</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンでアプリとして入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v548</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v549</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">相手を待っています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v548</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v549</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">名前</b> さんが入室を求めています</p>
         <p class="jr-fp">合図 <b id="jr-fp">----</b> ／ 相手の画面と同じかくににて確認</p>
@@ -2842,7 +2842,7 @@ var Net={
     var pushP=null;
     /* v219: 削除の合図は通知を出すベルに載せない。本文だけ従来の通知経路を使う。 */
     /* v493: 受領待ちの送り直し（約20秒ごと）のたびに新しい暗号文で通知していた（2通で通知6件）。同じメッセージ(mid)の通知は1回だけ */
-    if(env&&(env.t==='chats'||env.t==='chat')&&!env.__pushOk&&!pushMidsAllDone(env)&&!(function(){try{return (Date.now()-(+(window.__zgsPeerLive||0)||0))<70000;}catch(e){return false;}})()){ try{ pushP=pushToPeer(body).then(function(ok){ if(ok){ env.__pushOk=1; pushMidsMark(env); if(env.t==='chats') markPushAcked(env); } return ok; }); }catch(e){} }
+    if(env&&(env.t==='chats'||env.t==='chat')&&!env.__pushOk&&!pushMidsAllDone(env)&&!peerViewing()){ try{ pushP=pushToPeer(body).then(function(ok){ if(ok){ env.__pushOk=1; pushMidsMark(env); if(env.t==='chats') markPushAcked(env); } return ok; }); }catch(e){} }
     /* v540: 相手に通知を送る時は、中継所に置く時にも相手の通知の とおりみち（bell）を添える。中継所がメッセージを受け取った時点で
        中継所からも通知を出すので、このスマホの /push が途中で止まっても（アプリを閉じた・電波が切れた）通知は出る。同じ暗号文なので2回は鳴らない */
     if(env) env.__bellQ='';   /* 送り直し（通知しない時）には添えない */
@@ -2908,7 +2908,7 @@ var Net={
     if(fastOk){
       /* v267: 相手が いま つながって いるなら 保存は いらない（1日に 250通の わくを 節約） */
       var __live=0; try{ __live=+(window.__zgsPeerLive||0)||0; }catch(e){}
-      var __need=(env&&env.__forceStore)||!(env&&env.t==='chats'&&__live&&Date.now()-__live<70000);
+      var __need=(env&&env.__forceStore)||!(env&&env.t==='chats'&&__live&&Date.now()-__live<70000&&peerViewing());   /* v549: 見ている時だけ省く */
       if(__need) this.postStore(body,scope,!!(env&&env.__noStore),env);
       else if(env&&env.n){
         /* v320: あいてが 「いきてる」と 見えても、ほんとうに とどいた かは わからない。
@@ -7336,6 +7336,7 @@ function peerChatOpen(at,late,proof,meta){
   S.peerChatT=Math.max(+(S.peerChatT||0)||0,t);
   window.__zgsPeerChatOpen=S.peerChatT;
   window.__zgsPeerLast=Math.max(+(window.__zgsPeerLast||0)||0,t); window.__zgsPeerDirty=true;   /* v183: さいごは「アプリを ひらいた」記録だけ（じどうの つうしんでは かぞえない） */
+  if(__fresh) window.__zgsPeerVis=__now;   /* v549: トーク画面を開いた＝見ている */
   if(__fresh) window.__zgsPeerLive=__now;   /* v187: いきてる しるしは 受けとった いま（v512: 新しい 合図の ときだけ） */
   try{ localStorage.setItem('zg_peer_chat_open',String(S.peerChatT)); }catch(e){}
   try{ if(__fresh) sessionStorage.setItem('zg_peer_live',String(window.__zgsPeerLive)); }catch(e){}
@@ -7638,8 +7639,18 @@ function sendLive(){   /* v183: あいてに「いきてる」しるしを は�
   if(S.isHost!==false) return;   /* v272: ホストの 在席も 相手に わたさない（開いて いる ことが 分かって しまう） */
   var t=Date.now(); if(t-lastLiveSent<25000) return;
   lastLiveSent=t;
-  try{ Net.send({t:'app-live',at:t,__noStore:1}); }catch(e){}
+  /* v549: 画面が見えているか（vis）も伝える。iPhone は裏に回っても少しの間動いて「生きてる」を送るため、相手（ホスト）は
+     「今見ている」と思って通知を送らないことがあった（持ち主: iPhone の通知が遅れて、アプリを開いた時に出た） */
+  try{ Net.send({t:'app-live',at:t,vis:(document.visibilityState==='visible')?1:0,__noStore:1}); }catch(e){}
 }
+document.addEventListener('visibilitychange',function(){ try{
+  if(!(S.paired||S.linked)||S.isHost!==false) return;
+  if(document.visibilityState!=='visible'){ lastLiveSent=Date.now(); Net.send({t:'app-live',at:Date.now(),vis:0,__noStore:1}); }
+  else { lastLiveSent=0; sendLive(); }
+}catch(e){} });
+window.addEventListener('pagehide',function(){ try{ if((S.paired||S.linked)&&S.isHost===false) Net.send({t:'app-live',at:Date.now(),vis:0,__noStore:1}); }catch(e){} });
+/* v549: 相手が「今、画面を見ている」か。見ている時だけ通知を省く（以前は「アプリが動いている」だけで省いていた） */
+function peerViewing(){ try{ var v=+(window.__zgsPeerVis||0)||0; return !!(v&&Date.now()-v<40000); }catch(e){ return false; } }
 function peerPresenceTick(){   /* v183: 「つながり中」ランプを あいての そんざいも みて だす */
   try{
     if(!(S.paired||S.linked)) return;
@@ -8383,8 +8394,11 @@ function notifyIncoming(at){
   try{ if(at&&document.visibilityState==='visible'&&Date.now()-at>60000){ updateBadge(); updateTalkbackBadges(); updateTitleBadge(); setAppBadgeCount(S.unread||0); return; } }catch(e){}
   niPend++;
   if(niT) return;
+  var niAt=Date.now();
   niT=setTimeout(async function(){
     niT=null; var n=niPend; niPend=0;
+    /* v549: スマホが画面の中を止めていて、開いた時に遅れて動いた時は通知を出さない（開いたら通知が出た、の元）。数字だけ合わせる */
+    if(Date.now()-niAt>30000){ try{ updateBadge(); updateTalkbackBadges(); updateTitleBadge(); setAppBadgeCount(S.unread||0); }catch(e){} return; }
     var now=Date.now(), used=niUsedLoad(), times=(await swPushTimes()).filter(function(t){ return now-t<12*3600000&&t<=now+5000&&used.indexOf(t)<0; }).sort();   /* v538: 15分 → 12時間 */
     var take=Math.min(n,times.length);
     if(take){ used=used.concat(times.slice(0,take)); niUsedSave(used); }
@@ -11981,6 +11995,8 @@ Net.onMsg=async function(m){
       if(!m.from||m.from===S.me.id) break;
       if(!S.opp||!S.opp.id||m.from!==S.opp.id) break;   /* v187: あいてと 特定できた 合図だけ */
       if(!m.at||Date.now()-m.at>90000) break;   /* v512: 600秒→90秒。とっておかれて あとから 届いた「生きてる」しるしで「今 開いている」「接続が 切れました」に しない */
+      try{ if(m.vis===1) window.__zgsPeerVis=Date.now(); else window.__zgsPeerVis=0; }catch(e){}   /* v549: 見ている時だけ（vis の無い古い版は「見ていない」扱い＝通知を送る） */
+      if(m.vis===0) break;   /* v549: 裏に回った知らせ。「今いる」にはしない */
       var wasLive=+(window.__zgsPeerLive||0)||0;   /* v185 */
       window.__zgsPeerLive=Date.now();
       try{ sessionStorage.setItem('zg_peer_live',String(window.__zgsPeerLive)); }catch(e){}
@@ -13045,15 +13061,20 @@ async function pushToPeer(body){
     /* v131: 回数制限などで 失敗したら 20秒・60秒・3分後に やりなおす（通知を とりこぼさない） */
     var tryPush=function(k){
       var done=function(ok){ if(k===0) first(!!ok); if(!ok&&k<3) setTimeout(function(){ tryPush(k+1); },[20000,60000,180000][k]); };
-      var viaNtfy=function(){
+      var viaNtfy=function(again){
+        /* v549: 通知サーバーに届かなかった（null）時は ntfy だけで終わらせない。iPhone は通知サーバーにしか登録していないので、
+           ntfy に送っても iPhone には出ない。20秒・60秒・3分後に通知サーバーへもう一度送る（同じ暗号文なので2回は鳴らない） */
+        var retry=function(){ if(again&&k<3) setTimeout(function(){ tryPush(k+1); },[20000,60000,180000][k]); };
+        if(k>0&&again){ if(k===0) first(false); retry(); return; }
         fetch('https://ntfy.sh/'+t,{method:'POST',headers:{'Content-Type':'text/plain','Priority':'high'},body:payload,keepalive:true})
-          .then(function(r){ done(r.ok); }).catch(function(){ done(false); });
+          .then(function(r){ if(again){ if(k===0) first(!!r.ok); if(!r.ok&&k<3) done(false); else retry(); } else done(r.ok); }).catch(function(){ if(again){ if(k===0) first(false); retry(); } else done(false); });
       };
       if(psrvGet()){
         psrvPush(t,payload).then(function(j){
           if(j&&j.ok&&(j.sent>0)){ done(true); return; }
           /* v241: サーバーが こたえない・とうろくが ない ときは 予備の 経路で おくる */
-          if(j===null||/no subscriber/.test((j&&j.err)||'')){ viaNtfy(); return; }
+          if(j===null){ viaNtfy(true); return; }
+          if(/no subscriber/.test((j&&j.err)||'')){ viaNtfy(false); return; }
           done(false);
         });
         return;

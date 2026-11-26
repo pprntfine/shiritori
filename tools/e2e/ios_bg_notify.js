@@ -2,16 +2,18 @@
 //  iPhone はアプリを裏に回した直後もしばらく動いていて、メッセージを受け取り「受け取った（ack）」を返す。その後すぐ止められる（凍結）。
 //  ホストは相手が「今いる」と見て通知を送らず、受領が来たので後からも送らない。iPhone の画面の通知は5秒待ちの間に止められて出ない → 通知0回。
 //  数える物: A（ホスト）が送る /push（＝iPhone の sw.js の通知）と、B の画面から出す通知。1回以上なら OK。
+// v549: ③ iPhone が見ている時は通知を送らない（画面の中の通知だけ）④ 通知サーバーへの1回目が届かなかった（電波の切れ目）時も、後でもう一度サーバーへ送る。
 // 使い方: bash tools/run_e2e.sh tools/e2e/ios_bg_notify.js
 const {chromium}=require('playwright');
 const DIR=process.argv[2];const SK=Buffer.alloc(32,9).toString('base64'),TOPIC='gskr3s-'+Date.now().toString(16).padEnd(24,'e');const PS='https://zatsugaku-push.pprnt908.workers.dev';
-const pushes=[];
+const pushes=[]; let failNext=0, failed=0, ntfyN=0;
 async function dev(b,me,peer,host,count){const ctx=await b.newContext({viewport:{width:390,height:844}});
  await ctx.addInitScript(({me,peer,host,SK,TOPIC})=>{ if(!sessionStorage.getItem('i')){ sessionStorage.setItem('i','1'); localStorage.setItem('mtp_id_v1',me); localStorage.setItem('mtp_pair_v1',JSON.stringify({sid:'p',h:host?1:0,peer,peerName:'あいて',topic:TOPIC,rk:SK,sk:SK,at:Date.now(),exp:Date.now()+9e9})); }
    window.__vis='visible'; Object.defineProperty(document,'visibilityState',{get:()=>window.__vis,configurable:true}); Object.defineProperty(document,'hidden',{get:()=>window.__vis!=='visible',configurable:true}); },{me,peer,host,SK,TOPIC});
  await ctx.route('**/*',async r=>{const u=r.request().url();
   if(u.startsWith('https://zg.test/'))return r.fulfill({path:DIR+'/'+(u.split('/').pop().split('?')[0]||'index.html')});
-  if(count&&u===PS+'/push'){ try{ const j=JSON.parse(r.request().postData()||'{}'); if(/^zgm:/.test(j.msg||'')) pushes.push({at:Date.now(),msg:String(j.msg).slice(0,20)}); }catch(e){} return r.fulfill({status:200,contentType:'application/json',body:'{"ok":true,"sent":1,"send":1}'}); }
+  if(count&&u===PS+'/push'){ if(failNext>0){ failNext--; failed++; return r.abort(); } try{ const j=JSON.parse(r.request().postData()||'{}'); if(/^zgm:/.test(j.msg||'')) pushes.push({at:Date.now(),msg:String(j.msg).slice(0,20)}); }catch(e){} return r.fulfill({status:200,contentType:'application/json',body:'{"ok":true,"sent":1,"send":1}'}); }
+  if(count&&/^https:\/\/ntfy\.sh\/[^/?]+$/.test(u)&&r.request().method()==='POST'){ ntfyN++; return r.fulfill({status:200,contentType:'application/json',body:'{}'}); }   // 予備の ntfy は受け付ける（iPhone は登録していないので通知は出ない）
   if(u.startsWith(PS))return r.continue(); return r.abort();});
  await ctx.routeWebSocket(u=>!String(u).includes('zatsugaku-push'),ws=>ws.close());
  const pg=await ctx.newPage(); await pg.goto('https://zg.test/index.html'); return {pg,ctx};}
@@ -25,6 +27,10 @@ async function dev(b,me,peer,host,count){const ctx=await b.newContext({viewport:
  // B（iPhone）が見ている → A に「今いる」が届くまで待つ
  await send(B,'こんにちは'); await A.pg.waitForTimeout(30000);
  const live=await A.pg.evaluate(()=>Date.now()-(+(window.__zgsPeerLive||0)||0));
+ if(process.env.DBG) console.log('DBG',JSON.stringify(await A.pg.evaluate(()=>({vis:window.__zgsPeerVis,live:window.__zgsPeerLive,now:Date.now()}))),JSON.stringify(await B.pg.evaluate(()=>({host:__t.S.isHost,vs:document.visibilityState}))));
+ // ③ B が見ている時に A が送る → 通知は送らない
+ pushes.length=0; await send(A,'見ている時'); await A.pg.waitForTimeout(8000);
+ const viewingPush=pushes.length;
  // B がホームに戻る（裏に回る）。2秒後に A が送る。B は受け取って受領を返した直後に止められる
  await B.pg.evaluate(()=>{ window.__vis='hidden'; document.dispatchEvent(new Event('visibilitychange')); });
  await A.pg.waitForTimeout(2000);
@@ -37,8 +43,12 @@ async function dev(b,me,peer,host,count){const ctx=await b.newContext({viewport:
  await cdp.send('Page.setWebLifecycleState',{state:'frozen'});
  await A.pg.waitForTimeout(20000);
  const acked=await A.pg.evaluate(()=>__t.S.chat.some(c=>c.text==='裏に回った直後'&&(c.peerAck||c.acked)));
- const res={peerLiveAgoMs:live,acked,push:pushes.length,pushMsgs:pushes.map(p=>p.msg),pageBeforeFreeze:pnBefore};
+ const res={peerLiveAgoMs:live,viewingPush,acked,push:pushes.length,pushMsgs:pushes.map(p=>p.msg),pageBeforeFreeze:pnBefore};
+ // ④ B は止まったまま。通知サーバーへの1回目が届かない → 後でもう一度
+ pushes.length=0; failNext=1; failed=0;
+ await send(A,'電波の切れ目'); await A.pg.waitForTimeout(30000);
+ res.failFirst={failed,ntfy:ntfyN,pushAfter:pushes.length};
  console.log(JSON.stringify(res));
- const ok=(res.push+res.pageBeforeFreeze)>=1;
+ const ok=(res.push+res.pageBeforeFreeze)>=1&&res.viewingPush===0&&res.failFirst.failed===1&&res.failFirst.pushAfter>=1;
  console.log(ok?'OK: iPhone に通知が出る':'NG: 通知が0回（iPhone に届かない）');
  await b.close(); process.exit(ok?0:1);})();

@@ -6,7 +6,7 @@ const store=new Map(); const shown=[]; const listeners={};
 const cache={ async match(k){ return store.has(k)?{text:async()=>store.get(k)}:undefined; }, async put(k,r){ store.set(k,await r.text()); }, async delete(k){ store.delete(k); } };
 class Resp{ constructor(t){ this.t=String(t); } async text(){ return this.t; } }
 const self={ addEventListener:(n,f)=>{ listeners[n]=f; }, registration:{ showNotification:async(t,o)=>{ shown.push(o); }, scope:'https://zg.test/' }, clients:{ matchAll:async()=>[] }, skipWaiting(){} };
-const ctx={ self, caches:{ open:async()=>cache, keys:async()=>[] }, Response:Resp, indexedDB:undefined, URL, console, Date };
+const ctx={ self, caches:{ open:async()=>cache, keys:async()=>[] }, Response:Resp, indexedDB:undefined, URL, console, Date, setTimeout, clearTimeout };
 vm.createContext(ctx); vm.runInContext(src,ctx);
 async function push(text){ let p; listeners.push({data:{text:()=>text}, waitUntil:(x)=>{ p=x; }}); await p; return shown[shown.length-1]; }
 let ok=true; const chk=(n,c,x)=>{ console.log(n,JSON.stringify(x),c?'OK':'NG'); if(!c) ok=false; };
