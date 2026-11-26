@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとしてインストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">新しい版に更新する</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンでアプリとして入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v549</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v550</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">相手を待っています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v549</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v550</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">名前</b> さんが入室を求めています</p>
         <p class="jr-fp">合図 <b id="jr-fp">----</b> ／ 相手の画面と同じかくににて確認</p>
@@ -3643,14 +3643,16 @@ function show(which){
   /* v245: トークを 開いた ときに 全画面スタンプを 出す しくみは やめた（新しい スタンプが とどいた ときだけ 出す） */
 }
 /* ペア成立後は 部屋を でても トークだけ つづく */
+/* v550: トーク画面が本当に出ているか。開き直した時は S.phase が 'play' のままトップが出ているので、S.phase では分からない（持ち主: 足跡が付かない） */
+function playShown(){ try{ return !!(screens.play&&screens.play.classList.contains('on')); }catch(e){ return S.phase==='play'; } }
 function updateTalkbackBadges(){
   document.querySelectorAll('.talk-back').forEach(function(b){
-    b.hidden=!(S.linked&&S.phase!=='play');
+    b.hidden=!(S.linked&&!playShown());
     var bg=b.querySelector('.badge');
     if(bg){ bg.hidden=!S.unread; bg.textContent='🐾'; }
   });
   /* v118: 🍄‍🟫 は はいし。未読は タイトルの 右上に 小さく 出す */
-  var hb=$('#hero-badge'); if(hb){ hb.hidden=!(S.linked&&S.phase!=='play'&&S.unread>0); hb.textContent='🐾'; }
+  var hb=$('#hero-badge'); if(hb){ hb.hidden=!(S.linked&&!playShown()&&S.unread>0); hb.textContent='🐾'; }
 }
 document.querySelectorAll('.talk-back').forEach(function(b){
   b.addEventListener('click',function(){
@@ -10085,7 +10087,7 @@ async function recvPhoto(m){
   if(S.chat.some(function(c){ return c.from===m.from&&c.pid===m.id; })) return;
   try{ photoDone[String(m.id)]=1; }catch(e){}   /* v285: かけら側で 2まい目を つくらない */
   var url=bytesDataURL(bytes,pm);
-  var viewing=(S.phase==='play'&&S.tab==='chat'&&document.visibilityState==='visible');
+  var viewing=chatOnScreen();   /* v550: 画面に本当にトークが出ている時だけ（開き直した時はトップなのに既読扱いになり得た） */
   S.chat.push({photo:true,from:m.from,at:(typeof m.at==='number'?m.at:Date.now()),data:url,pid:m.id,uid:String(++UID),n:m.n||0,sent:true});
   S.lastPeerN=Math.max(S.lastPeerN||0,m.n||0);
   try{ await chatSaveNow(); if(privateIncoming(m)&&m.n) Net.send({t:'ack',n1:m.n,ps:[String(m.id)]}); }catch(e){ return false; }

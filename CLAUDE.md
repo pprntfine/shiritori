@@ -1,4 +1,4 @@
-# とー君ニュース（旧 雑学王 / zatsugakuou）引き継ぎメモ  ― 現在 v549
+# とー君ニュース（旧 雑学王 / zatsugakuou）引き継ぎメモ  ― 現在 v550
 
 ## これは何か
 見た目は「とー君ニュース」（ニュースアプリ。v460 までは「雑学クイズ」アプリ）。中身は **2人専用の暗号化チャット**（メッセージ・写真・ライブ映像・電話）。
@@ -207,6 +207,10 @@
   (3) sw.js: 保存（IndexedDB）を最大2秒だけ待って通知を出し、保存は後ろで続ける（保存が止まると通知も出なかった）。試験 `tools/sw_idb_hang_test.mjs`（v548: 0件 → v549: 2秒で1件）。
   (4) 画面の中の通知（`notifyIncoming` の5秒待ち）が、止められていて開いた時に30秒以上遅れて動いた時は出さない（数字だけ）。
   `tools/e2e/ios_bg_notify.js` に③見ている時は通知0・④1回目のサーバー送りが失敗（ntfy は受け付ける）を追加: v548 は④で iPhone への通知0 → v549 は1。relay_basic・send_status・notify_dup（ROLE=guest も）・notify_viewing・notify_on_open・send_then_close・refresh_button・log_while_closed・read_on_open・sw_dup_test・sw_badge_test 通過。**2人とも上げると効く**。
+- v550 「メッセージが来ているのに、トップの『とー君ニュース』の横に足跡が付かない」（持ち主）。再現 `tools/e2e/hero_badge.js`（①トップで受け取る ②裏で受け取って戻る ③閉じている間に届いて開く）: v549 は③だけ付かない。
+  原因: 開き直した時（`7083` 付近の部屋の復元）は `S.phase='play'` にするが画面はトップのまま。足跡 `#hero-badge` は `S.phase!=='play'` の時だけ出すので出なかった。
+  直し: `playShown()`（トーク画面 `screens.play` が本当に出ているか）で判定。写真の受け取りの「見ている」判定（`S.phase==='play'&&S.tab==='chat'`）も `chatOnScreen()` に（トップなのに既読扱いになり得た）。
+  ROLE=guest も通過。relay_basic・send_status・photo_receipt・notify_dup・notify_on_open・privacy_shield 通過。**上げた人の画面だけ変わる**。
 - Worker に「1日に保存する数のブレーキ」`SOFT_STORE`（既定8000件/日、`env.SOFT_STORE` で変えられる）を作成済み・**未公開。2026-11-19 持ち主「いったんはブレーキはいらない」→ 既定は `SOFT_STORE = 0`（無効）にした**。使う時は 8000 などにして Worker を書き込む（説明済みのデメリット: かかった日は、相手が閉じている間のメッセージが通知か2人同時に開いた時の送り直し〈最大約10分〉で届く。送った側には送信済みと出る）。超えた分は保存せず流すだけ（中継所ごと止まるより良い）。数は kv `cnt:日付` に「総数|保存数」。手元の wrangler で上限3 → 6通中3通だけ保存を確認。
 
 ## 構造のメモ（行番号は目安。検索で探すこと）
