@@ -43,6 +43,8 @@ node tools/sw_badge_test.mjs                   # sw.js の通知の小さいア�
 | e2e/log_while_closed.js | ホストが閉じている間に相手がトーク画面を開いて読んでも、アクセス履歴と既読が残る（2台）（v540） |
 | worker_relay_push_test.mjs | Worker: bell 付きで中継所に置くと Worker からも Web Push が出る（`node tools/worker_relay_push_test.mjs`）（v540） |
 | sw_dup_test.mjs | 同じメッセージの通知が2回届いても2回目は鳴らさない（`node tools/sw_dup_test.mjs`）（v537） |
+| sw_idb_hang_test.mjs | sw.js の保存が止まっても2秒で通知が出る（`node tools/sw_idb_hang_test.mjs`）（v549） |
+| e2e/ios_bg_notify.js | iPhone（ゲスト）が裏に回った直後・見ている時・通知サーバーへの1回目が失敗した時の通知（`bash tools/run_e2e.sh tools/e2e/ios_bg_notify.js`）（v548/v549） |
 | e2e/call_no_stale_ring.js | 閉じていた間の電話が、あとで開いた時に鳴らない |
 | e2e/push_once.js | 相手が閉じている間、送り直しが続いても通知は1通につき1回（v493） |
 | e2e/vanish_unseen.js | 見ていないメッセージは消えない・見てから15分で消える（v494） |
