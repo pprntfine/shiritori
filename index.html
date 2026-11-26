@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとしてインストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">新しい版に更新する</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンでアプリとして入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v551</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v552</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">相手を待っています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v551</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v552</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">名前</b> さんが入室を求めています</p>
         <p class="jr-fp">合図 <b id="jr-fp">----</b> ／ 相手の画面と同じかくににて確認</p>
@@ -7055,6 +7055,34 @@ async function chatRestore(sk){
   return k;
 }
 function chatClearStore(){ try{ chatDbPut(null); }catch(e){} try{ localStorage.removeItem(UNREAD_KEY); }catch(e){} }
+/* v552: 入力中の文（下書き）を、2人の鍵で暗号化してこの端末に残す（持ち主: 入力中にホーム画面に戻ると消える）。
+   ホームに戻っている間にスマホがアプリを読み込み直すと、入力欄が空になっていた。送ったら消す。ペアを解除したら消す */
+var DRAFT_KEY='zg_draft1', draftT=null;
+async function draftSave(){
+  try{
+    var ta=$('#in-chat'); if(!ta) return;
+    var v=String(ta.value||'');
+    if(!v.trim()){ localStorage.removeItem(DRAFT_KEY); return; }
+    var key=S.sessKey; if(!key) return;
+    var iv=crypto.getRandomValues(new Uint8Array(12));
+    var ct=await crypto.subtle.encrypt({name:'AES-GCM',iv:iv},key,new TextEncoder().encode(JSON.stringify({t:v.slice(0,MAX_CHAT),at:Date.now()})));
+    if(String(ta.value||'')!==v) return;   /* 暗号化の間に書き変わった（送った）時は残さない */
+    localStorage.setItem(DRAFT_KEY,JSON.stringify({iv:b64(iv),ct:b64(ct)}));
+  }catch(e){}
+}
+function draftSaveSoon(){ clearTimeout(draftT); draftT=setTimeout(draftSave,300); }
+function draftClear(){ clearTimeout(draftT); try{ localStorage.removeItem(DRAFT_KEY); }catch(e){} }
+async function draftRestore(sk){
+  try{
+    var raw=localStorage.getItem(DRAFT_KEY); if(!raw||!sk) return false;
+    var o=JSON.parse(raw);
+    var pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:unb64(o.iv)},sk,unb64(o.ct));
+    var d=JSON.parse(new TextDecoder().decode(pt));
+    var ta=$('#in-chat'); if(!ta||ta.value||!d||!d.t) return false;
+    ta.value=String(d.t).slice(0,MAX_CHAT); try{ chatGrow(); }catch(e){}
+    return true;
+  }catch(e){ return false; }
+}
 window.addEventListener('pagehide',function(){ try{ chatSaveNow().catch(function(){}); }catch(e){} });
 document.addEventListener('visibilitychange',function(){ if(document.hidden){ try{ chatSaveNow().catch(function(){}); }catch(e){} } });
 /* 保存した 鍵で そのまま つなぎなおす（ホストの 許可は そのまま 継続） */
@@ -7086,6 +7114,7 @@ async function resumeConnect(silent){
     S.chatRendered=-1;
     S.chatLoaded=false;
     try{ var got=await chatRestore(sk); if(!got) await unreadRestore(sk); }catch(e){}
+    try{ await draftRestore(sk); }catch(e){}   /* v552: 入力中だった文を戻す */
     try{ window.__zgBootMs=Date.now()-__t0; }catch(e){}   /* v154: トークの きろくを もどす（なければ 古い あずかり箱） */
     try{ await outRestore(); }catch(e){}   /* v150: 送信待ちを もどす */
     try{
@@ -11184,6 +11213,9 @@ $('#form-chat').addEventListener('submit',function(e){ e.preventDefault();
 /* v156: エンターは 改行（送信は 🐾 だけ）。入力に あわせて 高さを のばす（最大 5行ぶん） */
 function chatGrow(){ var i=$('#in-chat'); if(!i) return; i.style.height='auto'; i.style.height=Math.min(i.scrollHeight+2,124)+'px'; i.style.overflowY=(i.scrollHeight>122)?'auto':'hidden'; }
 $('#in-chat').addEventListener('input',chatGrow);
+$('#in-chat').addEventListener('input',draftSaveSoon);   /* v552: 下書きを残す */
+document.addEventListener('visibilitychange',function(){ if(document.hidden){ try{ draftSave(); }catch(e){} } });
+window.addEventListener('pagehide',function(){ try{ draftSave(); }catch(e){} });
 /* ===== 入力まわり(Line風) ===== */
 (function(){
   var inp=$('#in-chat'); if(!inp) return;
@@ -11456,6 +11488,7 @@ function submitChat(){
   var txt=(inp.value||'').replace(/\s+$/,'').slice(0,MAX_CHAT);
   if(!txt.trim()) return;
   inp.value=''; try{ chatGrow(); }catch(e){}
+  draftClear();   /* v552 */
   queueChat(txt,Date.now());
 }
 function sendAgain(msg){
@@ -11625,6 +11658,7 @@ function wipePairLocal(){
   discardPrivateWork();
   try{ pairClear(); }catch(e){}
   unreadClear(); chatClearStore(); hwmClear(); try{ swClearNotifs(); }catch(e){}
+  draftClear();   /* v552 */
   try{ localStorage.removeItem('mtp_since_v1'); localStorage.removeItem('mtp_cid_v1'); }catch(e){}
   try{ localStorage.removeItem(OUT_KEY); }catch(e){}
   try{ localStorage.removeItem('mtp_prof_v1'); PROF=profLoad(); try{ window.PROF=PROF; }catch(e){} }catch(e){}
