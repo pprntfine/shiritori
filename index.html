@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとしてインストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">新しい版に更新する</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンでアプリとして入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v552</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v553</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">相手を待っています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v552</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v553</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">名前</b> さんが入室を求めています</p>
         <p class="jr-fp">合図 <b id="jr-fp">----</b> ／ 相手の画面と同じかくににて確認</p>
@@ -2345,7 +2345,7 @@ var confirmedHostMessages=new WeakSet();
 function roomPeerAllowed(id){ return typeof id==='string'&&id.length>0&&id.length<=180&&S.me&&id!==S.me.id; }
 function pinnedJoin(req,m){ return !!(req&&req.did===m.from&&req.pub===m.pub); }
 var HANDSHAKE_TYPES=Object.freeze({join:1,in2:1,in3:1,deny:1,full:1,expired:1,ping:1,ob:1,nettest:1,'nettest-ok':1});
-var PRIV=Object.freeze({reaction:1,'reaction-ack':1,recall:1,'recall-ack':1,purge:1,'live-on':1,'live-see':1,'live-off':1,igh:1,chats:1,chat:1,photo:1,attachment:1,'photo-chunk':1,'photo-ref':1,'photo-again':1,'photo-miss':1,'photo-hq':1,'chat-open':1,'app-live':1,read:1,ack:1,prof:1,unpair:1,rtc2:1,rtc:1,'rtc-bye':1,'call-no':1,'rtc-sdp':1,'rtc-ice':1,'live-jpg':1,'live-ctl':1,'live-frame':1,'live-audio':1,call:1,'call-end':1});
+var PRIV=Object.freeze({reaction:1,'reaction-ack':1,recall:1,'recall-ack':1,purge:1,'live-on':1,'live-see':1,'live-off':1,igh:1,chats:1,chat:1,photo:1,attachment:1,'photo-chunk':1,'photo-ref':1,'photo-again':1,'photo-miss':1,'photo-hq':1,'chat-open':1,'app-live':1,read:1,ack:1,prof:1,unpair:1,rtc2:1,rtc:1,'rtc-bye':1,'call-no':1,'rtc-sdp':1,'rtc-ice':1,'live-jpg':1,'live-ctl':1,'live-frame':1,'live-audio':1,call:1,'call-end':1,rang:1});
 var outboundScopes=new WeakMap(), inboundScopes=new WeakMap();
 var privateTimers=new Set(), privateAborts=new Set(), photoScopes=Object.create(null);
 /* v452: つなぎなおした あとは 入室の ときの「あいず」が 作れない。かわりに 2人の 鍵から「かぎの しるし」を 作る（2台で 同じなら 同じ 鍵） */
@@ -2700,6 +2700,7 @@ var Net={
       inboundScopes.set(env,scope);
     }
     env.__legacy=legacy;
+    try{ if(!legacy&&(env.t==='chats'||env.t==='chat')) rangMapNote(body,env); }catch(e){}   /* v553 */
     env.__att=(att&&att.url)?String(att.url):'';
     /* v115: 番号は「同じものを 2回 うけとらない」ためだけに つかう。
        (以前は「前より 小さい 番号は すてる」だったため、相手が 入りなおすと 番号が 0 に もどり、全部 すてられていた) */
@@ -2868,7 +2869,7 @@ var Net={
     var NO_STORE={'photo-chunk':1,'photo-miss':1};
     /* v539: 既読（最初の1回）は即時路（MQTT）だけで済ませず、中継所にも残す。相手がアプリを閉じている間に読まれると、
        既読は MQTT で流れて消え、相手が開いても既読が付かなかった（「消して」の合図は残るので、既読が付かないまま消えていた。持ち主） */
-    var __keep=!!(env&&(ntfyKeep(env.t)||((env.t==='read'||env.t==='ack'||env.t==='chat-open')&&!env.__noStore)));   /* 受領証（最初の1回）も同じ。v540: 「開いた」の詳しい合図も残す（相手の記録＝アクセス履歴が抜けない） */
+    var __keep=!!(env&&(ntfyKeep(env.t)||((env.t==='read'||env.t==='ack'||env.t==='chat-open'||env.t==='rang')&&!env.__noStore)));   /* 受領証（最初の1回）も同じ。v540: 「開いた」の詳しい合図も残す（相手の記録＝アクセス履歴が抜けない） */
     if(!__keep&&fastOk) return true;
     /* v152: 受領証・ping は 即時路が きれて いる ときも 行列を 待たせない（うしろで 保存路へ）。
        以前は 1通ごとに 最大7秒 待って いたので、うしろの トークが「送信中」の まま つまっていた */
@@ -7480,6 +7481,80 @@ try{
   if(__pkb) __pkb.addEventListener('click',function(){ try{ localStorage.setItem(PEERKEEP_KEY,peerKeepOn()?'1':'0'); }catch(e){} paintPeerKeepBtn(); });
 }catch(e){}
 /* v324: 「ひらいた だけ」か「メッセージも おくった」かを 記録に のこす（ホストの 端末だけ） */
+/* v553: メッセージの時刻（ホストだけ。持ち主: 送った時刻と、iPhone で通知が鳴った時刻を見たい。iPhone 側には見せない）。
+   時刻と番号（mid）だけを残し、文は残さない。out＝あなたが送った（at 送信・rg iPhone で鳴った・ak 届いた・rd 既読）、in＝相手が送った（at 送信・rv 受け取り） */
+var MT_KEY='zg_msg_times';
+function mtLoad(){ try{ var l=JSON.parse(localStorage.getItem(MT_KEY)||'[]'); return Array.isArray(l)?l.filter(function(e){ return e&&typeof e==='object'&&typeof e.m==='string'&&e.m; }).slice(-200):[]; }catch(e){ return []; } }
+function mtSave(l){ try{ localStorage.setItem(MT_KEY,JSON.stringify(l.slice(-200))); }catch(e){} }
+function mtOk(t){ return typeof t==='number'&&isFinite(t)&&t>0&&Math.abs(Date.now()-t)<30*86400000; }
+function mtAdd(d,mid,at,extra){
+  try{ if(S.isHost!==true||!mid) return; var l=mtLoad(); for(var i=l.length-1;i>=0;i--){ if(l[i].m===mid&&l[i].d===d) return; }
+    var e={d:d,m:String(mid).slice(0,64),at:mtOk(at)?at:Date.now()}; if(extra) Object.assign(e,extra); l.push(e); mtSave(l); }catch(e){}
+}
+function mtMark(mid,k,t){
+  try{ if(S.isHost!==true||!mid||!mtOk(t)) return; var l=mtLoad(); for(var i=l.length-1;i>=0;i--){ if(l[i].m===mid&&l[i].d==='out'){ if(!l[i][k]){ l[i][k]=t; mtSave(l); } return; } } }catch(e){}
+}
+/* ゲスト（iPhone）: 通知（sw.js）が鳴った時刻を、どのメッセージか（暗号文の末尾32文字 → mid）と合わせてホストへ知らせる */
+var RG_MAP='zg_rg_map', RG_DONE='zg_rg_done';
+function rangMapNote(body,env){
+  try{
+    if(S.isHost!==false||typeof body!=='string') return;
+    var b=body.replace(/^zgm:\d+:/,''); if(!/^[A-Za-z0-9_-]{40,}$/.test(b)) return;
+    var ids=(Array.isArray(env.items)?env.items:[env]).map(function(it){ return it&&it.mid; }).filter(validDeletionId).slice(0,16); if(!ids.length) return;
+    var mp={}; try{ mp=JSON.parse(localStorage.getItem(RG_MAP)||'{}')||{}; }catch(e){ mp={}; }
+    var tag=b.slice(-32); if(mp[tag]) return; mp[tag]={i:ids,t:Date.now()};
+    var ks=Object.keys(mp); if(ks.length>120){ ks.sort(function(x,y){ return (mp[x].t||0)-(mp[y].t||0); }).slice(0,ks.length-120).forEach(function(k){ delete mp[k]; }); }
+    localStorage.setItem(RG_MAP,JSON.stringify(mp));
+  }catch(e){}
+}
+var rangBusy=false;
+async function rangFlush(){
+  if(rangBusy) return; rangBusy=true;
+  try{
+    if(S.isHost!==false||!(S.paired||S.linked)||!privateReady()||!window.caches) return;
+    var c=await caches.open('zg-count'), o=await c.match('rg'); if(!o) return;
+    var list=(await o.text()).split(',').filter(function(x){ return /^[A-Za-z0-9_-]{32}\|\d+$/.test(x); }); if(!list.length) return;
+    var mp={}, done=[]; try{ mp=JSON.parse(localStorage.getItem(RG_MAP)||'{}')||{}; done=JSON.parse(localStorage.getItem(RG_DONE)||'[]')||[]; }catch(e){}
+    var items=[], tags=[];
+    list.forEach(function(x){ var p=x.split('|'), tag=p[0], at=+p[1]; if(done.indexOf(tag)>=0||!mp[tag]||!Array.isArray(mp[tag].i)) return; mp[tag].i.forEach(function(mid){ items.push({m:mid,a:at}); }); tags.push(tag); });
+    if(!items.length) return;
+    var ok=await Net.send({t:'rang',items:items.slice(0,40)});
+    if(ok===false) return;
+    done=done.concat(tags).slice(-150); try{ localStorage.setItem(RG_DONE,JSON.stringify(done)); }catch(e){}
+  }catch(e){}
+  finally{ rangBusy=false; }
+}
+setInterval(function(){ try{ rangFlush(); }catch(e){} },15000);
+setTimeout(function(){ try{ rangFlush(); }catch(e){} },6000);
+document.addEventListener('visibilitychange',function(){ if(!document.hidden) setTimeout(function(){ try{ rangFlush(); }catch(e){} },4000); });
+function mtHMS(t){ var d=new Date(t); return ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2)+':'+('0'+d.getSeconds()).slice(-2); }
+function mtGap(a,b){ var s=Math.round((b-a)/1000); if(s<0) return '（時計のずれ '+(-s)+'秒）'; if(s<90) return '（'+s+'秒後）'; if(s<5400) return '（'+Math.round(s/60)+'分後）'; return '（'+Math.round(s/3600)+'時間後）'; }
+function mtRender(){
+  try{
+    var b=$('#mem-mt-list'); if(!b) return;
+    var l=mtLoad().slice().sort(function(x,y){ return (y.at||0)-(x.at||0); }), E=recordEscape, h='';
+    var dayOf=function(t){ var d=new Date(t), dk=d.toDateString(); return dk===new Date().toDateString()?'今日':(dk===new Date(Date.now()-86400000).toDateString()?'昨日':((d.getMonth()+1)+'月'+d.getDate()+'日')); };
+    var outs=l.filter(function(e){ return e.d==='out'; }).slice(0,15), ins=l.filter(function(e){ return e.d==='in'; }).slice(0,15);
+    h+='<div class="zl-sec">あなたが送ったメッセージ</div>';
+    if(!outs.length) h+='<div class="zl-empty">まだ記録はありません</div>';
+    var lastDay='';
+    outs.forEach(function(e){
+      var dn=dayOf(e.at); if(dn!==lastDay){ lastDay=dn; h+='<div class="zl-day">'+dn+'</div>'; }
+      var sub=e.rg?('相手のスマホで通知が鳴った '+mtHMS(e.rg)+mtGap(e.at,e.rg)):(e.rd?'通知は鳴っていません（相手が画面を見ていた時など）':'鳴った時刻はまだ届いていません（相手がアプリを開くと届きます）');
+      var chips=[]; if(e.ak) chips.push('<i class="c-msg">届いた '+mtHMS(e.ak)+'</i>'); if(e.rd) chips.push('<i class="c-ok">✓ 既読 '+mtHMS(e.rd)+'</i>');
+      h+='<div class="zl-it k-'+(e.rg?'open':'guess')+'"><div class="zl-tm">'+mtHMS(e.at)+'</div><div class="zl-bd"><div class="zl-tt">送信</div><div class="zl-sub">'+E(sub)+'</div>'+(chips.length?'<div class="zl-ch">'+chips.join('')+'</div>':'')+'</div></div>';
+    });
+    h+='<div class="zl-sec">相手が送ったメッセージ</div>';
+    if(!ins.length) h+='<div class="zl-empty">まだ記録はありません</div>';
+    lastDay='';
+    ins.forEach(function(e){
+      var dn=dayOf(e.at); if(dn!==lastDay){ lastDay=dn; h+='<div class="zl-day">'+dn+'</div>'; }
+      h+='<div class="zl-it k-msg"><div class="zl-tm">'+mtHMS(e.at)+'</div><div class="zl-bd"><div class="zl-tt">相手が送信</div>'+(e.rv?'<div class="zl-sub">'+E('この端末で受け取った '+mtHMS(e.rv)+mtGap(e.at,e.rv))+'</div>':'')+'</div></div>';
+    });
+    h+='<div class="zl-ft">時刻はそれぞれのスマホの時計です（数秒ずれることがあります）。この記録はこの端末だけに保存され、相手には見えません。最新15件ずつ。</div>';
+    b.innerHTML=h;
+  }catch(e){}
+}
 function plogNoteMsg(at,mid,recvAt){
   /* v325: 「おくった 時刻」(あいての 時計) と「うけとった 時刻」(この 端末の 時計) を 両方 のこす。
      どちらも かためず そのまま のこすので、時計の ずれや おくれが あとから 分かる。
@@ -7663,7 +7738,7 @@ function plogRender(){
     b.innerHTML=h;
   }catch(e){}
 }
-setInterval(function(){ try{ if(memBox) plogRender(); }catch(e){} },3000);   /* v186: 裏画面を 出している あいだは 履歴を 新しくする */
+setInterval(function(){ try{ if(memBox){ plogRender(); mtRender(); } }catch(e){} },3000);   /* v186: 裏画面を 出している あいだは 履歴を 新しくする */
 var lastLiveSent=0;
 function sendLive(){   /* v183: あいてに「いきてる」しるしを はなす（25秒に 1かい） */
   if(!(S.paired||S.linked)) return;
@@ -7710,10 +7785,11 @@ if(brand) brand.addEventListener('click',function(){
   memBox.innerHTML='<div class="zl-hd"><b>相手のアクセス履歴</b><button type="button" class="zl-x" aria-label="閉じる">×</button></div>'
  +'<div id="mem-line" class="zl-st"></div>'
  +'<div id="mem-plog-list" class="zl-list"></div>'
+ +'<div class="zl-hd2">メッセージの時刻</div><div id="mem-mt-list" class="zl-list"></div>'
  +'<details id="mem-det" class="zl-memo"><summary>接続のメモ（この端末が起動してから）</summary><div id="mem-list"></div></details>';
   document.body.appendChild(memBox);
   memBox.querySelector('.zl-x').addEventListener('click',function(){ if(memBox){ memBox.remove(); memBox=null; } });
-  renderMem(); plogRender();
+  renderMem(); plogRender(); mtRender();
 });
 function startWatch(){
   if(S.watchTimer) return;
@@ -11350,6 +11426,7 @@ function queueChat(txt,at){
   S.outbox.push(item);
   outSave();
   var msg={mid:item.mid,from:S.me.id,text:txt,at:item.at,sent:false,acked:false,delivered:false,tries:0,n:0,uid:String(++UID)};
+  try{ mtAdd('out',item.mid,item.at); }catch(e){}   /* v553 */
   try{ ringBell(); }catch(e){}
   S.chat.push(msg);
   item.msg=msg;
@@ -11381,7 +11458,8 @@ function exactReceipt(ns,read,ids,ps){
     var touched=S.chat.filter(function(m){return m&&!m.sys&&m.from===S.me.id&&(receivedIds.has(m.mid)||set.has(m.n)||(m.pid&&(m.photo||m.file)&&pids.has(m.pid))||(Array.isArray(m.oldN)&&m.oldN.some(function(x){return set.has(x);})));});
     if(!touched.length)return true;
     var old=touched.map(function(m){return {m:m,acked:m.acked,peerAck:m.peerAck,delivered:m.delivered,read:m.read,rad:m.rad};});
-    touched.forEach(function(m){m.acked=true;m.peerAck=true;m.delivered=true;if(m.sent!==true){m.sent=true;if(!m.sentAt)m.sentAt=Date.now();}if(read){m.read=true;markReadAt(m);}});   /* v527: 相手が受け取った＝送れている。送信の返事だけ遅れて失敗に見えると、送信待ちから消えたのに「送信中…」のまま残っていた */
+    touched.forEach(function(m){m.acked=true;m.peerAck=true;m.delivered=true;if(m.sent!==true){m.sent=true;if(!m.sentAt)m.sentAt=Date.now();}if(read){m.read=true;markReadAt(m);}});
+    try{ var __mt=Date.now(); touched.forEach(function(m){ if(m&&m.mid){ mtMark(m.mid,'ak',__mt); if(read) mtMark(m.mid,'rd',__mt); } }); }catch(e){}   /* v553 */   /* v527: 相手が受け取った＝送れている。送信の返事だけ遅れて失敗に見えると、送信待ちから消えたのに「送信中…」のまま残っていた */
     try{await chatSaveNow();if(!privateCurrent(scope))throw new Error('ペア変更');}
     catch(e){old.forEach(function(x){Object.keys(x).forEach(function(k){if(k!=='m')x.m[k]=x[k];});});storageWarn('receipt','受領の記録を保存できません。送信待ちと本文を残しています。');return false;}
     // A crash before this point leaves the queue intact; a crash after it has durable history.
@@ -12044,6 +12122,10 @@ Net.onMsg=async function(m){
       if(m.from===S.me.id) break;
       receivePurge(m);
       break;
+    case 'rang':   /* v553: 相手のスマホで通知が鳴った時刻（ホストだけが記録する） */
+      if(S.isHost!==true||m.from===S.me.id) break;
+      try{ (Array.isArray(m.items)?m.items:[]).slice(0,40).forEach(function(it){ if(it&&validDeletionId(it.m)&&typeof it.a==='number') mtMark(it.m,'rg',it.a); }); }catch(e){}
+      break;
     case 'cl-clear':   /* v534 */
       if(m.from===S.me.id) break;
       receiveClClear(m);
@@ -12353,6 +12435,7 @@ case 'ack':
           added++;
           /* v325: まとめて とどいた ぶんも 1通ずつ 履歴に のこす（おくった 時刻＋うけとった 時刻） */
           try{ plogNoteMsg((typeof it.at==='number'?it.at:Date.now()), validDeletionId(it.mid)?it.mid:'', Date.now()); }catch(e){}
+          try{ if(validDeletionId(it.mid)) mtAdd('in',it.mid,(typeof it.at==='number'?it.at:Date.now()),{rv:Date.now()}); }catch(e){}   /* v553 */
         }
         try{ await chatSaveNow(); }catch(e){ return false; }
         if(!privateIncoming(m)) return false;
@@ -15490,6 +15573,8 @@ html body #mem-box{position:fixed!important;left:12px!important;right:12px!impor
 #mem-box .zl-num small{font-size:13px;margin-left:2px}
 #mem-box .zl-sum b{display:block;font-size:14px}
 #mem-box .zl-sum span{display:block;font-size:12.5px;color:#6B6585;margin-top:2px}
+#mem-box .zl-hd2{margin:18px 18px 2px;padding-top:12px;border-top:2px solid #EEEAF8;font-size:16px;font-weight:800;color:#2A2338}
+#mem-box .zl-sec{margin:12px 0 2px;font-size:13px;font-weight:800;color:#6D4DF2}
 #mem-box .zl-day{margin:14px 0 4px;font-size:12px;font-weight:800;color:#7A72A0;letter-spacing:.08em}
 #mem-box .zl-it{display:flex;gap:12px;padding:10px 12px;margin:6px 0;border-radius:14px;background:#FAF9FE;border:1px solid #EEEAF8;border-left:4px solid #6D4DF2}
 #mem-box .zl-it.k-guess{border-left-color:#EAB308}

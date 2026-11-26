@@ -1,4 +1,4 @@
-# とー君ニュース（旧 雑学王 / zatsugakuou）引き継ぎメモ  ― 現在 v552
+# とー君ニュース（旧 雑学王 / zatsugakuou）引き継ぎメモ  ― 現在 v553
 
 ## これは何か
 見た目は「とー君ニュース」（ニュースアプリ。v460 までは「雑学クイズ」アプリ）。中身は **2人専用の暗号化チャット**（メッセージ・写真・ライブ映像・電話）。
@@ -225,6 +225,13 @@
   直し: 下書き `draftSave`（入力の0.3秒後・裏に回った時・pagehide）を2人の鍵 `S.sessKey` で AES-GCM 暗号化して localStorage `zg_draft1` に保存、部屋の復元（`chatRestore` の後）で `draftRestore(sk)` が入力欄が空なら戻す。
   送信（`submitChat`）とペア解除（`wipePairLocal`）で `draftClear`。試験 `tools/e2e/draft_keep.js`（1台。v551: 読み込み直すと空 → v552: 残る・平文は保存されない・送ったら消える）。
   emoji_input・emoji_tap_back・voice_input・relay_basic・send_status・privacy_shield・refresh_button・cols_sync 通過。**上げた人の画面だけ変わる**。
+- v553 「Android が送った時刻と iPhone で通知が鳴った時刻（既読ではない）、iPhone が送った時刻の一覧を、ホスト（Android）だけで見られるように。iPhone 側には見せない」（持ち主）。
+  場所: アクセス履歴（トーク画面のタイトル5回タップ、ホストだけ）の下に「メッセージの時刻」（`#mem-mt-list`、`mtRender`、3秒ごとに更新）。「あなたが送った」（送信・鳴った・届いた・既読）と「相手が送った」（送信・受け取った）を最新15件ずつ。
+  記録はホストだけ: localStorage `zg_msg_times`（`mtAdd`/`mtMark`、時刻と mid だけ・文は残さない）。送信は `queueChat`、届いた/既読は `exactReceipt`、相手の送信は chats の受け取り（`plogNoteMsg` の横）。
+  鳴った時刻: iPhone の sw.js が通知を出した時に cache `zg-count` の `rg` に「暗号文の末尾32文字|時刻」（60件）。iPhone の画面は受け取った暗号文の末尾と mid を `rangMapNote`（`Net.process` の中、localStorage `zg_rg_map`）で対応づけ、
+  `rangFlush`（15秒ごと・開いた時）で新しい合図 `rang`（`{items:[{m:mid,a:時刻}]}`、PRIV に追加、`__keep` で中継所に残す）をホストへ。ホストだけが受け取って `rg` に記録。**鳴った時刻がホストに届くのは、iPhone の画面が動いた時（アプリを開いた時など）**。
+  画面で見ている時は通知が鳴らないので「通知は鳴っていません」。時刻はそれぞれのスマホの時計。試験 `tools/e2e/msg_times.js`（ゲストには記録も画面も無い）。sw_dup_test・sw_badge_test・sw_idb_hang_test・relay_basic・send_status・notify_dup・ios_bg_notify・read_resend・log_while_closed 通過。
+  **鳴った時刻を知らせるのは iPhone 側（sw.js と画面）、表示はホスト側。2人とも上げると効く**。
 - Worker に「1日に保存する数のブレーキ」`SOFT_STORE`（既定8000件/日、`env.SOFT_STORE` で変えられる）を作成済み・**未公開。2026-11-19 持ち主「いったんはブレーキはいらない」→ 既定は `SOFT_STORE = 0`（無効）にした**。使う時は 8000 などにして Worker を書き込む（説明済みのデメリット: かかった日は、相手が閉じている間のメッセージが通知か2人同時に開いた時の送り直し〈最大約10分〉で届く。送った側には送信済みと出る）。超えた分は保存せず流すだけ（中継所ごと止まるより良い）。数は kv `cnt:日付` に「総数|保存数」。手元の wrangler で上限3 → 6通中3通だけ保存を確認。
 
 ## 構造のメモ（行番号は目安。検索で探すこと）
