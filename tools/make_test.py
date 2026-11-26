@@ -8,7 +8,7 @@ src, out = sys.argv[1], sys.argv[2]
 os.makedirs(out, exist_ok=True)
 NAMES = ['S','Net','Relay','Fast','FastH','FastE','renderChat','setTab','show','queueChat','relaySendBase','relayHas','relayAnyBase',
  'privateReady','privateScope','outSave','flushOutbox','newChatId','sasLabel','psrvRaw','metaText','sendPhoto',
- 'chatSaveNow','maybeSendRead','chatOnScreen','privateReady','vanishSweep','callLogAdd','Caster','News','appNav','plogAdd','peerChatOpen','plogNoteMsg','plogMarkRead','unseal',
+ 'chatSaveNow','maybeSendRead','chatOnScreen','drainInbox','consumeInbox','privateReady','vanishSweep','callLogAdd','Caster','News','appNav','plogAdd','peerChatOpen','plogNoteMsg','plogMarkRead','unseal',
  'deletionRemember','deletionLoad','syncDeletions','purgeSend','purgePending']
 inject = 'window.__t={};' + ''.join("try{window.__t.%s=%s;}catch(e){}" % (n, n) for n in NAMES)
 s = open(src, encoding='utf-8').read()

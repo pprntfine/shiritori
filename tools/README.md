@@ -45,6 +45,7 @@ node tools/sw_badge_test.mjs                   # sw.js の通知の小さいア�
 | sw_dup_test.mjs | 同じメッセージの通知が2回届いても2回目は鳴らさない（`node tools/sw_dup_test.mjs`）（v537） |
 | sw_idb_hang_test.mjs | sw.js の保存が止まっても2秒で通知が出る（`node tools/sw_idb_hang_test.mjs`）（v549） |
 | e2e/hero_badge.js | トップの「とー君ニュース」の横の足跡（トップ・裏・閉じて開いた時）（`bash tools/run_e2e.sh tools/e2e/hero_badge.js`、`ROLE=guest` も）（v550） |
+| e2e/notify_vanish.js | 裏で画面が生きていても通知を閉じない・トークを開いたら閉じる（`bash tools/run_e2e.sh tools/e2e/notify_vanish.js`）（v551） |
 | e2e/ios_bg_notify.js | iPhone（ゲスト）が裏に回った直後・見ている時・通知サーバーへの1回目が失敗した時の通知（`bash tools/run_e2e.sh tools/e2e/ios_bg_notify.js`）（v548/v549） |
 | e2e/call_no_stale_ring.js | 閉じていた間の電話が、あとで開いた時に鳴らない |
 | e2e/push_once.js | 相手が閉じている間、送り直しが続いても通知は1通につき1回（v493） |

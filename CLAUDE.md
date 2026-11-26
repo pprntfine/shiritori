@@ -1,4 +1,4 @@
-# とー君ニュース（旧 雑学王 / zatsugakuou）引き継ぎメモ  ― 現在 v550
+# とー君ニュース（旧 雑学王 / zatsugakuou）引き継ぎメモ  ― 現在 v551
 
 ## これは何か
 見た目は「とー君ニュース」（ニュースアプリ。v460 までは「雑学クイズ」アプリ）。中身は **2人専用の暗号化チャット**（メッセージ・写真・ライブ映像・電話）。
@@ -211,6 +211,10 @@
   原因: 開き直した時（`7083` 付近の部屋の復元）は `S.phase='play'` にするが画面はトップのまま。足跡 `#hero-badge` は `S.phase!=='play'` の時だけ出すので出なかった。
   直し: `playShown()`（トーク画面 `screens.play` が本当に出ているか）で判定。写真の受け取りの「見ている」判定（`S.phase==='play'&&S.tab==='chat'`）も `chatOnScreen()` に（トップなのに既読扱いになり得た）。
   ROLE=guest も通過。relay_basic・send_status・photo_receipt・notify_dup・notify_on_open・privacy_shield 通過。**上げた人の画面だけ変わる**。
+- v551 「Android へのメッセージなどの通知が一瞬点灯して消える」（持ち主）。原因: 電池を「制限なし」にしたので、裏に回っても画面の中身が生きている。sw.js が通知（data.zgm＝暗号文）を出すと、
+  画面の `drainInbox`（裏でも1.2秒ごと）がそれを取り込んで `n.close()` していた。→ 閉じるのは `chatOnScreen()` の時だけ（取り込みは今までどおり）。見ている時は重複（取り込み済み）でも閉じる（`saveFailed` の物は除く）。
+  再現 `tools/e2e/notify_vanish.js`（sw.js の通知を偽物で置く。`ServiceWorkerRegistration.prototype.getNotifications` を差し替え、中継所を5秒遅らせて通知を先に届ける。make_test に `drainInbox`・`consumeInbox` を出した）: v550 は裏で閉じる → v551 は残り、トークを開いたら閉じる。
+  relay_basic・send_status・notify_dup・notify_on_open・notify_viewing・hero_badge・read_on_open 通過。**受け取る側（持ち主）が上げれば効く**。
 - Worker に「1日に保存する数のブレーキ」`SOFT_STORE`（既定8000件/日、`env.SOFT_STORE` で変えられる）を作成済み・**未公開。2026-11-19 持ち主「いったんはブレーキはいらない」→ 既定は `SOFT_STORE = 0`（無効）にした**。使う時は 8000 などにして Worker を書き込む（説明済みのデメリット: かかった日は、相手が閉じている間のメッセージが通知か2人同時に開いた時の送り直し〈最大約10分〉で届く。送った側には送信済みと出る）。超えた分は保存せず流すだけ（中継所ごと止まるより良い）。数は kv `cnt:日付` に「総数|保存数」。手元の wrangler で上限3 → 6通中3通だけ保存を確認。
 
 ## 構造のメモ（行番号は目安。検索で探すこと）

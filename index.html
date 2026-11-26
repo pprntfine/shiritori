@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとしてインストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">新しい版に更新する</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンでアプリとして入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v550</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v551</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">相手を待っています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v550</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v551</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">名前</b> さんが入室を求めています</p>
         <p class="jr-fp">合図 <b id="jr-fp">----</b> ／ 相手の画面と同じかくににて確認</p>
@@ -13196,7 +13196,11 @@ function drainInbox(){
     try{
       var rr=swReg||((navigator.serviceWorker&&navigator.serviceWorker.getRegistration)?await navigator.serviceWorker.getRegistration():null);
       if(rr&&rr.getNotifications){var ns=await rr.getNotifications();for(var i=0;i<ns.length;i++){
-        var n=ns[i];if(n&&n.data&&n.data.zgm&&await consumeInbox(n.data.zgm))n.close();
+        /* v551: 通知を閉じるのはトーク画面を見ている時だけ。裏で画面の中身が生きている時（Android の電池「制限なし」）に取り込んで閉じていたので、
+           通知が一瞬点いて消えていた（持ち主）。見ていない時は取り込むだけで通知は残す。見ている時は、取り込み済み（重複）でも閉じる（保存に失敗した物は除く） */
+        var n=ns[i];if(!(n&&n.data&&n.data.zgm))continue;
+        var __ok=await consumeInbox(n.data.zgm);
+        if(chatOnScreen()&&(__ok||!n.data.saveFailed))n.close();
       }}
     }catch(e){S.inboxError=e.name||'通知取込失敗';}
     for(var entry of [['zg-sw-inbox','pin'],['zg-inbox','m']]){
