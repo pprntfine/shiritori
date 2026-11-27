@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとしてインストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">新しい版に更新する</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンでアプリとして入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v557</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v558</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">相手を待っています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v557</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v558</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">名前</b> さんが入室を求めています</p>
         <p class="jr-fp">合図 <b id="jr-fp">----</b> ／ 相手の画面と同じかくににて確認</p>
@@ -11591,10 +11591,41 @@ function submitChat(){
   var inp=$('#in-chat');
   var txt=(inp.value||'').replace(/\s+$/,'').slice(0,MAX_CHAT);
   if(!txt.trim()) return;
-  inp.value=''; try{ chatGrow(); }catch(e){}
+  /* v558: Android のキーボード（Gboard など）は、入力欄をプログラムで空にしても「最後に打っていた区間」を覚えたままで、
+     次の1文字を打つとその区間を一緒に戻してしまう（持ち主: 次のメッセージに最後に入力した区間が残る時がある）。
+     ① 入力欄に入ったままなら、キーボードに伝わる消し方（全部選んで削除）で消す ② それでも次の1文字で前の区間が戻ったら、その区間を取り除く */
+  var __seg=String(window.__zgLastSeg||'');
+  try{ if(document.activeElement===inp&&document.execCommand){ inp.focus(); inp.select(); document.execCommand('delete'); } }catch(e){}
+  if(inp.value) inp.value='';
+  try{ chatGrow(); }catch(e){}
   draftClear();   /* v552 */
+  try{ window.__zgSentGuard=(__seg&&__seg.length<=40&&txt.slice(-__seg.length)===__seg)?{seg:__seg,at:Date.now()}:null; window.__zgLastSeg=''; }catch(e){}
   queueChat(txt,Date.now());
 }
+/* v558: 最後に変換していた区間を覚える／送った直後の最初の入力で、前の区間が先頭に戻っていたら取り除く */
+(function(){
+  var inp=$('#in-chat'); if(!inp) return;
+  inp.addEventListener('compositionupdate',function(e){ try{ if(e&&typeof e.data==='string') window.__zgLastSeg=e.data; }catch(_){} });
+  inp.addEventListener('compositionend',function(e){ try{ if(e&&typeof e.data==='string'&&e.data) window.__zgLastSeg=e.data; }catch(_){} });
+  inp.addEventListener('input',function(e){
+    try{
+      var g=window.__zgSentGuard; if(!g) return;
+      window.__zgSentGuard=null;   /* 送った後の最初の入力だけを見る */
+      if(Date.now()-g.at>15000||window.__zgVoiceOn) return;
+      var it=String((e&&e.inputType)||'');
+      if(it&&!/Composition|insertText|insertReplacementText/.test(it)) return;   /* 貼り付け・絵文字ボタンなどは見ない */
+      var v=String(inp.value||'');
+      /* 1回打っただけで「前の区間＋新しい文字」になった＝キーボードが前の区間を戻した */
+      if(v.length>g.seg.length&&v.indexOf(g.seg)===0){
+        var rest=v.slice(g.seg.length);
+        inp.value=rest;
+        /* キーボードの覚えている区間も捨てさせる（入力欄から一度外して、すぐ戻す） */
+        try{ inp.blur(); inp.focus({preventScroll:true}); }catch(_){}
+        try{ inp.setSelectionRange(rest.length,rest.length); chatGrow(); }catch(_){}
+      }
+    }catch(_){}
+  });
+})();
 function sendAgain(msg){
   if(!msg||msg.acked||msg.read||!privateReady())return;
   msg.lastTry=0;
