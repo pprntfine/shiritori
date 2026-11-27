@@ -1,10 +1,12 @@
 // v553: ホスト（Android）だけが見られる「メッセージの時刻」。① あなたが送った時刻と、相手（iPhone）のスマホで通知が鳴った時刻（sw.js が残す 'rg' → 相手の画面が 'rang' で知らせる）
 //  ② 相手が送った時刻。③ ゲスト側には記録も表示も無い。アクセス履歴（タイトル5回）に出る。2台・中継所。
+// v554: 2つの列（左＝この端末・右＝相手）。列の名前は端末の種類（相手の種類は app-live の os）。
 // 使い方: bash tools/run_e2e.sh tools/e2e/msg_times.js
 const {chromium}=require('playwright');
 const DIR=process.argv[2];const SK=Buffer.alloc(32,9).toString('base64'),TOPIC='gskr3s-'+Date.now().toString(16).padEnd(24,'b');const PS='https://zatsugaku-push.pprnt908.workers.dev';
 const pushes=[];
-async function dev(b,me,peer,host,count){const ctx=await b.newContext({viewport:{width:390,height:844},deviceScaleFactor:2});
+const UA={A:'Mozilla/5.0 (Linux; Android 15; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0 Mobile Safari/537.36',B:'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1'};
+async function dev(b,me,peer,host,count){const ctx=await b.newContext({viewport:{width:390,height:844},deviceScaleFactor:2,userAgent:host?UA.A:UA.B});
  await ctx.addInitScript(({me,peer,host,SK,TOPIC})=>{ if(!localStorage.getItem('mtp_id_v1')){ localStorage.setItem('mtp_id_v1',me); localStorage.setItem('mtp_pair_v1',JSON.stringify({sid:'p',h:host?1:0,peer,peerName:'あいて',topic:TOPIC,rk:SK,sk:SK,at:Date.now(),exp:Date.now()+9e9})); }
    window.__vis='visible'; Object.defineProperty(document,'visibilityState',{get:()=>window.__vis,configurable:true}); Object.defineProperty(document,'hidden',{get:()=>window.__vis!=='visible',configurable:true}); },{me,peer,host,SK,TOPIC});
  await ctx.route('**/*',async r=>{const u=r.request().url();
@@ -41,5 +43,6 @@ async function dev(b,me,peer,host,count){const ctx=await b.newContext({viewport:
  const text=await A.pg.evaluate(()=>{ const m=document.getElementById('mem-mt-list'); return m?m.innerText:''; });
  const res={out,inn,guestStored:lb.mt,guestBox:lb.box,text:text.slice(0,300)};
  console.log(JSON.stringify(res));
- const ok=!!body&&out&&out.rg===rangAt&&!!inn&&inn.rv&&!lb.mt&&!lb.box&&/鳴った/.test(text);
+ const rows=await A.pg.evaluate(()=>document.querySelectorAll('#mem-mt-list .mt-row').length);
+ const ok=!!body&&out&&out.rg===rangAt&&!!inn&&inn.rv&&!lb.mt&&!lb.box&&/鳴った/.test(text)&&rows===2&&/Android（あなた）/.test(text)&&/iPhone（相手）/.test(text);
  console.log(ok?'OK: ホストだけに送信時刻と鳴った時刻が出る':'NG'); await b.close(); process.exit(ok?0:1);})();

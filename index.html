@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとしてインストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">新しい版に更新する</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンでアプリとして入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v553</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v554</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">相手を待っています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v553</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v554</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">名前</b> さんが入室を求めています</p>
         <p class="jr-fp">合図 <b id="jr-fp">----</b> ／ 相手の画面と同じかくににて確認</p>
@@ -7529,29 +7529,35 @@ setTimeout(function(){ try{ rangFlush(); }catch(e){} },6000);
 document.addEventListener('visibilitychange',function(){ if(!document.hidden) setTimeout(function(){ try{ rangFlush(); }catch(e){} },4000); });
 function mtHMS(t){ var d=new Date(t); return ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2)+':'+('0'+d.getSeconds()).slice(-2); }
 function mtGap(a,b){ var s=Math.round((b-a)/1000); if(s<0) return '（時計のずれ '+(-s)+'秒）'; if(s<90) return '（'+s+'秒後）'; if(s<5400) return '（'+Math.round(s/60)+'分後）'; return '（'+Math.round(s/3600)+'時間後）'; }
+/* v554: 2つの列（左＝この端末、右＝相手）に並べる（持ち主: Android 側・iPhone 側を同時に見やすく）。1行＝1通 */
+function myOS(){ try{ var ua=navigator.userAgent||''; if(/iPhone|iPad|iPod/.test(ua)||(/Macintosh/.test(ua)&&(navigator.maxTouchPoints||0)>1)) return 'iPhone'; if(/Android/.test(ua)) return 'Android'; return 'パソコン'; }catch(e){ return ''; } }
+function peerOS(){ try{ var o=localStorage.getItem('zg_peer_os')||''; return /^(iPhone|Android|パソコン)$/.test(o)?o:''; }catch(e){ return ''; } }
 function mtRender(){
   try{
     var b=$('#mem-mt-list'); if(!b) return;
-    var l=mtLoad().slice().sort(function(x,y){ return (y.at||0)-(x.at||0); }), E=recordEscape, h='';
+    var l=mtLoad().slice().sort(function(x,y){ return (y.at||0)-(x.at||0); }).slice(0,20), E=recordEscape, h='';
     var dayOf=function(t){ var d=new Date(t), dk=d.toDateString(); return dk===new Date().toDateString()?'今日':(dk===new Date(Date.now()-86400000).toDateString()?'昨日':((d.getMonth()+1)+'月'+d.getDate()+'日')); };
-    var outs=l.filter(function(e){ return e.d==='out'; }).slice(0,15), ins=l.filter(function(e){ return e.d==='in'; }).slice(0,15);
-    h+='<div class="zl-sec">あなたが送ったメッセージ</div>';
-    if(!outs.length) h+='<div class="zl-empty">まだ記録はありません</div>';
+    var me=myOS(), pe=peerOS();
+    h+='<div class="mt-head"><div class="mt-hc me">'+E(me||'あなた')+'<small>（あなた）</small></div><div class="mt-hc peer">'+E(pe||'相手')+'<small>'+(pe?'（相手）':'')+'</small></div></div>';
+    if(!l.length) h+='<div class="zl-empty">まだ記録はありません</div>';
+    var cell=function(cls,lab,tm,note,extra){ return '<div class="mt-c '+cls+'"><div class="mt-l">'+lab+'</div>'+(tm?'<div class="mt-t">'+tm+'</div>':'')+(note?'<div class="mt-n">'+E(note)+'</div>':'')+(extra||'')+'</div>'; };
     var lastDay='';
-    outs.forEach(function(e){
+    l.forEach(function(e){
       var dn=dayOf(e.at); if(dn!==lastDay){ lastDay=dn; h+='<div class="zl-day">'+dn+'</div>'; }
-      var sub=e.rg?('相手のスマホで通知が鳴った '+mtHMS(e.rg)+mtGap(e.at,e.rg)):(e.rd?'通知は鳴っていません（相手が画面を見ていた時など）':'鳴った時刻はまだ届いていません（相手がアプリを開くと届きます）');
-      var chips=[]; if(e.ak) chips.push('<i class="c-msg">届いた '+mtHMS(e.ak)+'</i>'); if(e.rd) chips.push('<i class="c-ok">✓ 既読 '+mtHMS(e.rd)+'</i>');
-      h+='<div class="zl-it k-'+(e.rg?'open':'guess')+'"><div class="zl-tm">'+mtHMS(e.at)+'</div><div class="zl-bd"><div class="zl-tt">送信</div><div class="zl-sub">'+E(sub)+'</div>'+(chips.length?'<div class="zl-ch">'+chips.join('')+'</div>':'')+'</div></div>';
+      var L='',R='';
+      if(e.d==='out'){
+        L=cell('mt-snd','送信 →',mtHMS(e.at),'',e.ak?'<div class="mt-s">相手に届いた '+mtHMS(e.ak)+'</div>':'');
+        var rx=e.rd?'<div class="mt-s ok">✓ 既読 '+mtHMS(e.rd)+'</div>':'';
+        if(e.rg) R=cell('mt-rng','🔔 通知が鳴った',mtHMS(e.rg),mtGap(e.at,e.rg).replace(/[（）]/g,''),rx);
+        else if(e.rd) R=cell('mt-no','通知','','鳴っていません（画面を見ていた時など）',rx);
+        else R=cell('mt-wt','通知','','鳴った時刻はまだ届いていません',rx);
+      }else{
+        R=cell('mt-snd','← 送信',mtHMS(e.at),'','');
+        L=e.rv?cell('mt-rng','受け取った',mtHMS(e.rv),mtGap(e.at,e.rv).replace(/[（）]/g,''),''):cell('mt-wt','受け取った','','','');
+      }
+      h+='<div class="mt-row">'+L+R+'</div>';
     });
-    h+='<div class="zl-sec">相手が送ったメッセージ</div>';
-    if(!ins.length) h+='<div class="zl-empty">まだ記録はありません</div>';
-    lastDay='';
-    ins.forEach(function(e){
-      var dn=dayOf(e.at); if(dn!==lastDay){ lastDay=dn; h+='<div class="zl-day">'+dn+'</div>'; }
-      h+='<div class="zl-it k-msg"><div class="zl-tm">'+mtHMS(e.at)+'</div><div class="zl-bd"><div class="zl-tt">相手が送信</div>'+(e.rv?'<div class="zl-sub">'+E('この端末で受け取った '+mtHMS(e.rv)+mtGap(e.at,e.rv))+'</div>':'')+'</div></div>';
-    });
-    h+='<div class="zl-ft">時刻はそれぞれのスマホの時計です（数秒ずれることがあります）。この記録はこの端末だけに保存され、相手には見えません。最新15件ずつ。</div>';
+    h+='<div class="zl-ft">1行が1通です。「送信」の枠が送った側です。時刻はそれぞれのスマホの時計です（数秒ずれることがあります）。鳴った時刻は、相手がアプリを開いた時に届きます。この記録はこの端末だけに保存され、相手には見えません。最新20件。</div>';
     b.innerHTML=h;
   }catch(e){}
 }
@@ -7747,7 +7753,7 @@ function sendLive(){   /* v183: あいてに「いきてる」しるしを は�
   lastLiveSent=t;
   /* v549: 画面が見えているか（vis）も伝える。iPhone は裏に回っても少しの間動いて「生きてる」を送るため、相手（ホスト）は
      「今見ている」と思って通知を送らないことがあった（持ち主: iPhone の通知が遅れて、アプリを開いた時に出た） */
-  try{ Net.send({t:'app-live',at:t,vis:(document.visibilityState==='visible')?1:0,__noStore:1}); }catch(e){}
+  try{ Net.send({t:'app-live',at:t,vis:(document.visibilityState==='visible')?1:0,os:myOS(),__noStore:1}); }catch(e){}   /* v554: os＝ホストの記録の列の名前 */
 }
 document.addEventListener('visibilitychange',function(){ try{
   if(!(S.paired||S.linked)||S.isHost!==false) return;
@@ -12109,7 +12115,8 @@ Net.onMsg=async function(m){
       if(!m.from||m.from===S.me.id) break;
       if(!S.opp||!S.opp.id||m.from!==S.opp.id) break;   /* v187: あいてと 特定できた 合図だけ */
       if(!m.at||Date.now()-m.at>90000) break;   /* v512: 600秒→90秒。とっておかれて あとから 届いた「生きてる」しるしで「今 開いている」「接続が 切れました」に しない */
-      try{ if(m.vis===1) window.__zgsPeerVis=Date.now(); else window.__zgsPeerVis=0; }catch(e){}   /* v549: 見ている時だけ（vis の無い古い版は「見ていない」扱い＝通知を送る） */
+      try{ if(m.vis===1) window.__zgsPeerVis=Date.now(); else window.__zgsPeerVis=0; }catch(e){}
+      try{ if(S.isHost===true&&/^(iPhone|Android|パソコン)$/.test(m.os||'')) localStorage.setItem('zg_peer_os',m.os); }catch(e){}   /* v554 */   /* v549: 見ている時だけ（vis の無い古い版は「見ていない」扱い＝通知を送る） */
       if(m.vis===0) break;   /* v549: 裏に回った知らせ。「今いる」にはしない */
       var wasLive=+(window.__zgsPeerLive||0)||0;   /* v185 */
       window.__zgsPeerLive=Date.now();
@@ -15574,6 +15581,21 @@ html body #mem-box{position:fixed!important;left:12px!important;right:12px!impor
 #mem-box .zl-sum b{display:block;font-size:14px}
 #mem-box .zl-sum span{display:block;font-size:12.5px;color:#6B6585;margin-top:2px}
 #mem-box .zl-hd2{margin:18px 18px 2px;padding-top:12px;border-top:2px solid #EEEAF8;font-size:16px;font-weight:800;color:#2A2338}
+#mem-box .mt-head{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:10px 0 4px}
+#mem-box .mt-hc{text-align:center;padding:7px 4px;border-radius:12px;font-size:14px;font-weight:800;color:#fff;background:#6D4DF2}
+#mem-box .mt-hc.peer{background:#2F8FE8}
+#mem-box .mt-hc small{font-size:11px;font-weight:700;opacity:.9}
+#mem-box .mt-row{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:6px 0}
+#mem-box .mt-c{min-width:0;padding:8px 9px;border-radius:12px;background:#FAF9FE;border:1px solid #EEEAF8}
+#mem-box .mt-c.mt-snd{background:#F1EDFF;border:1.5px solid #6D4DF2}
+#mem-box .mt-row .mt-c.mt-snd:last-child{background:#EAF4FF;border-color:#2F8FE8}
+#mem-box .mt-c.mt-rng{background:#FFF8E8;border-color:#F2D9A0}
+#mem-box .mt-c.mt-wt,#mem-box .mt-c.mt-no{background:transparent;border:1px dashed #DDD5F2}
+#mem-box .mt-l{font-size:11.5px;font-weight:700;color:#6B6585}
+#mem-box .mt-t{font-size:17px;font-weight:800;color:#2A2338;font-variant-numeric:tabular-nums;line-height:1.3}
+#mem-box .mt-n{font-size:11.5px;color:#6B6585;line-height:1.4}
+#mem-box .mt-s{margin-top:3px;font-size:11.5px;font-weight:700;color:#3C6FB0;font-variant-numeric:tabular-nums}
+#mem-box .mt-s.ok{color:#2E8B57}
 #mem-box .zl-sec{margin:12px 0 2px;font-size:13px;font-weight:800;color:#6D4DF2}
 #mem-box .zl-day{margin:14px 0 4px;font-size:12px;font-weight:800;color:#7A72A0;letter-spacing:.08em}
 #mem-box .zl-it{display:flex;gap:12px;padding:10px 12px;margin:6px 0;border-radius:14px;background:#FAF9FE;border:1px solid #EEEAF8;border-left:4px solid #6D4DF2}
