@@ -2,6 +2,7 @@
 //  持ち主（B・ホスト・Android）はアプリを裏に回している。Chrome の電池を「制限なし」にしたので、裏でも画面の中身が生きている。
 //  sw.js が通知（data.zgm＝暗号文）を出す → 画面の drainInbox が取り込み、通知を閉じていた（1秒ほどで消える）。
 //  ここでは sw.js の通知を偽物で置く（試験では sw.js が動かないため）。① 裏の時は閉じない ② トーク画面を開いたら閉じる
+// v557: ③ トーク画面を見ている時に届いた通知も、出てから6秒は閉じない（以前は1.2秒以内）。閉じた時刻と理由をホストの「メッセージの時刻」に残す。
 // 使い方: bash tools/run_e2e.sh tools/e2e/notify_vanish.js
 const {chromium}=require('playwright');
 const DIR=process.argv[2];const SK=Buffer.alloc(32,9).toString('base64'),TOPIC='gskr3s-'+Date.now().toString(16).padEnd(24,'a');const PS='https://zatsugaku-push.pprnt908.workers.dev';
@@ -38,11 +39,22 @@ async function dev(b,me,peer,host,count){const ctx=await b.newContext({viewport:
  await B.pg.waitForTimeout(8000);
  const r1=await B.pg.evaluate(()=>({gn:window.__gn,pr:__t.privateReady(),loaded:__t.S.chatLoaded,closed:window.__closed,got:__t.S.chat.some(c=>c.text==='通知が消えないか')}));
  // B がトーク画面を開く
- await B.pg.evaluate(()=>{ window.__vis='visible'; document.dispatchEvent(new Event('visibilitychange')); __t.show('play'); __t.setTab('chat'); });
+ await B.pg.evaluate(()=>{ window.__vis='visible'; document.dispatchEvent(new Event('visibilitychange')); }); await B.pg.waitForTimeout(600); await B.pg.evaluate(()=>{ __t.show('play'); __t.setTab('chat'); });
  await B.pg.waitForTimeout(5000);
  const r2=await B.pg.evaluate(()=>({closed:window.__closed}));
 
- const res={push:!!body,bgClosed:r1.closed,gotInBg:r1.got,afterOpenClosed:r2.closed};
+ // ③ 見ている時にもう1通
+ pushes.length=0; delayRelay=0; await A.pg.fill('#in-chat','見ている時の通知'); await A.pg.click('#btn-chat-send');
+ for(let i=0;i<40&&!pushes.length;i++) await A.pg.waitForTimeout(250);
+ const body3=pushes[0]||'';
+ await B.pg.evaluate((z)=>{ window.__fakeNs.push({tag:'zgs-'+z.slice(-32),timestamp:Date.now(),data:{zgm:z},close(){ this.gone=true; window.__closed++; }}); },body3);
+ await B.pg.waitForTimeout(3000); const c3a=await B.pg.evaluate(()=>window.__closed);
+ await B.pg.waitForTimeout(6000); const c3b=await B.pg.evaluate(()=>window.__closed);
+
+ await B.pg.evaluate(()=>__t.hostRangSync&&__t.hostRangSync()); await B.pg.waitForTimeout(1500);
+ const ncl=await B.pg.evaluate(()=>JSON.parse(localStorage.getItem('zg_nclose')||'[]').length);
+ const mtIn=await B.pg.evaluate(()=>__t.mtLoad().filter(e=>e.d==='in').map(e=>({cl:!!e.cl,cw:e.cw||''})));
+ const res={push:!!body,bgClosed:r1.closed,gotInBg:r1.got,afterOpenClosed:r2.closed,viewing3s:c3a-r2.closed,viewing9s:c3b-r2.closed,ncl,mtIn};
  console.log(JSON.stringify(res));
- const ok=res.push&&res.gotInBg&&res.bgClosed===0&&res.afterOpenClosed===1;
+ const ok=res.push&&res.gotInBg&&res.bgClosed===0&&res.afterOpenClosed===1&&res.viewing3s===0&&res.viewing9s===1&&res.ncl>=2&&res.mtIn.some(e=>e.cl&&/見ていた/.test(e.cw));
  console.log(ok?'OK: 裏の時は通知が残り、トークを開いたら消える':'NG: 通知がすぐ消える（または開いても残る）'); await b.close(); process.exit(ok?0:1);})();

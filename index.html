@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとしてインストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">新しい版に更新する</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンでアプリとして入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v556</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v557</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">相手を待っています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v556</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v557</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">名前</b> さんが入室を求めています</p>
         <p class="jr-fp">合図 <b id="jr-fp">----</b> ／ 相手の画面と同じかくににて確認</p>
@@ -7498,7 +7498,7 @@ function mtMark(mid,k,t){
 var RG_MAP='zg_rg_map', RG_DONE='zg_rg_done';
 function rangMapNote(body,env){
   try{
-    if(S.isHost!==false||typeof body!=='string') return;
+    if(typeof body!=='string') return;   /* v557: ホストも覚える（自分のスマホで通知が出た時刻・閉じた時刻を記録するため） */
     var b=body.replace(/^zgm:\d+:/,''); if(!/^[A-Za-z0-9_-]{40,}$/.test(b)) return;
     var ids=(Array.isArray(env.items)?env.items:[env]).map(function(it){ return it&&it.mid; }).filter(validDeletionId).slice(0,16); if(!ids.length) return;
     var mp={}; try{ mp=JSON.parse(localStorage.getItem(RG_MAP)||'{}')||{}; }catch(e){ mp={}; }
@@ -7507,6 +7507,25 @@ function rangMapNote(body,env){
     localStorage.setItem(RG_MAP,JSON.stringify(mp));
   }catch(e){}
 }
+/* v557: このスマホでアプリが通知を閉じた時刻と理由（ホストの「メッセージの時刻」に出す） */
+function ncLog(tag,why){ try{ var t=String(tag||'').replace(/^zgs-/,''); if(!/^[A-Za-z0-9_-]{32}$/.test(t)) return; var l=JSON.parse(localStorage.getItem('zg_nclose')||'[]')||[]; l.push({t:t,a:Date.now(),w:String(why||'').slice(0,40)}); localStorage.setItem('zg_nclose',JSON.stringify(l.slice(-60))); }catch(e){} }
+function mtMarkIn(mid,k,v){
+  try{ if(S.isHost!==true||!mid) return; var l=mtLoad(); for(var i=l.length-1;i>=0;i--){ if(l[i].m===mid&&l[i].d==='in'){ if(!l[i][k]){ l[i][k]=v; mtSave(l); } return; } } }catch(e){}
+}
+/* v557: ホスト: 自分のスマホ（sw.js）で通知が出た時刻（rg）と、アプリが閉じた時刻（zg_nclose）を、相手のメッセージに結びつける */
+var hostRgBusy=false;
+async function hostRangSync(){
+  if(hostRgBusy||S.isHost!==true||!window.caches) return; hostRgBusy=true;
+  try{
+    var mp={}; try{ mp=JSON.parse(localStorage.getItem(RG_MAP)||'{}')||{}; }catch(e){}
+    var c=await caches.open('zg-count'), o=await c.match('rg');
+    if(o){ (await o.text()).split(',').forEach(function(x){ if(!/^[A-Za-z0-9_-]{32}\|\d+$/.test(x)) return; var p=x.split('|'); var e=mp[p[0]]; if(e&&Array.isArray(e.i)) e.i.forEach(function(mid){ mtMarkIn(mid,'nt',+p[1]); }); }); }
+    var cl=[]; try{ cl=JSON.parse(localStorage.getItem('zg_nclose')||'[]')||[]; }catch(e){}
+    cl.forEach(function(x){ var e=x&&mp[x.t]; if(e&&Array.isArray(e.i)) e.i.forEach(function(mid){ mtMarkIn(mid,'cl',x.a); mtMarkIn(mid,'cw',x.w); }); });
+  }catch(e){}
+  finally{ hostRgBusy=false; }
+}
+setInterval(function(){ try{ hostRangSync(); }catch(e){} },10000);
 var rangBusy=false;
 async function rangFlush(){
   if(rangBusy) return; rangBusy=true;
@@ -7553,7 +7572,8 @@ function mtRender(){
         else R=cell('mt-wt','通知','','鳴った時刻はまだ届いていません',rx);
       }else{
         R=cell('mt-snd','← 送信',mtHMS(e.at),'','');
-        L=e.rv?cell('mt-rng','受け取った',mtHMS(e.rv),mtGap(e.at,e.rv).replace(/[（）]/g,''),''):cell('mt-wt','受け取った','','','');
+        var lx=(e.nt?'<div class="mt-s">🔔 通知が出た '+mtHMS(e.nt)+'</div>':'')+(e.cl?'<div class="mt-s warn">アプリが閉じた '+mtHMS(e.cl)+(e.cw?'（'+E(String(e.cw).replace(/閉じた$/,''))+'）':'')+'</div>':'');   /* v557 */
+        L=e.rv?cell('mt-rng','受け取った',mtHMS(e.rv),mtGap(e.at,e.rv).replace(/[（）]/g,''),lx):cell('mt-wt','受け取った','','',lx);
       }
       h+='<div class="mt-row">'+L+R+'</div>';
     });
@@ -7744,7 +7764,7 @@ function plogRender(){
     b.innerHTML=h;
   }catch(e){}
 }
-setInterval(function(){ try{ if(memBox){ plogRender(); mtRender(); } }catch(e){} },3000);   /* v186: 裏画面を 出している あいだは 履歴を 新しくする */
+setInterval(function(){ try{ if(memBox){ hostRangSync(); plogRender(); mtRender(); } }catch(e){} },3000);   /* v186: 裏画面を 出している あいだは 履歴を 新しくする */
 var lastLiveSent=0;
 function sendLive(){   /* v183: あいてに「いきてる」しるしを はなす（25秒に 1かい） */
   if(!(S.paired||S.linked)) return;
@@ -8517,7 +8537,7 @@ function notifyIncoming(at){
     if(take){ used=used.concat(times.slice(0,take)); niUsedSave(used); }
     if(n-take>0){ notifyIncomingNow(); return; }
     /* sw.js が通知済み: 数字だけ合わせる。見ている時は sw.js の通知も6秒後に消す（v520 と同じ） */
-    try{ if(chatOnScreen()){ setTimeout(function(){ try{ if(swReg&&swReg.getNotifications) swReg.getNotifications().then(function(ns){ ns.forEach(function(x){ if(/^zgs-/.test(x.tag||'')) x.close(); }); }); }catch(e){} },6000); }
+    try{ if(chatOnScreen()){ setTimeout(function(){ try{ if(swReg&&swReg.getNotifications) swReg.getNotifications().then(function(ns){ ns.forEach(function(x){ if(/^zgs-/.test(x.tag||'')){ try{ ncLog(x.tag,'トーク画面を見ていたので6秒後に閉じた'); }catch(e){} x.close(); } }); }); }catch(e){} },6000); }
          else { updateBadge(); updateTalkbackBadges(); updateTitleBadge(); setAppBadgeCount(S.unread||1); } }catch(e){}
   },5000);
 }
@@ -13324,7 +13344,8 @@ function drainInbox(){
            通知が一瞬点いて消えていた（持ち主）。見ていない時は取り込むだけで通知は残す。見ている時は、取り込み済み（重複）でも閉じる（保存に失敗した物は除く） */
         var n=ns[i];if(!(n&&n.data&&n.data.zgm))continue;
         var __ok=await consumeInbox(n.data.zgm);
-        if(chatOnScreen()&&(__ok||!n.data.saveFailed))n.close();
+        /* v557: 見ている時でも、通知が出てから6秒は閉じない（以前は1.2秒以内に閉じ、ポップアップ・バイブが「一瞬」で終わっていた）。閉じたら記録する */
+        if(chatOnScreen()&&(__ok||!n.data.saveFailed)&&(!n.timestamp||Date.now()-n.timestamp>6000)){ try{ ncLog(n.tag,'トーク画面を見ていたので閉じた'); }catch(e){} n.close(); }
       }}
     }catch(e){S.inboxError=e.name||'通知取込失敗';}
     for(var entry of [['zg-sw-inbox','pin'],['zg-inbox','m']]){
@@ -15596,6 +15617,7 @@ html body #mem-box{position:fixed!important;left:12px!important;right:12px!impor
 #mem-box .mt-n{font-size:11.5px;color:#6B6585;line-height:1.4}
 #mem-box .mt-s{margin-top:3px;font-size:11.5px;font-weight:700;color:#3C6FB0;font-variant-numeric:tabular-nums}
 #mem-box .mt-s.ok{color:#2E8B57}
+#mem-box .mt-s.warn{color:#B4532A}
 #mem-box .zl-sec{margin:12px 0 2px;font-size:13px;font-weight:800;color:#6D4DF2}
 #mem-box .zl-day{margin:14px 0 4px;font-size:12px;font-weight:800;color:#7A72A0;letter-spacing:.08em}
 #mem-box .zl-it{display:flex;gap:12px;padding:10px 12px;margin:6px 0;border-radius:14px;background:#FAF9FE;border:1px solid #EEEAF8;border-left:4px solid #6D4DF2}
