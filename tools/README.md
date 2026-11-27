@@ -44,6 +44,7 @@ node tools/sw_badge_test.mjs                   # sw.js の通知の小さいア�
 | worker_relay_push_test.mjs | Worker: bell 付きで中継所に置くと Worker からも Web Push が出る（`node tools/worker_relay_push_test.mjs`）（v540） |
 | sw_dup_test.mjs | 同じメッセージの通知が2回届いても2回目は鳴らさない（`node tools/sw_dup_test.mjs`）（v537） |
 | sw_idb_hang_test.mjs | sw.js の保存が止まっても2秒で通知が出る（`node tools/sw_idb_hang_test.mjs`）（v549） |
+| sw_race_test.mjs | 同じメッセージの通知が2つ同時に届いてもバイブ付きの通知は1回だけ・後から置き換えない（`node tools/sw_race_test.mjs [sw.js]`）（v556） |
 | e2e/hero_badge.js | トップの「とー君ニュース」の横の足跡（トップ・裏・閉じて開いた時）（`bash tools/run_e2e.sh tools/e2e/hero_badge.js`、`ROLE=guest` も）（v550） |
 | e2e/notify_vanish.js | 裏で画面が生きていても通知を閉じない・トークを開いたら閉じる（`bash tools/run_e2e.sh tools/e2e/notify_vanish.js`）（v551） |
 | e2e/draft_keep.js | 入力中の文（下書き）が読み込み直しても残る・暗号化して保存・送ったら消える（`node tools/e2e/draft_keep.js /tmp/zg`）（v552） |
