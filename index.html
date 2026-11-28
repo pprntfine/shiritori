@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとしてインストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">新しい版に更新する</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンでアプリとして入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v559</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v560</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">相手を待っています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v559</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v560</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">名前</b> さんが入室を求めています</p>
         <p class="jr-fp">合図 <b id="jr-fp">----</b> ／ 相手の画面と同じかくににて確認</p>
@@ -11798,7 +11798,7 @@ function sendAgain(msg){
 
 /* v530: 手で送り直す・受け取り直す（持ち主: 送信中を手で更新できない）。
    自分の吹き出しの「送信中…」「相手の受信待ち」の文字を押す → その場で送り直す。
-   上の相手の名前を押す → 中継所に残っているメッセージを取りに行き、つながりも作り直す（受け取る側用） */
+   上の相手の名前を押す → 中継所に残っているメッセージを取りに行き、つながりも作り直す（受け取る側用）※ v560 でやめた。今は上の段の「更新」ボタン */
 function zgManualRefresh(quiet){
   try{ if(!privateReady()) return; }catch(e){ return; }
   try{ Relay.badUntil=0; }catch(e){}   /* 一度失敗した直後の「中継所を10秒使わない」を解く（手で押した時はすぐ試す） */
@@ -11829,7 +11829,8 @@ document.addEventListener('click',function(e){
       try{ toast('もう一度送っています'); }catch(_){}
       return;
     }
-    if(t.closest('header.bar .brand .zb-peer')&&document.body.classList.contains('in-play')){ zgManualRefresh(false); }
+    /* v560: 上の相手の名前を押した時の受け取り直しはやめた（持ち主: 名前を押すと「メッセージを確かめています」になる＝不具合）。
+       名前の5回タップはアクセス履歴の入口なので、1回ごとにお知らせが出ていた。受け取り直しは上の段の「更新」ボタン（v531）で行う */
   }catch(_){}
 },true);
 function resendUnacked(all){

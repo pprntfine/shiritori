@@ -1,4 +1,5 @@
-// v530: 「送信中…」の文字を押すと、その場で送り直す。上の相手の名前を押すと受け取り直す（エラーが出ない）。
+// v530: 「送信中…」の文字を押すと、その場で送り直す。
+// v560: 上の相手の名前を押しても「メッセージを確かめています」は出ない（名前の5回タップはアクセス履歴の入口。ホストは5回で履歴が開く）。受け取り直しは「更新」ボタン（refresh_button.js）。
 // 送る側を電波なし（オフライン）にしておき（送信中のまま）、止めるのをやめた直後に文字を押して、3秒以内に送信済みになるかを見る。
 const {chromium}=require('playwright');
 const DIR=process.argv[2];const SK=Buffer.alloc(32,9).toString('base64'),TOPIC='gskr3s-'+Date.now().toString(16).padEnd(24,'g');const PS='https://zatsugaku-push.pprnt908.workers.dev';
@@ -44,6 +45,12 @@ async function dev(b,me,peer,host,late){const ctx=await b.newContext({viewport:{
  await B.pg.locator('header.bar .brand .zb-peer').click({force:true}); await B.pg.waitForTimeout(1500);
  const tst=await B.pg.evaluate(()=>{ const t=document.getElementById('toast'); return t?t.textContent:''; });
  console.log('相手の名前を押した時:',tst,'エラー:',errs.length?errs:'なし');
- const ok=mid.sent===false&&t!==null&&got&&/確かめています/.test(tst)&&!errs.length;
- console.log(ok?'OK: 手で送り直せる・受け取り直せる':'NG');
+ // ホスト（A）は名前を5回押すとアクセス履歴が開き、お知らせは出ない
+ await A.pg.evaluate(()=>{ document.body.classList.add('in-play'); const t=document.getElementById('toast'); if(t) t.textContent=''; });
+ for(let i=0;i<5;i++){ await A.pg.locator('header.bar .brand .zb-peer').click({force:true}); await A.pg.waitForTimeout(120); }
+ await A.pg.waitForTimeout(400);
+ const five=await A.pg.evaluate(()=>({mem:!!document.getElementById('mem-box'),toast:(document.getElementById('toast')||{}).textContent||''}));
+ console.log('ホストが名前を5回押した時:',JSON.stringify(five));
+ const ok=mid.sent===false&&t!==null&&got&&!/確かめています/.test(tst)&&five.mem&&!/確かめています/.test(five.toast)&&!errs.length;
+ console.log(ok?'OK: 手で送り直せる・名前を押してもお知らせが出ない（5回で履歴）':'NG');
  await b.close(); process.exit(ok?0:1);})();
