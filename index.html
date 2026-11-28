@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとしてインストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">新しい版に更新する</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンでアプリとして入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v558</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v559</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">相手を待っています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v558</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v559</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">名前</b> さんが入室を求めています</p>
         <p class="jr-fp">合図 <b id="jr-fp">----</b> ／ 相手の画面と同じかくににて確認</p>
@@ -1737,7 +1737,9 @@ body .bar::after{
       <div class="zs-row"><span class="zs-lab">既読から15分で消える</span><button type="button" class="ph zs-tg" id="pf-vanish">オフ</button></div>
       <p class="zs-desc">相手が読んでから15分たつと、自分と相手の両方のスマホから消えます。元に戻すことはできません。対象は、オンにしたあとで既読になったメッセージだけです。相手がつながっていないあいだに読んだ場合は、つながった時点から15分を数えます。スクリーンショットは防げません。</p>
         <div class="zs-row"><span class="zs-lab">音声入力に絵文字を付ける</span><button type="button" class="ph zs-tg" id="pf-voice-emo">オン</button></div>
-      <p class="zs-desc">入力欄の右のマイクで話すと、言葉に合う絵文字（おはよう→☀️、ありがとう→🙏 など）を文の終わりに付けます。送る前に消すこともできます。</p>
+      <p class="zs-desc">入力欄の左のマイクで話すと、言葉に合う絵文字（おはよう→☀️、ありがとう→🙏 など）を文の終わりに付けます。送る前に消すこともできます。</p>
+        <div class="zs-row"><span class="zs-lab">リンクを開くブラウザ</span><button type="button" class="ph zs-tg zs-br" id="pf-link-br">標準</button></div>
+      <p class="zs-desc">メッセージの中のアドレス（https://…）を押すと、ここで選んだブラウザで開きます。開いたページは、そのブラウザの履歴に残ります。アプリに戻ると、いつもどおりトップ画面になります。</p>
   </section>
 
   <section class="zs-card">
@@ -8081,7 +8083,7 @@ function renderChatFull(forceBottom, __tailFrom){
     row.className='msg '+(mine?'out':'in')+(cont?' cont':'')+((knownMessages&&knownMessages.has(String(m.from)+':'+String(m.pid||m.uid||m.n||m.at)))?' zg-still':'');
     var bub=document.createElement('div');
     bub.className='bubble';
-    if(m.file) bub.appendChild(attachmentLink(m,{ticket:renderTicket,userTicket:userTicket,stick:stick,top:previousTop})); else if(DOG_STK[m.text]){ var dgi=document.createElement('img'); dgi.className='dog-stk'; dgi.src=DOG_STK[m.text]; dgi.alt=''; dgi.setAttribute('aria-hidden','true'); bub.appendChild(dgi); bub.classList.add('dog-b'); } else bub.textContent=m.text;
+    if(m.file) bub.appendChild(attachmentLink(m,{ticket:renderTicket,userTicket:userTicket,stick:stick,top:previousTop})); else if(DOG_STK[m.text]){ var dgi=document.createElement('img'); dgi.className='dog-stk'; dgi.src=DOG_STK[m.text]; dgi.alt=''; dgi.setAttribute('aria-hidden','true'); bub.appendChild(dgi); bub.classList.add('dog-b'); } else zgLinkify(bub,m.text);   /* v559: アドレスを押せるように */
     var meta=document.createElement('div');
     meta.className='meta';
     meta.textContent=metaText(m,mine,at,groupEnd);
@@ -9119,6 +9121,126 @@ function markDeletable(row,bubble,m,mine){
   bubble.tabIndex=0; bubble.title='長押しで反応を選ぶ'; bubble.setAttribute('aria-label',(mine?'送信した':'受信した')+'メッセージ。長押し、または操作ボタンで反応を選ぶ'); bubble.setAttribute('aria-keyshortcuts',mine?'Delete Shift+F10':'Shift+F10');
 }
 bindMessageDeletion($('#chat-log'));
+/* v559: メッセージの中のアドレスを押せるようにする（持ち主: 押したらそのままネットを開きたい・開くブラウザを設定で選びたい）。
+   見分けるのは http:// https:// www. で始まる英数字の部分だけ（日本語の手前で区切る）。押すと設定のブラウザで開く（localStorage zg_link_br・端末ごと）。
+   Android は intent:（package 指定）、iPhone は各ブラウザのアドレス（googlechromes:// など）。入っていなくて開けない時は知らせて標準で開く。
+   長押しは今までどおり反応・削除（リンクは <a> にしない＝ブラウザのリンクのメニューを出さない） */
+var ZG_URL_RE=/\b(?:https?:\/\/|www\.)[A-Za-z0-9\-._~:\/?#\[\]@!$&'()*+,;=%]+/gi;
+function zgLinkHref(raw){
+  try{
+    var u=String(raw||'');
+    for(;;){ var ch=u.slice(-1);
+      if(/[.,!?;:'"*]/.test(ch)){ u=u.slice(0,-1); continue; }
+      if(ch===')'&&u.split('(').length<u.split(')').length){ u=u.slice(0,-1); continue; }
+      if(ch===']'&&u.split('[').length<u.split(']').length){ u=u.slice(0,-1); continue; }
+      break; }
+    var h=/^www\./i.test(u)?'https://'+u:u;
+    var x=new URL(h);
+    if(!/^https?:$/.test(x.protocol)||!x.hostname||x.hostname.indexOf('.')<0||h.length>2000) return null;
+    return {shown:u,href:x.href};
+  }catch(e){ return null; }
+}
+function zgLinkify(el,text){
+  text=String(text==null?'':text);
+  var last=0, m, any=false; ZG_URL_RE.lastIndex=0;
+  while((m=ZG_URL_RE.exec(text))){
+    var l=zgLinkHref(m[0]); if(!l) continue;
+    if(m.index>last) el.appendChild(document.createTextNode(text.slice(last,m.index)));
+    var a=document.createElement('span'); a.className='zg-link'; a.setAttribute('role','link'); a.setAttribute('data-u',l.href); a.textContent=l.shown;
+    el.appendChild(a); any=true;
+    last=m.index+l.shown.length; ZG_URL_RE.lastIndex=last;
+  }
+  if(!any){ el.textContent=text; return; }
+  if(last<text.length) el.appendChild(document.createTextNode(text.slice(last)));
+}
+var ZG_BR_AND=[
+  {id:'',name:'標準',long:'標準（いつものブラウザ）'},
+  {id:'chrome',name:'Chrome',pkg:'com.android.chrome'},
+  {id:'brave',name:'Brave',pkg:'com.brave.browser'},
+  {id:'firefox',name:'Firefox',pkg:'org.mozilla.firefox'},
+  {id:'edge',name:'Edge',pkg:'com.microsoft.emmx'},
+  {id:'opera',name:'Opera',pkg:'com.opera.browser'},
+  {id:'samsung',name:'Samsung Internet',pkg:'com.sec.android.app.sbrowser'},
+  {id:'mi',name:'Mi ブラウザ',pkg:'com.mi.globalbrowser'},
+  {id:'ddg',name:'DuckDuckGo',pkg:'com.duckduckgo.mobile.android'},
+  {id:'vivaldi',name:'Vivaldi',pkg:'com.vivaldi.browser'},
+  {id:'ask',name:'毎回選ぶ'}
+];
+var ZG_BR_IOS=[
+  {id:'',name:'標準',long:'標準（Safari）'},
+  {id:'chrome',name:'Chrome',ios:function(u){ return u.replace(/^https:\/\//i,'googlechromes://').replace(/^http:\/\//i,'googlechrome://'); }},
+  {id:'firefox',name:'Firefox',ios:function(u){ return 'firefox://open-url?url='+encodeURIComponent(u); }},
+  {id:'edge',name:'Edge',ios:function(u){ return 'microsoft-edge-'+u; }},
+  {id:'brave',name:'Brave',ios:function(u){ return 'brave://open-url?url='+encodeURIComponent(u); }},
+  {id:'ask',name:'毎回選ぶ'}
+];
+function zgBrList(){ return myOS()==='iPhone'?ZG_BR_IOS:ZG_BR_AND; }
+function zgBrGet(){ var id=''; try{ id=localStorage.getItem('zg_link_br')||''; }catch(e){} var l=zgBrList(); for(var i=0;i<l.length;i++) if(l[i].id===id) return l[i]; return l[0]; }
+function zgBrPaint(){ var b=$('#pf-link-br'); if(b) b.textContent=zgBrGet().name; }
+function zgOpenStd(u){ try{ window.open(u,'_blank','noopener,noreferrer'); }catch(e){} }
+function zgLaunchUrl(b,u){
+  if(b.pkg){ var p=/^(https?):\/\/(.*)$/i.exec(u); if(!p) return null;
+    return 'intent://'+p[2]+'#Intent;scheme='+p[1].toLowerCase()+';action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;package='+b.pkg+';end'; }
+  if(b.ios) return b.ios(u);
+  return null;
+}
+function zgOpenWith(b,u){
+  try{ window.__zgLinkLast={id:b.id,u:u,at:Date.now()}; }catch(e){}
+  var href=zgLaunchUrl(b,u);
+  if(!href){ zgOpenStd(u); return; }
+  var gone=false, onv=function(){ if(document.hidden) gone=true; };
+  document.addEventListener('visibilitychange',onv);
+  try{ var a=document.createElement('a'); a.href=href; a.rel='noopener noreferrer'; a.style.display='none'; document.body.appendChild(a); a.click(); setTimeout(function(){ try{ a.remove(); }catch(_){} },0); }catch(e){}
+  /* 1.8秒たってもアプリが前にいる＝開けなかった（そのブラウザが入っていない） */
+  setTimeout(function(){
+    document.removeEventListener('visibilitychange',onv);
+    if(gone||document.hidden) return;
+    toast(b.name+'で開けませんでした（スマホに入っていないかもしれません）。標準のブラウザで開きます。設定の「リンクを開くブラウザ」で変えられます。');
+    zgOpenStd(u);
+  },1800);
+}
+function zgOpenLink(u){
+  var b=zgBrGet();
+  if(b.id==='ask'){ zgBrSheet('open',u); return; }
+  zgOpenWith(b,u);
+}
+function zgBrSheet(mode,u){
+  var sh=$('#zg-br-sheet');
+  if(!sh){ sh=document.createElement('div'); sh.id='zg-br-sheet'; document.body.appendChild(sh);
+    sh.addEventListener('click',function(e){ if(e.target===sh) sh.classList.remove('on'); }); }
+  sh.textContent='';
+  var box=document.createElement('div'); box.className='zbs-box'; box.setAttribute('role','dialog'); box.setAttribute('aria-modal','true');
+  var t=document.createElement('div'); t.className='zbs-t'; t.textContent=mode==='set'?'リンクを開くブラウザ':'どのブラウザで開きますか？'; box.appendChild(t);
+  if(mode==='open'){ var uu=document.createElement('div'); uu.className='zbs-u'; uu.textContent=u; box.appendChild(uu); }
+  var cur=zgBrGet().id, list=document.createElement('div'); list.className='zbs-l';
+  zgBrList().forEach(function(b){
+    if(mode==='open'&&b.id==='ask') return;
+    var bt=document.createElement('button'); bt.type='button'; bt.className='zbs-b'+(mode==='set'&&b.id===cur?' on':''); bt.textContent=(mode==='set'&&b.id===cur?'✓ ':'')+(b.long||b.name);
+    bt.addEventListener('click',function(){
+      sh.classList.remove('on');
+      if(mode==='set'){ try{ localStorage.setItem('zg_link_br',b.id); }catch(e){} zgBrPaint(); toast(b.id==='ask'?'リンクを押すたびに、開くブラウザを選びます。':'リンクは'+(b.long||b.name)+'で開きます。'); }
+      else zgOpenWith(b,u);
+    });
+    list.appendChild(bt);
+  });
+  box.appendChild(list);
+  if(mode==='open'){ var cp=document.createElement('button'); cp.type='button'; cp.className='zbs-b zbs-cp'; cp.textContent='アドレスをコピー'; cp.addEventListener('click',function(){ copyText(u,cp,'アドレスをコピー'); }); box.appendChild(cp); }
+  var x=document.createElement('button'); x.type='button'; x.className='zbs-x'; x.textContent='やめる'; x.addEventListener('click',function(){ sh.classList.remove('on'); }); box.appendChild(x);
+  sh.appendChild(box); sh.classList.add('on');
+}
+(function(){
+  var box=$('#chat-log'), downAt=0;
+  /* 長押し（反応・削除）の後に指を離した時は開かない（押していた時間で見分ける） */
+  if(box){ box.addEventListener(typeof PointerEvent!=='undefined'?'pointerdown':'touchstart',function(){ downAt=Date.now(); },{capture:true,passive:true});
+  box.addEventListener('click',function(e){
+    var a=e.target&&e.target.closest&&e.target.closest('.zg-link'); if(!a||!box.contains(a)) return;
+    e.preventDefault(); e.stopPropagation();
+    if((downAt&&Date.now()-downAt>550)||document.getElementById('reaction-palette')) return;
+    var u=a.getAttribute('data-u'); if(u&&/^https?:\/\//i.test(u)) zgOpenLink(u);
+  }); }
+  var bt=$('#pf-link-br'); if(bt){ zgBrPaint(); bt.addEventListener('click',function(){ zgBrSheet('set'); }); }
+  document.addEventListener('visibilitychange',function(){ if(document.hidden){ var sh=$('#zg-br-sheet'); if(sh) sh.classList.remove('on'); } });
+})();
 setInterval(syncDeletions,15000);
 window.addEventListener('online',function(){ syncDeletions(); try{ purgeFlush(); }catch(e){} reactionReconnect(); });
 document.addEventListener('visibilitychange',function(){ if(!document.hidden){ syncDeletions(); try{ purgeFlush(); }catch(e){} reactionReconnect(); } });
@@ -11594,37 +11716,78 @@ function submitChat(){
   /* v558: Android のキーボード（Gboard など）は、入力欄をプログラムで空にしても「最後に打っていた区間」を覚えたままで、
      次の1文字を打つとその区間を一緒に戻してしまう（持ち主: 次のメッセージに最後に入力した区間が残る時がある）。
      ① 入力欄に入ったままなら、キーボードに伝わる消し方（全部選んで削除）で消す ② それでも次の1文字で前の区間が戻ったら、その区間を取り除く */
-  var __seg=String(window.__zgLastSeg||'');
-  try{ if(document.activeElement===inp&&document.execCommand){ inp.focus(); inp.select(); document.execCommand('delete'); } }catch(e){}
+  /* v559: v558 では足りなかった（持ち主: まだ送っても残る時がある）。Android では送信ボタンを押した瞬間に入力欄から外れ（キーボードが閉じ）、
+     その後で入力欄を空にしていたため、キーボードに「空にした」が伝わらず、前の区間を覚えたままになっていたと考えられる（v558 の①は Android では一度も動いていなかった）。
+     ① Android は送信ボタンを押しても入力欄から外れないようにして（下の v559 のかたまり）、入力欄に入ったまま空にする → 少し後でキーボードを閉じる（今までと同じ見た目）
+     ② 送った後、何も打っていないのに文字が戻ったら消す（3秒まで） ③ 次に打った最初の1回で前の区間・前の文が戻っていたら取り除く（時間の制限なし） */
+  var __seg=String(window.__zgLastSeg||''), __segs=(window.__zgSegs||[]).slice(), __had=(document.activeElement===inp);
+  try{ if(__had&&document.execCommand){ inp.focus(); inp.select(); document.execCommand('delete'); } }catch(e){}
   if(inp.value) inp.value='';
   try{ chatGrow(); }catch(e){}
   draftClear();   /* v552 */
-  try{ window.__zgSentGuard=(__seg&&__seg.length<=40&&txt.slice(-__seg.length)===__seg)?{seg:__seg,at:Date.now()}:null; window.__zgLastSeg=''; }catch(e){}
+  try{ zgSentArm(inp,txt,[__seg].concat(__segs),__had); }catch(e){}
   queueChat(txt,Date.now());
 }
-/* v558: 最後に変換していた区間を覚える／送った直後の最初の入力で、前の区間が先頭に戻っていたら取り除く */
+/* v559: 送った後に戻ってきた文字を取り除く */
+var zgSent=null;
+function zgResidueClear(inp,rest){
+  inp.value=rest;
+  /* キーボードの覚えている区間も捨てさせる（入力欄から一度外して、すぐ戻す） */
+  if(document.activeElement===inp){ try{ inp.blur(); inp.focus({preventScroll:true}); }catch(_){} }
+  try{ inp.setSelectionRange(rest.length,rest.length); }catch(_){}
+  try{ chatGrow(); }catch(_){}
+  try{ draftSaveSoon(); }catch(_){}
+  try{ window.__zgResidueN=(window.__zgResidueN||0)+1; }catch(_){}
+}
+function zgSentArm(inp,txt,segs,had){
+  var c=[];
+  segs.concat([txt]).forEach(function(x){ x=String(x||''); if(x.length>=2&&x.length<=MAX_CHAT&&c.indexOf(x)<0) c.push(x); });
+  c.sort(function(x,y){ return y.length-x.length; });
+  var g={c:c,at:Date.now()};
+  zgSent=g; window.__zgSentGuard=g;
+  try{ window.__zgLastSeg=''; window.__zgSegs=[]; }catch(e){}
+  /* ② 何も打っていない（入力の合図が1つも無い）のに文字が入っていたら、キーボードかブラウザが戻した物なので消す */
+  [80,300,800,1600,3000].forEach(function(t){ setTimeout(function(){ try{
+    if(zgSent!==g||window.__zgVoiceOn) return;
+    if(inp.value) zgResidueClear(inp,'');
+  }catch(e){} },t); });
+  /* ① Android: 入力欄に入ったまま空にしたので、キーボードに伝わってから閉じる（送った後にキーボードが閉じるのは今までと同じ） */
+  if(had&&/Android/i.test(navigator.userAgent||'')) setTimeout(function(){ try{ if(document.activeElement===inp&&!inp.value) inp.blur(); }catch(e){} },150);
+}
+/* v558/v559: 変換していた区間を覚える／送った後の最初の入力で、前の区間・前の文が戻っていたら取り除く */
 (function(){
   var inp=$('#in-chat'); if(!inp) return;
-  inp.addEventListener('compositionupdate',function(e){ try{ if(e&&typeof e.data==='string') window.__zgLastSeg=e.data; }catch(_){} });
-  inp.addEventListener('compositionend',function(e){ try{ if(e&&typeof e.data==='string'&&e.data) window.__zgLastSeg=e.data; }catch(_){} });
+  /* 1回の変換の中で、一番長かった区間（かなのまま）と最後の区間（変換後）を覚える。途中の短い区間は覚えない */
+  var long='';
+  inp.addEventListener('compositionstart',function(){ long=''; try{ window.__zgSegs=[]; }catch(_){} });
+  function note(d){ try{ if(typeof d!=='string'||!d) return; window.__zgLastSeg=d; if(d.length>=long.length) long=d; window.__zgSegs=[long]; }catch(_){} }
+  inp.addEventListener('compositionupdate',function(e){ note(e&&e.data); });
+  inp.addEventListener('compositionend',function(e){ note(e&&e.data); });
   inp.addEventListener('input',function(e){
     try{
-      var g=window.__zgSentGuard; if(!g) return;
-      window.__zgSentGuard=null;   /* 送った後の最初の入力だけを見る */
-      if(Date.now()-g.at>15000||window.__zgVoiceOn) return;
-      var it=String((e&&e.inputType)||'');
-      if(it&&!/Composition|insertText|insertReplacementText/.test(it)) return;   /* 貼り付け・絵文字ボタンなどは見ない */
-      var v=String(inp.value||'');
-      /* 1回打っただけで「前の区間＋新しい文字」になった＝キーボードが前の区間を戻した */
-      if(v.length>g.seg.length&&v.indexOf(g.seg)===0){
-        var rest=v.slice(g.seg.length);
-        inp.value=rest;
-        /* キーボードの覚えている区間も捨てさせる（入力欄から一度外して、すぐ戻す） */
-        try{ inp.blur(); inp.focus({preventScroll:true}); }catch(_){}
-        try{ inp.setSelectionRange(rest.length,rest.length); chatGrow(); }catch(_){}
+      var g=zgSent; if(!g) return;
+      zgSent=null; window.__zgSentGuard=null;   /* 送った後の最初の入力だけを見る */
+      if(window.__zgVoiceOn) return;
+      if(typeof InputEvent==='undefined'||!(e instanceof InputEvent)) return;   /* 絵文字ボタン・音声入力（アプリが入れた文字）は見ない */
+      var it=String(e.inputType||''), comp=(it===''||/Composition/.test(it));
+      if(!comp&&!/^(insertText|insertReplacementText)$/.test(it)) return;   /* 貼り付け・削除などは見ない */
+      var v=String(inp.value||''); if(!v) return;
+      var soon=(Date.now()-g.at)<2500;
+      for(var i=0;i<g.c.length;i++){
+        var x=g.c[i];
+        /* 前の区間（または前の文）だけが戻った */
+        if(v===x){ if(comp||soon) zgResidueClear(inp,''); return; }
+        /* 1回打っただけで「前の区間＋新しい文字」になった＝キーボードが前の区間を戻した */
+        if(comp&&v.length>x.length&&v.length-x.length<=3&&v.indexOf(x)===0){ zgResidueClear(inp,v.slice(x.length)); return; }
       }
     }catch(_){}
   });
+  /* ① Android: 送信ボタンを押しても入力欄から外れないようにする（押した時に入力欄からボタンへ移ると、キーボードに「空にした」が伝わらない） */
+  var bs=$('#btn-chat-send');
+  if(bs&&/Android/i.test(navigator.userAgent||'')){
+    var keep=function(e){ try{ if(document.activeElement===inp) e.preventDefault(); }catch(_){} };
+    bs.addEventListener('pointerdown',keep); bs.addEventListener('mousedown',keep);
+  }
 })();
 function sendAgain(msg){
   if(!msg||msg.acked||msg.read||!privateReady())return;
@@ -15856,6 +16019,22 @@ html body #zg-st-view input.zst-reply{flex:1!important;min-width:0!important;hei
 html body #chat-tools button#btn-photo{display:none!important}
 /* v526: ストーリーは出さない（持ち主: 画質が悪いのでいらない）。コードは残す */
 html body #zg-st-bar,html body #zg-st-sheet,html body #zg-st-edit,html body #zg-st-view{display:none!important}
+
+/* v559: メッセージの中のリンク・開くブラウザを選ぶ画面 */
+html body #chat-log .bubble .zg-link{text-decoration:underline!important;text-underline-offset:2px!important;overflow-wrap:anywhere!important;word-break:break-all!important;cursor:pointer!important;-webkit-tap-highlight-color:rgba(0,0,0,.12)}
+html body #pane-chat #chat-log .msg.in .bubble .zg-link{color:#1F5FD8!important}
+html body #pane-chat #chat-log .msg.out .bubble .zg-link{color:#fff!important}
+html body #zg-br-sheet{position:fixed!important;inset:0!important;z-index:2147483000!important;background:rgba(20,16,40,.42)!important;display:none!important;align-items:flex-end!important;justify-content:center!important}
+html body #zg-br-sheet.on{display:flex!important}
+html body #zg-br-sheet .zbs-box{width:100%!important;max-width:520px!important;max-height:82vh!important;overflow:auto!important;background:#fff!important;border-radius:20px 20px 0 0!important;padding:16px 16px calc(14px + env(safe-area-inset-bottom))!important;box-sizing:border-box!important;box-shadow:0 -6px 24px rgba(30,20,80,.22)!important}
+html body #zg-br-sheet .zbs-t{font:800 1rem/1.4 system-ui,sans-serif!important;color:#2A2440!important;margin:2px 4px 10px!important}
+html body #zg-br-sheet .zbs-u{font:500 .78rem/1.4 ui-monospace,monospace!important;color:#5A5870!important;background:#F3F1FA!important;border-radius:10px!important;padding:8px 10px!important;margin:0 0 10px!important;word-break:break-all!important;max-height:4.4em!important;overflow:hidden!important}
+html body #zg-br-sheet .zbs-l{display:grid!important;grid-template-columns:1fr 1fr!important;gap:8px!important}
+html body #zg-br-sheet .zbs-b,html body #zg-br-sheet .zbs-x{appearance:none!important;border:1px solid #DDD8F0!important;background:#F7F5FF!important;color:#2A2440!important;border-radius:14px!important;min-height:46px!important;padding:8px 10px!important;font:700 .9rem/1.25 system-ui,sans-serif!important;text-align:center!important}
+html body #zg-br-sheet .zbs-b.on{background:#6C4CF5!important;color:#fff!important;border-color:#6C4CF5!important}
+html body #zg-br-sheet .zbs-cp{width:100%!important;margin-top:8px!important}
+html body #zg-br-sheet .zbs-x{width:100%!important;margin-top:10px!important;background:#fff!important;color:#6A6680!important}
+html body .zs-tg.zs-br{min-width:0!important;width:auto!important;max-width:11em!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
 </style>
 </body>
 </html>
