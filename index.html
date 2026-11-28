@@ -1429,7 +1429,7 @@ body .bar::after{
       <button id="btn-install" class="chalk-btn wide" type="button" hidden style="margin-top:12px">アプリとしてインストール</button>
       <button id="btn-reload" class="chalk-btn wide" type="button" hidden style="margin-top:10px">新しい版に更新する</button>
             <p id="install-hint" class="fine" hidden style="margin-top:6px">うえのボタンでアプリとして入れられます。iPhoneは「共有」→「ホーム画面に追加」。</p>
-      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v560</b></p>
+      <p class="verline" title="ビルド 2026-11-15">バージョン <b id="ver">v561</b></p>
     </section>
 
     <!-- 裏メニュー（トップを 5回 タップ） -->
@@ -1503,7 +1503,7 @@ body .bar::after{
     <!-- 待機 -->
     <section id="s-wait" class="screen">
       <p class="wait-lead" id="wait-lead">相手を待っています</p>
-      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v560</b></p>
+      <p class="verline" style="margin:6px 0 14px;border:0;padding:0;font-size:.68rem">バージョン <b>v561</b></p>
       <div id="joinreq" class="joinreq" hidden>
         <p class="jr-line"><b id="jr-name">名前</b> さんが入室を求めています</p>
         <p class="jr-fp">合図 <b id="jr-fp">----</b> ／ 相手の画面と同じかくににて確認</p>
@@ -2347,7 +2347,7 @@ var confirmedHostMessages=new WeakSet();
 function roomPeerAllowed(id){ return typeof id==='string'&&id.length>0&&id.length<=180&&S.me&&id!==S.me.id; }
 function pinnedJoin(req,m){ return !!(req&&req.did===m.from&&req.pub===m.pub); }
 var HANDSHAKE_TYPES=Object.freeze({join:1,in2:1,in3:1,deny:1,full:1,expired:1,ping:1,ob:1,nettest:1,'nettest-ok':1});
-var PRIV=Object.freeze({reaction:1,'reaction-ack':1,recall:1,'recall-ack':1,purge:1,'live-on':1,'live-see':1,'live-off':1,igh:1,chats:1,chat:1,photo:1,attachment:1,'photo-chunk':1,'photo-ref':1,'photo-again':1,'photo-miss':1,'photo-hq':1,'chat-open':1,'app-live':1,read:1,ack:1,prof:1,unpair:1,rtc2:1,rtc:1,'rtc-bye':1,'call-no':1,'rtc-sdp':1,'rtc-ice':1,'live-jpg':1,'live-ctl':1,'live-frame':1,'live-audio':1,call:1,'call-end':1,rang:1});
+var PRIV=Object.freeze({reaction:1,'reaction-ack':1,recall:1,'recall-ack':1,purge:1,'live-on':1,'live-see':1,'live-off':1,igh:1,chats:1,chat:1,photo:1,attachment:1,'att-part':1,'photo-chunk':1,'photo-ref':1,'photo-again':1,'photo-miss':1,'photo-hq':1,'chat-open':1,'app-live':1,read:1,ack:1,prof:1,unpair:1,rtc2:1,rtc:1,'rtc-bye':1,'call-no':1,'rtc-sdp':1,'rtc-ice':1,'live-jpg':1,'live-ctl':1,'live-frame':1,'live-audio':1,call:1,'call-end':1,rang:1});
 var outboundScopes=new WeakMap(), inboundScopes=new WeakMap();
 var privateTimers=new Set(), privateAborts=new Set(), photoScopes=Object.create(null);
 /* v452: つなぎなおした あとは 入室の ときの「あいず」が 作れない。かわりに 2人の 鍵から「かぎの しるし」を 作る（2台で 同じなら 同じ 鍵） */
@@ -2371,7 +2371,7 @@ function refreshKeyMark(){
     crypto.subtle.exportKey('raw',k).then(function(raw){ return keyMarkFrom(b64(raw)); }).then(function(m){ if(S.sessKey===k) S.keyMark=m; }).catch(function(){});
   }catch(e){}
 }
-var NET_FILE_TYPES={photo:1,attachment:1,'photo-ref':1,'story-part':1};   /* v516 */
+var NET_FILE_TYPES={photo:1,attachment:1,'photo-ref':1,'story-part':1,'att-part':1};   /* v516・v561: 大きい動画のかけら */
 function privateType(t){ return typeof t==='string'&&!Object.prototype.hasOwnProperty.call(HANDSHAKE_TYPES,t); }
 function privateReady(){
   var p=S&&S.opp&&S.opp.id;
@@ -2716,7 +2716,7 @@ var Net={
       if(!legacy&&env.from&&env.from!==S.me.id){
         /* 未受信の古い本文を水位だけで捨てない。確定した番号だけで重複判定する。 */
         if(env.n>Date.now()+600000) return false;
-        if(!({chats:1,chat:1,'photo-chunk':1,photo:1,attachment:1,'photo-ref':1,story:1,'story-part':1,'story-ack':1,'story-seen':1,'story-like':1,'story-del':1}[env.t])&&hwmSeen(env.from,env.n)){ this.reAck(env,legacy); return true; }
+        if(!({chats:1,chat:1,'photo-chunk':1,photo:1,attachment:1,'att-part':1,'photo-ref':1,story:1,'story-part':1,'story-ack':1,'story-seen':1,'story-like':1,'story-del':1}[env.t])&&hwmSeen(env.from,env.n)){ this.reAck(env,legacy); return true; }
 
       }
       /* 成功後にだけ seenN を更新する。 */
@@ -2727,7 +2727,7 @@ var Net={
     var self=this;
     var finish=function(ok){
       if(epoch!==self.epoch||key!==self.key||topic!==self.topic) return false;
-      if(ok===false||(({chats:1,chat:1,photo:1,attachment:1,'photo-ref':1,story:1,'story-part':1,'story-ack':1,'story-seen':1,'story-like':1,'story-del':1}[env.t])&&ok!==true)) return false;
+      if(ok===false||(({chats:1,chat:1,photo:1,attachment:1,'att-part':1,'photo-ref':1,story:1,'story-part':1,'story-ack':1,'story-seen':1,'story-like':1,'story-del':1}[env.t])&&ok!==true)) return false;
       if(typeof env.n==='number'&&env.t!=='photo-chunk'){
         self.seenN.add(String(env.from)+':'+env.n);
         if(!legacy&&env.from!==S.me.id) hwmMark(env.from,env.n);
@@ -6979,7 +6979,7 @@ async function chatSaveSnapshot(){
       if(m.sys) return {mid:m.mid||('cl'+(m.at||0)),f:'',t:m.text,cl:1,a:m.at||0,ra:m.rad||0};   /* v532: 電話の記録の「見た時刻」も残す */
       var __pt=!!(m.photo||m.file);
       if(__pt&&m.data){ var __k=photoKeyOf(m); if(__k) __ps.push({k:__k,v:m.data,l:m.data.length,m:m}); }
-      return {mid:m.mid||'',f:m.from,t:m.text||'',p:m.photo?1:0,pd:__pt?1:0,d:'',file:m.file?1:0,fn:m.fileName||'',fs:m.fileSize||0,failed:m.failed?1:0,a:m.at||0,n:m.n||0,on:(Array.isArray(m.oldN)&&m.oldN.length)?m.oldN.slice(-20):undefined,s:m.sent===false?0:1,k:m.acked?1:0,r:m.read?1:0,ra:m.rad||0,u:m.pid||''};
+      return {mid:m.mid||'',f:m.from,t:m.text||'',p:m.photo?1:0,pd:__pt?1:0,d:'',file:m.file?1:0,fn:m.fileName||'',fs:m.fileSize||0,failed:m.failed?1:0,a:m.at||0,n:m.n||0,on:(Array.isArray(m.oldN)&&m.oldN.length)?m.oldN.slice(-20):undefined,s:m.sent===false?0:1,k:m.acked?1:0,r:m.read?1:0,ra:m.rad||0,u:m.pid||'',bg:m.big||undefined};
     });
     if(__ps.length) await chatPhotoPutList(__ps);
     if(!privateCurrent(saveScope)) throw new Error('保存中にペアが変わりました');
@@ -7040,7 +7040,7 @@ async function chatRestore(sk){
       var m={mid:it.mid||'',from:it.f,at:it.a||Date.now(),n:it.n||0,sent:!!it.s,acked:!!it.k,read:!!it.r,rad:it.ra||0,uid:String(++UID)};
       if(Array.isArray(it.on)) m.oldN=it.on.filter(Number.isSafeInteger).slice(-20);   /* v523 */
       if(it.p){ m.photo=true; m.data=(ph[key]||it.d||''); if(!m.data) m.lost=1; m.__ps=(typeof phRaw[key]==='string')?0:(m.data?m.data.length:0); m.pid=it.u||''; }
-      else if(it.file){ m.file=true; m.data=(ph[key]||it.d||''); if(!m.data) m.lost=1; m.__ps=(typeof phRaw[key]==='string')?0:(m.data?m.data.length:0); m.fileName=String(it.fn||'ファイル').slice(0,180); m.fileSize=it.fs||0; m.pid=it.u||''; m.failed=!!it.failed||!it.s; }
+      else if(it.file){ m.file=true; m.data=(ph[key]||it.d||''); if(!m.data) m.lost=1; m.__ps=(typeof phRaw[key]==='string')?0:(m.data?m.data.length:0); m.fileName=String(it.fn||'ファイル').slice(0,180); m.fileSize=it.fs||0; m.pid=it.u||''; m.failed=!!it.failed||!it.s; if(it.bg&&m.from===S.me.id&&!it.s&&!it.failed&&m.data){ m.big=it.bg|0; m.failed=false; m.sent=false; m.__bigResume=1; } else if(it.bg) m.big=it.bg|0; }
       else m.text=String(it.t).slice(0,MAX_CHAT);
       if(messageGone(m)) return;
       /* 中継成功は受領証ではない。保存された k/r だけを復元する。 */
@@ -8146,6 +8146,7 @@ function metaText(m,mine,at,groupEnd){
   if(!mine) return groupEnd?tm:'';
   var __got=!!(m.read||m.peerAck||m.acked);   /* v529: acked は相手の受領証でしか立たない（読み込み直すと peerAck は消え acked だけ残る） */   /* v527: 相手の受け取り・既読が来ていれば、送信の結果より先にそれを出す（前の版で「送信中」のまま保存された分も直る） */
   if(m.failed&&!__got) return '送信できませんでした';
+  if(m.big&&m.sent!==true&&!__got) return '送信中…'+(typeof m.bigProg==='number'?' '+m.bigProg+'%':'');   /* v561 */
   if((m.sent===false||!m.n)&&!__got) return '送信中…';
   if(m.read){
     var vs='';
@@ -9863,18 +9864,19 @@ async function attachmentSelected(input,isPhoto,fromCam){
   var mime=attachmentKind(new Uint8Array(0),file.name,file.type);
   if(isPhoto&&mime.indexOf('image/')!==0&&mime.indexOf('video/')!==0){ toast('写真か動画を選んでください。'); return; }
   isPhoto=mime.indexOf('image/')===0;
-  if(file.size>(isPhoto?20*1024*1024:ATTACH_MAX)){ toast(isPhoto?'写真は 20 MB 以下を選んでください。':'動画・ファイルは 2 MB 以下を選んでください。'); return; }
-  if(!confirm(fromCam?'撮った写真を相手に送りますか？':'「'+file.name+'」を相手に送りますか？')) return;
+  var isVid=!isPhoto&&mime.indexOf('video/')===0;
+  if(file.size>(isPhoto?20*1024*1024:isVid?BIGV_MAX:ATTACH_MAX)){ toast(isPhoto?'写真は 20 MB 以下を選んでください。':isVid?'動画は 50 MB 以下を選んでください（スマホの写真アプリで短く切ると送れます）。':'ファイルは 2 MB 以下を選んでください。'); return; }
+  if(!confirm(fromCam?'撮った写真を相手に送りますか？':(isVid&&file.size>ATTACH_MAX)?'動画（約'+Math.max(3,Math.round(file.size/1048576))+'MB）を相手に送りますか？\n大きいので、届くまで少し時間がかかります。送り終わるまでアプリを開いたままにしてください。':'「'+file.name+'」を相手に送りますか？')) return;
   var peer=S.opp&&S.opp.id,topic=Net.topic,key=Net.key,scope=privateScope();
   try{
     var data=await attachmentRead(file);
     data=bytesDataURL(dataURLBytes(data),mime);
     if(isPhoto) data=await attachmentPhoto(data);
     if(!privateCurrent(scope)) return;
-    if(!isPhoto&&dataURLBytes(data).length>ATTACH_MAX){ toast('送信できる大きさを超えています。2 MB 以下にしてください。'); return; }   /* v517: 写真は sendPhoto が送れる大きさに縮めるので断らない（以前は 2MB を超える写真を断っていた） */
+    var __big=0; if(!isPhoto&&dataURLBytes(data).length>ATTACH_MAX){ if(isVid&&dataURLBytes(data).length<=BIGV_MAX) __big=1; else { toast('送信できる大きさを超えています。2 MB 以下にしてください。'); return; } }   /* v517: 写真は sendPhoto が送れる大きさに縮めるので断らない（以前は 2MB を超える写真を断っていた） */
     var msg={from:S.me.id,at:Date.now(),data:data,pid:'A'+Date.now().toString(36)+Math.random().toString(36).slice(2,8),uid:String(++UID),sent:false,n:0};
     if(isPhoto){ msg.photo=true; S.chat.push(msg); renderChat(true); chatJumpBottom(); sendPhoto(msg); }
-    else{ msg.file=true; msg.fileName=file.name.slice(0,180); msg.fileSize=file.size; S.chat.push(msg); renderChat(true); chatJumpBottom(); sendAttachment(msg); }
+    else{ msg.file=true; msg.fileName=file.name.slice(0,180); msg.fileSize=file.size; if(__big) msg.big=Math.ceil(dataURLBytes(data).length/BIGV_PART); S.chat.push(msg); renderChat(true); chatJumpBottom(); if(__big) sendBigVideo(msg); else sendAttachment(msg); }
   }catch(e){ toast(isPhoto?'写真を読みこめませんでした。JPEGやPNGの写真でお試しください。':'ファイルを読みこめませんでした。もう一度選んでください。'); }
 }
 $('#chat-photo-file').addEventListener('change',function(){ attachmentSelected(this,true); });
@@ -9917,6 +9919,124 @@ async function recvAttachment(m){
   }catch(e){ toast('添付ファイルを受信できませんでした。相手に送りなおしてもらってください。'); }
   finally{ attachmentReceiving.delete(id); }
 }
+/* v561: 2MBを超える動画（50MBまで）を送る（持ち主: 動画をメッセージで送りたい。容量を上げて）。
+   中継所は1回2MBまでなので、ストーリー（v515）と同じく約1.9MBずつに分けた暗号化ファイル {t:'att-part'} で送る。かけらは自分の情報（id・番号・数・大きさ）を全部持つので順番は問わない。
+   受け取る側は、かけらを2人の鍵で暗号化してスマホの中（IndexedDB zg-bigv）にためておき、全部そろったらつなげてトークに出す（ack に pid）。
+   送れなかったかけらだけ送り直す。途中でアプリが閉じた時は、開き直した時（と「更新」・「送信中」の文字）で続きから送る（相手は持っているかけらを取り直さない）。 */
+var BIGV_MAX=50*1024*1024, BIGV_PART=1900000;
+function sendBigVideo(msg){
+  if(!msg||!msg.big||msg.__bigBusy) return;
+  if(!bindPrivateMessage(msg)) return;
+  if(msg.cancelled||messageDeleted(msg)||S.chat.indexOf(msg)<0||msg.sent===true) return;
+  if(!privateReady()) return;
+  var bytes; try{ bytes=dataURLBytes(msg.data); }catch(e){ return; }
+  var n=Math.ceil(bytes.length/BIGV_PART); if(n<2||bytes.length>BIGV_MAX) return;
+  msg.big=n; msg.__bigBusy=1; msg.failed=false; msg.sent=false;
+  var scope=msg.__privateScope, mime=attachmentDataMime(msg.data), ok=msg.__bigOk||(msg.__bigOk={});
+  var paint=function(){ try{ var c=0; for(var k in ok) c++; msg.bigProg=Math.min(99,Math.floor(c*100/n)); var row=document.querySelector('#chat-log .msg[data-uid="'+msg.uid+'"] .meta'); if(row) row.textContent=metaText(msg,true,msg.at,true); }catch(e){} };
+  var one=function(i){ return new Promise(function(res){
+    var part=bytes.subarray(i*BIGV_PART,Math.min(bytes.length,(i+1)*BIGV_PART)), fin=false;
+    var env=0; try{ env=Net.sendFile({t:'att-part',id:msg.pid,at:msg.at,i:i,pc:n,size:bytes.length,name:msg.fileName,mime:mime},part,function(r){ if(fin) return; fin=true; if(r) ok[i]=1; paint(); res(!!r); }); }catch(e){}
+    if(env&&!msg.n) try{ msgSetN(msg,env); }catch(e){}
+    if(!env){ fin=true; res(false); }
+  }); };
+  paint();
+  (async function(){
+    try{
+      for(var round=0;round<6;round++){
+        for(var i=0;i<n;i++){
+          if(ok[i]) continue;
+          if(!privateCurrent(scope)||S.chat.indexOf(msg)<0||messageDeleted(msg)) return;
+          await one(i);
+        }
+        var left=0; for(var j=0;j<n;j++) if(!ok[j]) left++;
+        if(!left) break;
+        await new Promise(function(r){ setTimeout(r,5000*(round+1)); });
+      }
+      if(!privateCurrent(scope)||S.chat.indexOf(msg)<0) return;
+      var miss=0; for(var q=0;q<n;q++) if(!ok[q]) miss++;
+      if(miss){ msg.failed=true; toast('動画を送れませんでした。電波の良いところで、吹き出しの下の文字を押すと続きから送ります。'); }
+      else{
+        msg.sent=true; msg.failed=false; delete msg.bigProg; delete msg.__bigResume;
+        /* かけらには通知が付かないので、送り終わったら相手に1回だけ知らせる（見ている時は出さない） */
+        try{ if(!peerViewing()) pushToPeer('!'+Date.now().toString(36)).catch(function(){}); }catch(e){}
+      }
+      try{ chatSaveNow().catch(function(){}); }catch(e){}
+      renderChat(true);
+    }finally{ msg.__bigBusy=0; }
+  })();
+}
+/* 開き直した後など、途中で止まった大きい動画の続きを送る */
+function bigVideoResume(force){
+  try{ if(!privateReady()) return; (S.chat||[]).forEach(function(m){ if(m&&m.big&&m.from===S.me.id&&m.sent!==true&&!m.read&&!m.peerAck&&!m.acked&&(force||m.__bigResume)&&!m.__bigBusy) sendBigVideo(m); }); }catch(e){}
+}
+setInterval(function(){ bigVideoResume(false); },20000);
+/* 受け取る側: かけらをスマホの中にためる（2人の鍵で暗号化） */
+var bigvDBp=null, bigvLock=Promise.resolve(), bigvSwept=false, bigvToast={};
+function bigvDB(){
+  if(bigvDBp) return bigvDBp;
+  bigvDBp=new Promise(function(res,rej){ var r=indexedDB.open('zg-bigv',1);
+    r.onupgradeneeded=function(){ var d=r.result; if(!d.objectStoreNames.contains('p')) d.createObjectStore('p'); };
+    r.onsuccess=function(){ res(r.result); }; r.onerror=function(){ bigvDBp=null; rej(r.error||new Error('idb')); }; });
+  return bigvDBp;
+}
+function bigvReq(mode,fn){ return bigvDB().then(function(db){ return new Promise(function(res,rej){ var tx=db.transaction('p',mode), rq=fn(tx.objectStore('p')); tx.oncomplete=function(){ res(rq?rq.result:undefined); }; tx.onerror=tx.onabort=function(){ rej(tx.error||new Error('idb')); }; }); }); }
+function bigvRange(k){ return IDBKeyRange.bound(k+'|',k+'|￿'); }
+async function bigvSweep(){
+  if(bigvSwept) return; bigvSwept=true;
+  try{ var cut=Date.now()-2*86400000; var all=await bigvReq('readonly',function(os){ return os.getAll(); }); var keys=await bigvReq('readonly',function(os){ return os.getAllKeys(); });
+    var old=[]; (keys||[]).forEach(function(k,i){ var v=all[i]; if(!v||!(v.at>cut)) old.push(k); });
+    if(old.length) await bigvReq('readwrite',function(os){ old.forEach(function(k){ os.delete(k); }); return null; }); }catch(e){}
+}
+async function recvBigPart(m){
+  if(!privateIncoming(m)) return false;
+  var id=String(m.id||''); if(!/^A[0-9a-z]{6,40}$/.test(id)) return true;
+  var i=m.i|0, n=m.pc|0, size=+m.size;
+  if(!(size>ATTACH_MAX&&size<=BIGV_MAX)||n!==Math.ceil(size/BIGV_PART)||i<0||i>=n) return true;
+  if(messageDeleted({from:m.from,pid:id})) return true;
+  var exists=function(){ return S.chat.some(function(c){ return c&&c.pid===id&&c.from===m.from; }); };
+  if(exists()){ if(m.n) try{ Net.send({t:'ack',n1:m.n,ps:[id]}); }catch(e){} return true; }
+  if(!m.__att) return true;
+  var key=S.sessKey; if(!key) return false;
+  bigvSweep();
+  var k=String(m.from)+'|'+id, pk=k+'|'+('0'+i).slice(-2);
+  var have=false; try{ have=!!(await bigvReq('readonly',function(os){ return os.getKey(pk); })); }catch(e){}
+  if(!have){
+    try{ if(!bigvToast[k]&&chatOnScreen()){ bigvToast[k]=1; toast('大きい動画を受け取っています。少し待ってください。'); } }catch(e){}
+    var bytes=await Net.fetchFile(m.__att,m); if(!bytes) return false;
+    if(!privateIncoming(m)) return false;
+    var expect=(i<n-1)?BIGV_PART:(size-BIGV_PART*(n-1)); if(bytes.length!==expect) return true;
+    var iv=crypto.getRandomValues(new Uint8Array(12)), ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv:iv},key,bytes));
+    await bigvReq('readwrite',function(os){ return os.put({at:Date.now(),iv:iv,ct:ct},pk); });
+  }
+  var job=bigvLock.catch(function(){}).then(async function(){
+    if(exists()){ if(m.n) try{ Net.send({t:'ack',n1:m.n,ps:[id]}); }catch(e){} return true; }
+    var keys=await bigvReq('readonly',function(os){ return os.getAllKeys(bigvRange(k)); });
+    if(!keys||keys.length<n) return true;
+    var all=new Uint8Array(size), pos=0;
+    for(var j=0;j<n;j++){
+      var v=await bigvReq('readonly',function(os){ return os.get(k+'|'+('0'+j).slice(-2)); });
+      if(!v) return true;
+      var pt=new Uint8Array(await crypto.subtle.decrypt({name:'AES-GCM',iv:new Uint8Array(v.iv)},key,new Uint8Array(v.ct)));
+      if(pos+pt.length>size) return true;
+      all.set(pt,pos); pos+=pt.length;
+    }
+    if(pos!==size||!privateIncoming(m)||messageDeleted({from:m.from,pid:id})) return true;
+    var mime=attachmentKind(all,m.name,m.mime);
+    S.chat.push({file:true,big:n,from:m.from,at:typeof m.at==='number'?m.at:Date.now(),data:bytesDataURL(all,mime),fileName:String(m.name||'動画').slice(0,180),fileSize:size,pid:id,uid:String(++UID),n:m.n||0,sent:true});
+    await chatSaveNow();
+    try{ await bigvReq('readwrite',function(os){ return os.delete(bigvRange(k)); }); }catch(e){}
+    if(!privateIncoming(m)) return false;
+    S.lastPeerN=Math.max(S.lastPeerN||0,m.n||0); if(m.n) try{ Net.send({t:'ack',n1:m.n,ps:[id]}); }catch(e){}
+    if(!chatOnScreen()){ S.unread++; updateBadge(); updateTitleBadge(); updateTalkbackBadges(); notifyIncoming(); }
+    if(S.tab==='chat') renderChat(true); else persistChat();
+    maybeSendRead();
+    return true;
+  });
+  bigvLock=job; return job;
+}
+/* 大きい動画は、描き直すたびに作り直さない（50MB を毎回読み直すと重い） */
+var attachmentBigURL=new WeakMap();
 var attachmentURLs=[];
 var attachmentObservers=[],attachmentPlayback={};
 /* v220: 動画だけを音なしで再生。従来の監視処理を一本化する。 */
@@ -9970,8 +10090,10 @@ function attachmentLink(m,position){
   wrap.addEventListener('click',function(e){ e.stopPropagation(); });
   var title=document.createElement('div'); title.textContent=m.fileName||'ファイル'; title.style.cssText='font-weight:bold;overflow-wrap:anywhere;margin-bottom:8px'; wrap.appendChild(title);
   try{
-    var bytes=dataURLBytes(m.data),mime=attachmentKind(bytes,m.fileName,attachmentDataMime(m.data));
-    var u=URL.createObjectURL(new Blob([bytes],{type:mime})); attachmentURLs.push(u);
+    var __bc=(m.data&&m.data.length>3000000)?attachmentBigURL.get(m):null, bytes, mime, u;
+    if(__bc&&__bc.d===m.data){ mime=__bc.mime; u=__bc.u; bytes=new Uint8Array(0); }
+    else{ bytes=dataURLBytes(m.data); mime=attachmentKind(bytes,m.fileName,attachmentDataMime(m.data)); u=URL.createObjectURL(new Blob([bytes],{type:mime}));
+      if(m.data&&m.data.length>3000000){ if(__bc) try{ URL.revokeObjectURL(__bc.u); }catch(e){} attachmentBigURL.set(m,{d:m.data,mime:mime,u:u}); } else attachmentURLs.push(u); }   /* v561 */
     var view;
     if(mime.indexOf('image/')===0){
       view=document.createElement('img'); view.alt=m.fileName||'写真'; view.className='photo-msg';
@@ -11809,6 +11931,7 @@ function zgManualRefresh(quiet){
   try{ (S.outbox||[]).forEach(function(it){ it.lastTry=0; }); }catch(e){}
   try{ resendUnacked(true); }catch(e){}
   try{ photoAutoRetry(true); }catch(e){}
+  try{ bigVideoResume(true); }catch(e){}   /* v561 */
   if(!quiet){ try{ toast('メッセージを確かめています'); }catch(e){} }
 }
 try{ window.__zgRefresh=zgManualRefresh; }catch(e){}   /* v531: 上の段の「更新」ボタンから呼ぶ */
@@ -11824,7 +11947,8 @@ document.addEventListener('click',function(e){
       if(!m||m.from!==S.me.id) return;
       e.preventDefault(); e.stopPropagation();
       zgManualRefresh(true);
-      if(m.photo||m.file){ if(!m.sent&&m.photo){ try{ retryPhoto(m); }catch(_){} } }
+      if(m.big){ m.__bigResume=1; sendBigVideo(m); }   /* v561: 大きい動画は続きから */
+      else if(m.photo||m.file){ if(!m.sent&&m.photo){ try{ retryPhoto(m); }catch(_){} } }
       else { m.tries=0; S.inflight=(S.inflight||[]).filter(function(it){ return it.mid!==m.mid; }); sendAgain(m); }
       try{ toast('もう一度送っています'); }catch(_){}
       return;
@@ -12086,7 +12210,7 @@ Net.onMsg=async function(m){
   if(!m||typeof m.t!=='string') return false;
   if(privateType(m.t)&&!privateIncoming(m)) return false;
   /* v219: 保存領域の復元と削除を先に完了し、同時受信・再接続時の復活を防ぐ。 */
-  if(m&&({chats:1,chat:1,photo:1,attachment:1,'photo-chunk':1,recall:1,reaction:1}[m.t])&&!deletionReady.has(m)){
+  if(m&&({chats:1,chat:1,photo:1,attachment:1,'att-part':1,'photo-chunk':1,recall:1,reaction:1}[m.t])&&!deletionReady.has(m)){
     var scope=deletionScope(); if(!scope) return;
     deletionInbox=deletionInbox.catch(function(){}).then(async function(){
       await deletionLoad(); await reactionLoad(); if(deletionScope()!==scope||!privateIncoming(m)) return;
@@ -12428,6 +12552,9 @@ Net.onMsg=async function(m){
       if(m.from===S.me.id) break;
       return await recvAttachment(m);
       break;
+    case 'att-part':   /* v561: 2MBを超える動画のかけら */
+      if(m.from===S.me.id) break;
+      return await recvBigPart(m);
     /* v515: ストーリー */
     case 'story':
       if(m.from===S.me.id) break;

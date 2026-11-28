@@ -50,6 +50,7 @@ node tools/sw_badge_test.mjs                   # sw.js の通知の小さいア�
 | e2e/draft_keep.js | 入力中の文（下書き）が読み込み直しても残る・暗号化して保存・送ったら消える（`node tools/e2e/draft_keep.js /tmp/zg`）（v552） |
 | e2e/msg_times.js | ホストだけの「メッセージの時刻」（送信・相手のスマホで鳴った・既読、相手の送信）。ゲストには出ない（`bash tools/run_e2e.sh tools/e2e/msg_times.js`）（v553） |
 | e2e/ime_residual.js | 送信後に Android のキーボードが前の区間・前の文を戻しても取り除く（時間の制限なし・合図なしで戻った時も）。Android は送信ボタンで入力欄から外れない（`node tools/e2e/ime_residual.js /tmp/zg`）（v558・v559） |
+| e2e/big_video.js | 2MBを超える動画（50MBまで）をかけらに分けて送る・同じ中身で届く・失敗したかけらの送り直し・読み込み直しても続きから（`bash tools/run_e2e.sh tools/e2e/big_video.js`、`BIG=45` で大きさを変えられる）（v561） |
 | e2e/link_open.js | メッセージの中のアドレスを押すと設定のブラウザで開く（標準・Android の intent・iPhone の各ブラウザ・毎回選ぶ・長押しでは開かない）（`node tools/e2e/link_open.js /tmp/zg`）（v559） |
 | e2e/ios_bg_notify.js | iPhone（ゲスト）が裏に回った直後・見ている時・通知サーバーへの1回目が失敗した時の通知（`bash tools/run_e2e.sh tools/e2e/ios_bg_notify.js`）（v548/v549） |
 | e2e/call_no_stale_ring.js | 閉じていた間の電話が、あとで開いた時に鳴らない |
